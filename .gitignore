@@ -1,0 +1,11 @@
+# Never put youth pitcher records, player exports, or admin credentials in GitHub.
+*.PRIVATE.json
+*.private.json
+*-roster-backup.json
+diamond-zone-initial-roster*.json
+*.env
+.env*
+service-account*.json
+firebase-adminsdk*.json
+node_modules/
+.DS_Store
