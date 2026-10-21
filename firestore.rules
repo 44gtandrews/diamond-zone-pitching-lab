@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function verified() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string;
+    }
+    function approved() {
+      return verified()
+        && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email))
+        && get(/databases/$(database)/documents/allowlist/$(request.auth.token.email)).data.active == true;
+    }
+    function isAdmin() {
+      return approved()
+        && get(/databases/$(database)/documents/allowlist/$(request.auth.token.email)).data.role == 'admin';
+    }
+    match /allowlist/{email} {
+      // Only verified accounts can read their own approval entry.
+      allow get: if (verified() && request.auth.token.email == email) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll(['role', 'active'])
+        && request.resource.data.role in ['coach', 'admin']
+        && request.resource.data.active is bool;
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasAll(['role', 'active'])
+        && request.resource.data.role in ['coach', 'admin']
+        && request.resource.data.active is bool
+        && (email != request.auth.token.email ||
+            (request.resource.data.role == 'admin' && request.resource.data.active == true));
+      allow delete: if isAdmin() && email != request.auth.token.email;
+    }
+    match /players/{playerId} {
+      allow read: if approved();
+      allow create, update: if isAdmin()
+        && request.resource.data.id == playerId
+        && request.resource.data.name is string
+        && request.resource.data.dataType in ['aggregate', 'raw'];
+      allow delete: if isAdmin();
+    }
+    match /playerEdits/{playerId}/sections/{section} {
+      allow get, list: if approved();
+      allow create, update: if approved()
+        && exists(/databases/$(database)/documents/players/$(playerId))
+        && section in ['notes', 'mechanics', 'strength', 'grades', 'type-overrides']
+        && request.resource.data.keys().hasOnly(['value', 'updatedAt', 'editedBy'])
+        && request.resource.data.keys().hasAll(['value', 'updatedAt', 'editedBy'])
+        && request.resource.data.value is string
+        && request.resource.data.value.size() <= 50000
+        && request.resource.data.editedBy == request.auth.token.email;
+      allow delete: if isAdmin();
+    }
+    // Deny every unmentioned database path.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
