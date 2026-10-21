@@ -110,6 +110,8 @@
     if(PLAYERS[id]) await showPlayer(id);else showHome();
     if(staff.role==='admin') await listCoaches();
   }
+  window.DZ_RELOAD_ROSTER=async()=>{await loadRoster();};
+  window.DZ_CURRENT_PLAYER=()=>currentPlayerId;
   async function checkAccess(user) {
     const version=++accessVersion;
     activeUser=user;staff=null;
