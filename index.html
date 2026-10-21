@@ -183,6 +183,16 @@
   #admin-panel input{max-width:400px;width:100%;padding:10px;font-size:16px;border:1px solid var(--line-strong);}
   #admin-panel li{font-size:13px;padding:5px 0;overflow-wrap:anywhere;}
   .cloud-error{color:#9c2626;}
+  #session-import-overlay{position:fixed;inset:0;z-index:1000;background:rgba(28,27,24,.75);overflow-y:auto;padding:18px;}
+  #session-import-dialog{max-width:1080px;margin:18px auto;background:var(--paper);padding:20px;border:3px solid var(--accent);}
+  #session-import-dialog .session-table-wrap{overflow-x:auto;background:var(--paper-raised);border:1px solid var(--line-strong);}
+  #session-import-dialog .session-cell{width:78px;min-width:70px;padding:8px 4px;font:16px Inter,sans-serif;border:1px solid var(--line);}
+  #session-import-dialog table{width:max-content;min-width:100%;}
+  #session-import-dialog td,#session-import-dialog th{padding:5px;}
+  #session-import-dialog input[type=file]{max-width:100%;font-size:16px;}
+  #session-import-dialog .cloud-form{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #session-import-dialog .cloud-form input,#session-import-dialog .cloud-form select{width:100%;min-width:0;}
+  @media(max-width:560px){#session-import-overlay{padding:0}#session-import-dialog{margin:0;min-height:100%;padding:14px}#session-import-dialog .cloud-form{grid-template-columns:1fr;}}
   @media(max-width:480px){.wrap,.home-wrap{padding-inline:16px;}.cloud-card{margin:18px 12px;padding:17px}.player-row{padding:13px 11px}.kpi{padding:13px 12px}.tabbtn{padding:10px 11px;}}
 </style>
 </head>
@@ -222,9 +232,14 @@
     </div>
   </div>
   <div class="home-wrap">
+    <section id="coach-upload-panel" style="margin-top:20px;padding:16px;border:1px solid var(--line-strong);background:var(--paper-raised);">
+      <h2 class="admin-title">Pitcher Directory</h2>
+      <p class="cloud-help">Approved coaches can add players using a Trackman PDF, CSV, or JSON file. Review the extracted numbers before saving.</p>
+      <button class="cloud-button" id="cloud-add-player" type="button">+ Add Player · Upload File</button>
+    </section>
     <section id="admin-panel" style="display:none;">
       <h2 class="admin-title">Admin · Roster &amp; Coach Access</h2>
-      <p class="cloud-help">Only administrators can import or replace player stat records. Saved notes and grades are stored separately and will not be erased by a roster update.</p>
+      <p class="cloud-help">Administrators can bulk-import or back up the roster. All approved coaches can add a player or upload an additional session from a player profile. Saved notes and grades remain separate.</p>
       <label class="field-label" for="cloud-roster-file">Import private roster JSON</label>
       <input type="file" accept=".json,application/json" id="cloud-roster-file">
       <div class="cloud-actions"><button class="cloud-button" id="cloud-import" type="button">Import players</button><button class="cloud-button secondary" id="cloud-backup" type="button">Export roster backup</button></div>
@@ -284,6 +299,7 @@
 
   <div class="wrap">
     <div class="kpis" id="kpis"></div>
+    <div style="margin-top:16px;"><button class="cloud-button" type="button" id="cloud-update-player">+ Upload New Session · Trackman File</button></div>
 
     <div class="tabbar">
       <button class="tabbtn active" data-tab="overview">Overview</button>
@@ -945,6 +961,30 @@ window.addEventListener('hashchange', ()=>{
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 <script src="./firebase-config.js"></script>
+<div id="session-import-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="session-import-title">
+  <div id="session-import-dialog">
+    <h2 class="admin-title" id="session-import-title">Upload Trackman Data</h2>
+    <p class="cloud-help" id="session-target"></p>
+    <div class="cloud-form" id="session-new-fields" style="display:none;">
+      <label>Player name<input id="session-player-name" maxlength="100" autocomplete="off" placeholder="First Last"></label>
+      <label>Age group<select id="session-player-age"><option value="">Select group</option><option value="10">10U</option><option value="11">11U</option><option value="12">12U</option><option value="13">13U</option><option value="14">14U</option><option value="15">15U</option><option value="16">16U</option><option value="17">17U</option><option value="18">18U</option><option value="Coach">Coach / Adult</option></select></label>
+    </div>
+    <label class="field-label" for="session-file">Trackman session file (PDF, CSV, JSON; max 5 MB)</label>
+    <input type="file" id="session-file" accept=".pdf,.csv,.json,application/pdf,text/csv,application/json">
+    <div class="cloud-actions"><button type="button" class="cloud-button" id="session-read">Read File</button><button type="button" class="cloud-button secondary" id="session-cancel">Cancel</button></div>
+    <p class="cloud-status" id="session-import-status" role="status"></p>
+    <section id="session-review" style="display:none;">
+      <h3 class="field-label">Review Pitch Summary · One Session</h3>
+      <p class="cloud-help">Confirm each pitch count and average velocity, correct other fields as needed. Empty optional cells stay unknown. “Undefined” and “Other” are excluded. A new session is merged using pitch-count-weighted averages; previous notes and grades are retained. Do not upload the same session twice.</p>
+      <div class="session-table-wrap"><table><thead><tr><th>Pitch</th><th>#</th><th>Velo</th><th>Max</th><th>Spin</th><th>Max Spin</th><th>Ext</th><th>IVB</th><th>HB</th><th>Tilt</th><th>Strike %</th><th>Ext Strike %</th><th>Out %</th><th>VAA</th><th></th></tr></thead><tbody id="session-pitch-rows"></tbody></table></div>
+      <div class="cloud-actions"><button class="cloud-button secondary" type="button" id="session-add-pitch">+ Add pitch type</button><button class="cloud-button" type="button" id="session-save">Confirm &amp; Save to Shared Database</button></div>
+      <details><summary>Extracted PDF text (reference only)</summary><pre id="session-pdf-text" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow-y:auto;"></pre></details>
+    </section>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="./importer.js"></script>
 <script src="./cloud.js"></script>
 </body>
 </html>
