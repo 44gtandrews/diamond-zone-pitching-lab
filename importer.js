@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id), fields=['n','velo','veloMax','spin','spinMax','ext','ivb','hb','tilt','strike','strikeExt','out','vaa'];
 const names={fb:'Fastball',cb:'Curveball',ch:'ChangeUp',sk:'Sinker',sw:'Sweeper',sp:'Splitter',sl:'Slider',ct:'Cutter'};
-const aliases={fastball:'fb',four-seam:'fb',curveball:'cb',changeup:'ch',sinker:'sk',sweeper:'sw',splitter:'sp',slider:'sl',cutter:'ct'};
+const aliases={fastball:'fb','four-seam':'fb',curveball:'cb',changeup:'ch',sinker:'sk',sweeper:'sw',splitter:'sp',slider:'sl',cutter:'ct'};
 let db,user,mode,id,rows=[],fileName='',fileHash='',pdfText='';
 const err=e=>{ $('session-import-status').textContent=String(e?.message||e); };
 const num=(s,int=false)=>{if(s===null||s===undefined||String(s).trim()==='')return null;const v=Number(String(s).replace(/,/g,'').replace('%',''));return Number.isFinite(v)?int?Math.round(v):Math.round(v*100)/100:null;};
