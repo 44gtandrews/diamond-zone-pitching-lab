@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diamond Zone CT — Pitching Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1B18;
+    --ink-soft:#514E47;
+    --paper:#F4F1E8;
+    --paper-raised:#FDFCF8;
+    --line:#DBD5C4;
+    --line-strong:#C6BEA6;
+    --accent:#B9812A;
+    --accent-deep:#7E5518;
+    --fb:#B33A3A;
+    --cb:#2E6198;
+    --ch:#4C7A45;
+    --sk:#CC7A1E;
+    --sw:#8C7A1E;
+    --sp:#1E8A8A;
+    --sl:#D1B000;
+    --ct:#7A5233;
+    --un:#8C8778;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    font-feature-settings:"tnum" 1;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 60px 0;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px;}
+  .home-wrap{max-width:900px;margin:0 auto;padding:0 28px;}
+  a{color:inherit;}
+
+  /* Masthead */
+  .masthead{background:var(--ink);color:var(--paper);padding:22px 0 20px 0;border-bottom:4px solid var(--accent);}
+  .masthead-row{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+  .facility{font-family:'Oswald',sans-serif;font-size:12.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin:0 0 6px 0;font-weight:500;}
+  .back-link{
+    display:inline-block;font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:0.05em;
+    text-transform:uppercase;color:#C9C4B4;text-decoration:none;margin-bottom:10px;
+  }
+  .back-link:hover{color:var(--accent);}
+  .page-title{font-family:'Oswald',sans-serif;font-size:38px;font-weight:600;line-height:1;margin:0;letter-spacing:0.01em;}
+  .player-name{font-family:'Oswald',sans-serif;font-size:44px;font-weight:600;line-height:1;margin:0;letter-spacing:0.01em;}
+  .page-sub,.player-sub{font-size:14px;color:#C9C4B4;margin-top:8px;}
+  .session-tag{text-align:right;font-size:13px;color:#C9C4B4;}
+  .session-tag strong{color:var(--paper);font-weight:600;}
+  .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7BAE5B;margin-right:6px;box-shadow:0 0 0 3px rgba(123,174,91,0.25);}
+
+  /* Roster (home view) */
+  .group{margin-top:32px;}
+  .group-title{
+    font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--accent-deep);margin:0 0 10px 0;padding-bottom:8px;border-bottom:2px solid var(--line-strong);
+    display:flex;align-items:baseline;justify-content:space-between;
+  }
+  .group-count{font-family:'Inter';font-size:11.5px;letter-spacing:0;color:var(--ink-soft);font-weight:500;text-transform:none;}
+  .roster{border:1px solid var(--line-strong);background:var(--paper-raised);}
+  .player-row{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;
+    border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);transition:background .12s ease;
+  }
+  .roster a.player-row:hover{background:var(--paper);}
+  .roster a.player-row:last-child{border-bottom:none;}
+  .player-info{min-width:0;}
+  .player-row .player-name{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0;}
+  .player-blurb{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+  .chevron{font-family:'Oswald',sans-serif;font-size:20px;color:var(--line-strong);flex-shrink:0;}
+  .roster a.player-row:hover .chevron{color:var(--accent);}
+  .home-footnote{font-size:11.5px;color:var(--ink-soft);margin-top:36px;line-height:1.6;padding-top:16px;border-top:1px solid var(--line-strong);}
+
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line-strong);border-top:none;background:var(--paper-raised);}
+  .kpi{padding:16px 18px;border-right:1px solid var(--line);}
+  .kpi:last-child{border-right:none;}
+  .kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);margin-bottom:4px;}
+  .kpi-value{font-family:'Oswald',sans-serif;font-size:26px;font-weight:600;}
+  .kpi-value small{font-family:'Inter';font-size:13px;font-weight:500;color:var(--ink-soft);}
+
+  /* Tabs */
+  .tabbar{display:flex;gap:2px;margin-top:26px;border-bottom:1px solid var(--line-strong);flex-wrap:wrap;}
+  .tabbtn{font-family:'Oswald',sans-serif;font-size:14px;letter-spacing:0.03em;background:none;border:none;padding:10px 16px;cursor:pointer;color:var(--ink-soft);border-bottom:3px solid transparent;transition:color .15s ease;}
+  .tabbtn:hover{color:var(--ink);}
+  .tabbtn.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600;}
+  .panel{display:none;padding-top:24px;}
+  .panel.active{display:block;}
+
+  /* Overview grid */
+  .chart-row{display:grid;grid-template-columns:1.3fr 0.85fr 0.85fr;gap:1px;background:var(--line-strong);border:1px solid var(--line-strong);}
+  .chart-card{background:var(--paper-raised);padding:16px 16px 10px 16px;position:relative;}
+  .chart-title{font-family:'Oswald',sans-serif;font-size:12.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);margin:0 0 2px 0;}
+  .chart-caption{font-size:11px;color:var(--ink-soft);margin-bottom:8px;}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-soft);}
+  .swatch{width:9px;height:9px;border-radius:50%;display:inline-block;}
+
+  .view-toggle{display:flex;border:1px solid var(--line-strong);}
+  .toggle-btn{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;background:var(--paper-raised);border:none;padding:3px 8px;cursor:pointer;color:var(--ink-soft);}
+  .toggle-btn:not(:last-child){border-right:1px solid var(--line-strong);}
+  .toggle-btn.active{background:var(--ink);color:var(--paper);}
+
+  /* Velocity stat list */
+  .velo-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);}
+  .velo-row:last-child{border-bottom:none;}
+  .velo-name{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;}
+  .velo-nums{display:flex;gap:16px;align-items:baseline;}
+  .velo-avg{font-family:'Oswald',sans-serif;font-size:19px;font-weight:600;}
+  .velo-avg small{font-family:'Inter';font-size:10px;color:var(--ink-soft);font-weight:500;text-transform:uppercase;margin-left:2px;}
+  .velo-max{font-size:12.5px;color:var(--ink-soft);}
+
+  /* Table */
+  .table-card{background:var(--paper-raised);border:1px solid var(--line-strong);border-top:none;padding:6px 0 2px 0;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{text-align:right;font-family:'Oswald',sans-serif;font-weight:500;font-size:10.5px;letter-spacing:0.05em;text-transform:uppercase;color:var(--ink-soft);padding:8px 10px;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  thead th:first-child, tbody td:first-child{text-align:left;}
+  tbody td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody tr:last-child td{border-bottom:none;}
+  .pitch-cell{display:flex;align-items:center;gap:8px;font-weight:600;text-align:left;}
+  .pitch-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dim{color:var(--ink-soft);font-weight:400;}
+  .na{color:#B7B0A0;}
+  .footnote{font-size:11px;color:var(--ink-soft);margin-top:12px;line-height:1.5;}
+
+  .grade-select,.type-select{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;border:1px solid var(--line-strong);background:var(--paper-raised);color:var(--ink);padding:3px 4px;cursor:pointer;}
+  .grade-select:focus,.type-select:focus{outline:2px solid var(--accent);outline-offset:-1px;}
+
+  .dot-tooltip{position:absolute;pointer-events:none;background:var(--ink);color:var(--paper);font-size:11px;padding:6px 9px;border-radius:2px;line-height:1.4;opacity:0;transition:opacity .1s ease;transform:translate(-50%,-100%);white-space:nowrap;z-index:10;}
+  .dot-tooltip.show{opacity:1;}
+  .dot-tooltip strong{display:block;font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:0.02em;}
+
+  /* Notes-style panels */
+  .field-block{margin-bottom:22px;}
+  .field-label{font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.03em;color:var(--ink);margin-bottom:6px;font-weight:600;}
+  .field-hint{font-size:11.5px;color:var(--ink-soft);margin-bottom:8px;}
+  textarea{width:100%;min-height:120px;resize:vertical;font-family:'Inter',sans-serif;font-size:13.5px;line-height:1.5;padding:12px;border:1px solid var(--line-strong);background:var(--paper-raised);color:var(--ink);}
+  textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .note-list{display:flex;flex-direction:column;gap:10px;margin-bottom:10px;}
+  .note-box{position:relative;}
+  .note-box textarea{min-height:70px;padding-right:34px;}
+  .note-remove{position:absolute;top:6px;right:6px;width:20px;height:20px;border:1px solid var(--line-strong);background:var(--paper-raised);color:var(--ink-soft);font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+  .note-remove:hover{background:var(--ink);color:var(--paper);}
+  .add-note-btn{font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:0.03em;background:none;border:1px dashed var(--line-strong);color:var(--ink-soft);padding:7px 14px;cursor:pointer;width:100%;text-align:center;}
+  .add-note-btn:hover{border-color:var(--accent);color:var(--ink);}
+  .save-row{display:flex;align-items:center;gap:12px;margin-top:14px;}
+  .save-btn{font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.03em;background:var(--ink);color:var(--paper);border:none;padding:9px 20px;cursor:pointer;}
+  .save-btn:hover{background:var(--accent-deep);}
+  .save-status{font-size:12px;color:var(--ink-soft);opacity:0;transition:opacity .3s ease;}
+  .save-status.show{opacity:1;}
+
+  @media (max-width:820px){
+    .chart-row{grid-template-columns:1fr;}
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .two-col{grid-template-columns:1fr;}
+    .player-name{font-size:32px;}
+  }
+
+  html,body {overflow-x:clip;}
+  .cloud-card{max-width:520px;margin:44px auto;padding:24px;border:1px solid var(--line-strong);background:var(--paper-raised);}
+  .cloud-card h2,.admin-title{font:600 24px 'Oswald',sans-serif;margin:0 0 12px;}
+  .cloud-card p,.cloud-help{font-size:13px;line-height:1.6;color:var(--ink-soft);}
+  .cloud-form{display:grid;gap:12px;margin:18px 0 10px;}
+  .cloud-form label{font-size:12px;font-weight:600;}
+  .cloud-form input,.cloud-form select{width:100%;padding:12px;font:16px 'Inter',sans-serif;border:1px solid var(--line-strong);background:#fff;min-width:0;}
+  .cloud-button{padding:11px 15px;border:0;background:var(--ink);color:var(--paper);font:500 14px 'Oswald',sans-serif;cursor:pointer;min-height:44px;}
+  .cloud-button.secondary{background:transparent;border:1px solid var(--line-strong);color:var(--ink);}
+  .cloud-button:disabled{opacity:.5;cursor:not-allowed;}
+  .cloud-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .cloud-status{font-size:12px;line-height:1.55;margin:12px 0;color:var(--accent-deep);white-space:pre-wrap;}
+  #cloud-bar{background:#E9E3D4;border-bottom:1px solid var(--line-strong);}
+  #cloud-bar .wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-block:9px;font-size:12px;}
+  #cloud-bar button{border:1px solid var(--line-strong);background:var(--paper-raised);padding:7px 12px;cursor:pointer;}
+  #admin-panel{margin-top:22px;padding:18px;border:1px solid var(--line-strong);background:var(--paper-raised);}
+  #admin-panel input{max-width:400px;width:100%;padding:10px;font-size:16px;border:1px solid var(--line-strong);}
+  #admin-panel li{font-size:13px;padding:5px 0;overflow-wrap:anywhere;}
+  .cloud-error{color:#9c2626;}
+  @media(max-width:480px){.wrap,.home-wrap{padding-inline:16px;}.cloud-card{margin:18px 12px;padding:17px}.player-row{padding:13px 11px}.kpi{padding:13px 12px}.tabbtn{padding:10px 11px;}}
+</style>
+</head>
+<body>
+<section id="cloud-auth-screen" aria-live="polite">
+  <div class="masthead"><div class="home-wrap"><p class="facility">Diamond Zone CT · Pitching Lab</p><h1 class="page-title">Coaching Portal</h1><p class="page-sub">Private player profiles · secure shared coaching notes</p></div></div>
+  <div class="cloud-card">
+    <h2 id="cloud-auth-title">Connecting...</h2>
+    <p id="cloud-auth-description">Checking coach access.</p>
+    <form id="cloud-login-form" class="cloud-form" style="display:none;">
+      <label>Email<input id="cloud-email" type="email" required autocomplete="email" placeholder="coach@example.com"></label>
+      <label>Password<input id="cloud-password" type="password" required minlength="6" autocomplete="current-password"></label>
+      <button class="cloud-button" type="submit" id="cloud-login-button">Sign in</button>
+    </form>
+    <div id="cloud-auth-actions" class="cloud-actions" style="display:none;">
+      <button class="cloud-button secondary" type="button" id="cloud-signup">Create coach account</button>
+      <button class="cloud-button secondary" type="button" id="cloud-reset">Reset password</button>
+    </div>
+    <div id="cloud-verification-actions" class="cloud-actions" style="display:none;">
+      <button class="cloud-button" id="cloud-recheck">I've verified — continue</button>
+      <button class="cloud-button secondary" id="cloud-resend">Resend verification email</button>
+      <button class="cloud-button secondary" id="cloud-verify-signout">Use another account</button>
+    </div>
+    <div id="cloud-auth-status" role="status" class="cloud-status"></div>
+  </div>
+</section>
+<div id="cloud-bar" style="display:none;"><div class="wrap"><span id="cloud-identity"></span><button type="button" id="cloud-signout">Sign out</button></div></div>
+
+
+<!-- ============== HOME VIEW ============== -->
+<div id="view-home" style="display:none;">
+  <div class="masthead">
+    <div class="home-wrap">
+      <p class="facility">Diamond Zone CT · Pitching Lab</p>
+      <h1 class="page-title">Player Directory</h1>
+      <p class="page-sub">14 pitchers tracked · sorted by age group</p>
+    </div>
+  </div>
+  <div class="home-wrap">
+    <section id="admin-panel" style="display:none;">
+      <h2 class="admin-title">Admin · Roster &amp; Coach Access</h2>
+      <p class="cloud-help">Only administrators can import or replace player stat records. Saved notes and grades are stored separately and will not be erased by a roster update.</p>
+      <label class="field-label" for="cloud-roster-file">Import private roster JSON</label>
+      <input type="file" accept=".json,application/json" id="cloud-roster-file">
+      <div class="cloud-actions"><button class="cloud-button" id="cloud-import" type="button">Import players</button><button class="cloud-button secondary" id="cloud-backup" type="button">Export roster backup</button></div>
+      <p class="cloud-status" role="status" id="cloud-import-status"></p>
+      <div class="field-label" style="margin-top:20px;">Approved coach emails</div>
+      <form id="cloud-invite-form" class="cloud-actions">
+        <input type="email" id="cloud-invite-email" required placeholder="coach@example.com" aria-label="Coach email">
+        <select class="type-select" id="cloud-invite-role" aria-label="Coach permissions"><option value="coach">Coach</option><option value="admin">Admin</option></select>
+        <button class="cloud-button" type="submit">Approve coach</button>
+      </form>
+      <p class="cloud-status" id="cloud-invite-status" role="status"></p>
+      <ul id="cloud-allowlist"></ul>
+    </section>
+    <p id="cloud-empty" class="cloud-help" style="display:none;">No players have been imported yet. An administrator should import the private roster JSON above.</p>
+    <div class="group">
+      <p class="group-title">13U <span class="group-count">7 pitchers</span></p>
+      <div class="roster" id="roster-13u"></div>
+    </div>
+    <div class="group">
+      <p class="group-title">14U <span class="group-count">3 pitchers</span></p>
+      <div class="roster" id="roster-14u"></div>
+    </div>
+    <div class="group">
+      <p class="group-title">16U <span class="group-count">3 pitchers</span></p>
+      <div class="roster" id="roster-16u"></div>
+    </div>
+    <div class="group">
+      <p class="group-title">Coach / Adult <span class="group-count">1 pitcher</span></p>
+      <div class="roster" id="roster-coach"></div>
+    </div>
+    <p class="home-footnote">
+      Everything here lives in this one file — click a player to view their profile, click "All Players" to come
+      back. Stats on this roster are computed live from each player's own data, so they always match what's inside
+      their profile.
+    </p>
+  </div>
+</div>
+
+<!-- ============== PLAYER VIEW ============== -->
+<div id="view-player" style="display:none;">
+  <div class="masthead">
+    <div class="wrap">
+      <div class="masthead-row">
+        <div>
+          <a href="#" class="back-link">← All Players</a>
+          <p class="facility">Diamond Zone CT · Pitching Lab</p>
+          <h1 class="player-name" id="player-name"></h1>
+          <p class="player-sub" id="player-sub"></p>
+        </div>
+        <div class="session-tag">
+          <div id="session-tag-main"></div>
+          <div style="margin-top:4px;">Source: Trackman Team Portal export</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="tabbar">
+      <button class="tabbtn active" data-tab="overview">Overview</button>
+      <button class="tabbtn" data-tab="pitchlog" id="tab-pitchlog-btn" style="display:none;">Pitch Log</button>
+      <button class="tabbtn" data-tab="notes">Notes</button>
+      <button class="tabbtn" data-tab="mechanics">Mechanical Changes</button>
+      <button class="tabbtn" data-tab="strength">Strength &amp; Mobility</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="panel active" id="panel-overview">
+      <div class="chart-row">
+        <div class="chart-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <p class="chart-title" style="margin:0;">Movement</p>
+            <div class="view-toggle" id="move-toggle" style="display:none;">
+              <button class="toggle-btn active" type="button" data-view="avg">Avg</button>
+              <button class="toggle-btn" type="button" data-view="all">All pitches</button>
+            </div>
+          </div>
+          <p class="chart-caption" id="move-caption">Avg IVB vs. HB, inches — hover a dot for values</p>
+          <div id="chart-move" style="position:relative;"></div>
+        </div>
+        <div class="chart-card">
+          <p class="chart-title" id="velo-title">Velocity</p>
+          <p class="chart-caption" id="velo-caption">Avg / max, mph</p>
+          <div id="velo-stats"></div>
+        </div>
+        <div class="chart-card">
+          <p class="chart-title">Bullpen Pitch Usage</p>
+          <p class="chart-caption" id="usage-caption">Share of tracked pitches</p>
+          <div id="chart-usage"></div>
+        </div>
+      </div>
+      <div class="table-card"><table id="pitch-table"></table></div>
+      <p class="footnote" id="overview-footnote"></p>
+    </div>
+
+    <!-- PITCH LOG (raw-data players only) -->
+    <div class="panel" id="panel-pitchlog">
+      <p class="footnote" style="margin-top:0;margin-bottom:14px;">
+        Every pitch this session. "Type" defaults to the auto-classifier's best guess — change any pitch's type
+        here and the Overview charts and table update to match. Pitches tagged "Other" stay listed here but are
+        left out of the Overview tab. Changes are saved automatically.
+      </p>
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+        <label style="font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;">
+          Sort by
+          <select id="log-sort" class="type-select">
+            <option value="no">Pitch #</option>
+            <option value="date">Date</option>
+            <option value="type">Pitch type</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-card"><table id="pitchlog-table"></table></div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="panel" id="panel-notes">
+      <div class="field-block">
+        <div class="field-label">Session &amp; general notes</div>
+        <div class="field-hint" id="notes-hint"></div>
+        <div class="note-list" id="notes-list"></div>
+        <button class="add-note-btn" type="button" id="notes-add">+ Add note</button>
+      </div>
+      <div class="save-row">
+        <button class="save-btn" id="notes-save">Save notes</button>
+        <span class="save-status" id="status-notes">Saved</span>
+      </div>
+    </div>
+
+    <!-- MECHANICAL CHANGES -->
+    <div class="panel" id="panel-mechanics">
+      <div class="two-col">
+        <div class="field-block">
+          <div class="field-label">Positives</div>
+          <div class="field-hint">What's clicking mechanically right now.</div>
+          <div class="note-list" id="mech-pos-list"></div>
+          <button class="add-note-btn" type="button" id="mech-pos-add">+ Add note</button>
+        </div>
+        <div class="field-block">
+          <div class="field-label">Areas to work on</div>
+          <div class="field-hint">What still needs attention.</div>
+          <div class="note-list" id="mech-neg-list"></div>
+          <button class="add-note-btn" type="button" id="mech-neg-add">+ Add note</button>
+        </div>
+      </div>
+      <div class="save-row">
+        <button class="save-btn" id="mechanics-save">Save changes</button>
+        <span class="save-status" id="status-mechanics">Saved</span>
+      </div>
+    </div>
+
+    <!-- STRENGTH & MOBILITY -->
+    <div class="panel" id="panel-strength">
+      <div class="field-block">
+        <div class="field-label">Strength &amp; mobility concerns</div>
+        <div class="field-hint">Screening notes, restrictions, or things to monitor through the winter.</div>
+        <div class="note-list" id="strength-list"></div>
+        <button class="add-note-btn" type="button" id="strength-add">+ Add note</button>
+      </div>
+      <div class="save-row">
+        <button class="save-btn" id="strength-save">Save notes</button>
+        <span class="save-status" id="status-strength">Saved</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Storage is attached only after verified, allowlisted Firebase authentication.
+window.storage = {
+  async get(){ throw new Error('Sign in to read cloud data'); },
+  async set(){ throw new Error('Sign in to save cloud data'); },
+  async delete(){ throw new Error('Sign in to delete cloud data'); }
+};
+
+/* ================= Shared config ================= */
+const VELO_BENCH_BY_AGE = {10:50,11:54,12:58,13:63,14:67,15:70,16:74,17:77,18:81};
+const BENCHMARKS = { velo:{fb:VELO_BENCH_BY_AGE}, veloMax:{}, ivb:{}, hb:{} };
+
+const TYPE_INFO = [
+  {key:'fb', name:'Fastball', color:'fb', seedSpeed:76.4, seedIvb:17.5, seedHb:10.0},
+  {key:'ct', name:'Cutter',   color:'ct', seedSpeed:68.8, seedIvb:8.0,  seedHb:-1.0},
+  {key:'sp', name:'Splitter', color:'sp', seedSpeed:68.7, seedIvb:11.0, seedHb:7.0},
+  {key:'ch', name:'ChangeUp', color:'ch', seedSpeed:68.7, seedIvb:12.0, seedHb:9.0},
+  {key:'sw', name:'Sweeper',  color:'sw', seedSpeed:63.9, seedIvb:3.5,  seedHb:-11.0},
+  {key:'ot', name:'Other',    color:'un', seedSpeed:68.5, seedIvb:10.0, seedHb:4.0},
+];
+const TYPE_BY_KEY = Object.fromEntries(TYPE_INFO.map(t=>[t.key,t]));
+const DISCARD_KEYS = ['ot'];
+
+/* ================= Utilities ================= */
+const cssColor = k => getComputedStyle(document.documentElement).getPropertyValue('--'+k).trim();
+const fmt = (v,d=1) => v===null||v===undefined ? '—' : (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toString();
+function median(arr){
+  const s = arr.filter(v=>v!==null&&v!==undefined).slice().sort((a,b)=>a-b);
+  if(!s.length) return null;
+  const m = Math.floor(s.length/2);
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+}
+function avg(arr){
+  const s = arr.filter(v=>v!==null&&v!==undefined);
+  return s.length ? s.reduce((a,b)=>a+b,0)/s.length : null;
+}
+function maxOf(arr){
+  const s = arr.filter(v=>v!==null&&v!==undefined);
+  return s.length ? Math.max(...s) : null;
+}
+function parseFtIn(str){
+  if(str===null||str===undefined) return null;
+  const m = String(str).match(/(\d+)'(?:(\d+)")?/);
+  if(!m) return null;
+  return (+m[1]) + (m[2]?+m[2]:0)/12;
+}
+function divergingColor(t){
+  const absT = Math.min(1, Math.abs(t));
+  const lightness = 92 - absT*30;
+  const saturation = absT*68;
+  const hue = t >= 0 ? 355 : 213;
+  return `hsl(${hue},${saturation.toFixed(0)}%,${lightness.toFixed(0)}%)`;
+}
+function benchmarkCellStyle(metric, pitchKey, value, ageNum){
+  const table = BENCHMARKS[metric] && BENCHMARKS[metric][pitchKey];
+  const bench = table ? table[ageNum] : undefined;
+  if(bench===undefined || value===null || value===undefined) return '';
+  const deltaPct = (value-bench)/bench;
+  const t = Math.max(-1, Math.min(1, deltaPct/0.15));
+  return `background:${divergingColor(t)};`;
+}
+function gradeColor(grade){
+  const t = Math.max(-1, Math.min(1, (grade-50)/30));
+  return divergingColor(t);
+}
+const GRADES = [80,75,70,65,60,55,50,45,40,35,30,25,20];
+
+/* ================= Classification (raw per-pitch players) ================= */
+function classify(p){
+  let best=null, bestD=Infinity;
+  TYPE_INFO.forEach(t=>{
+    const dv=(p.speed-t.seedSpeed)/8;
+    let d=dv*dv;
+    if(p.ivb!==null){ const di=(p.ivb-t.seedIvb)/10; d+=di*di; }
+    if(p.hb!==null){ const dh=(p.hb-t.seedHb)/10; d+=dh*dh; }
+    if(d<bestD){bestD=d; best=t.key;}
+  });
+  return best;
+}
+function effectiveType(p, player){ return (player.typeOverrides && player.typeOverrides[p.no]) || p.autoType; }
+function groupByType(player){
+  const groups={}; TYPE_INFO.forEach(t=>groups[t.key]=[]);
+  player.rawPitches.forEach(p=>groups[effectiveType(p,player)].push(p));
+  return groups;
+}
+function getTypeSummary(player){
+  if(player.dataType==='aggregate') return player.pitches;
+  const groups = groupByType(player);
+  return TYPE_INFO.filter(t=>!DISCARD_KEYS.includes(t.key) && groups[t.key].length>0)
+    .map(t=>{
+      const items = groups[t.key];
+      const spinMed = median(items.map(p=>p.spin));
+      return {
+        name:t.name, key:t.key, n:items.length,
+        velo: median(items.map(p=>p.speed)),
+        veloMax: maxOf(items.map(p=>p.speed)),
+        spin: spinMed===null?null:Math.round(spinMed),
+        ivb: avg(items.map(p=>p.ivb)),
+        hb: avg(items.map(p=>p.hb)),
+        vaa: null,
+      };
+    }).sort((a,b)=>b.n-a.n);
+}
+
+/* ================= Player data ================= */
+// Player records are read from permission-protected Firestore after coach login.
+const PLAYERS = {};
+
+const ROSTER_GROUPS = [
+  {containerId:'roster-13u', ids:[]},
+  {containerId:'roster-14u', ids:[]},
+  {containerId:'roster-16u', ids:[]},
+  {containerId:'roster-coach', ids:[]},
+];
+
+/* ================= Home view ================= */
+async function ensureOverridesLoaded(player){
+  if(player.dataType!=='raw' || player._overridesLoaded) return;
+  try{
+    const res = await window.storage.get(player.id+':type-overrides', false);
+    if(res && res.value) player.typeOverrides = JSON.parse(res.value);
+  }catch(e){ /* none saved yet */ }
+  player._overridesLoaded = true;
+}
+
+async function renderHome(){
+  for(const group of ROSTER_GROUPS){
+    const rows = await Promise.all(group.ids.map(async id=>{
+      const player = PLAYERS[id];
+      await ensureOverridesLoaded(player);
+      const summary = getTypeSummary(player);
+      const totalN = summary.reduce((s,p)=>s+p.n,0);
+      const primary = summary.reduce((a,b)=> b.n>a.n?b:a, summary[0]);
+      const fb = summary.find(p=>p.key==='fb');
+      const veloLabel = player.dataType==='raw' ? 'FB med.' : 'FB avg';
+      const blurb = `${totalN} pitches · ${player.sessions} session${player.sessions===1?'':'s'} · `+
+        `Primary: ${primary.name} (${Math.round(primary.n/totalN*100)}%)` +
+        (fb ? ` · ${veloLabel} ${fmt(fb.velo)} mph` : '');
+      return `<a class="player-row" href="#${id}">
+        <div class="player-info">
+          <p class="player-name">${player.name}</p>
+          <p class="player-blurb">${blurb}</p>
+        </div>
+        <span class="chevron">→</span>
+      </a>`;
+    }));
+    document.getElementById(group.containerId).innerHTML = rows.join('');
+  }
+}
+
+/* ================= Reusable scatter chart ================= */
+function scatterChart(containerId, points, xLabel, yLabel, sizeByN){
+  const isNarrow = window.innerWidth <= 480;
+  const w = isNarrow ? 300 : 380;
+  const h = 300;
+  const pad = isNarrow ? 32 : 36;
+  const fsAxis = isNarrow ? 11 : 9;
+  const fsEnd = isNarrow ? 10 : 8.5;
+  const x0=-20, x1=20, y0=-20, y1=20;
+  const X = v => pad + (v-x0)/(x1-x0)*(w-2*pad);
+  const Y = v => (h-pad) - (v-y0)/(y1-y0)*(h-2*pad);
+  const maxN = sizeByN ? Math.max(...points.map(p=>p.n||1)) : null;
+  let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%">`;
+  svg += `<line x1="${X(0)}" y1="${pad}" x2="${X(0)}" y2="${h-pad}" stroke="${cssColor('line-strong')}" stroke-width="1"/>`;
+  svg += `<line x1="${pad}" y1="${Y(0)}" x2="${w-pad}" y2="${Y(0)}" stroke="${cssColor('line-strong')}" stroke-width="1"/>`;
+  svg += `<text x="${pad+2}" y="${Y(0)-4}" font-size="${fsEnd}" fill="${cssColor('ink-soft')}" text-anchor="start" font-family="Inter">-20</text>`;
+  svg += `<text x="${w-pad-2}" y="${Y(0)-4}" font-size="${fsEnd}" fill="${cssColor('ink-soft')}" text-anchor="end" font-family="Inter">20</text>`;
+  svg += `<text x="${X(0)+4}" y="${pad+8}" font-size="${fsEnd}" fill="${cssColor('ink-soft')}" text-anchor="start" font-family="Inter">20</text>`;
+  svg += `<text x="${X(0)+4}" y="${h-pad-2}" font-size="${fsEnd}" fill="${cssColor('ink-soft')}" text-anchor="start" font-family="Inter">-20</text>`;
+  svg += `<text x="${pad}" y="${h-10}" font-size="${fsAxis}" fill="${cssColor('ink-soft')}" font-family="Inter">${xLabel}</text>`;
+  svg += `<text x="6" y="${pad-8}" font-size="${fsAxis}" fill="${cssColor('ink-soft')}" font-family="Inter">${yLabel}</text>`;
+  points.forEach((p,i)=>{
+    const r = sizeByN ? (isNarrow?7:6) + ((p.n||1)/maxN)*(isNarrow?13:12) : (isNarrow?6:5);
+    svg += `<circle class="dot" cx="${X(p.x)}" cy="${Y(p.y)}" r="${r}" fill="${p.color}" fill-opacity="0.82" stroke="${cssColor('paper-raised')}" stroke-width="1" style="cursor:pointer;" data-i="${i}"/>`;
+  });
+  svg += `</svg>`;
+  const container = document.getElementById(containerId);
+  container.innerHTML = svg;
+  container.insertAdjacentHTML('beforeend', `<div class="dot-tooltip"></div>`);
+  const tooltip = container.querySelector('.dot-tooltip');
+  function showTip(p, clientX, clientY){
+    const rect = container.getBoundingClientRect();
+    tooltip.style.left = (clientX-rect.left)+'px';
+    tooltip.style.top = (clientY-rect.top-8)+'px';
+    tooltip.innerHTML = p.tooltip;
+    tooltip.classList.add('show');
+  }
+  container.querySelectorAll('.dot').forEach(dot=>{
+    const p = points[+dot.dataset.i];
+    dot.addEventListener('mousemove', (e)=> showTip(p, e.clientX, e.clientY));
+    dot.addEventListener('mouseleave', ()=> tooltip.classList.remove('show'));
+    dot.addEventListener('touchstart', (e)=>{
+      e.preventDefault();
+      const t = e.touches[0];
+      const already = tooltip.classList.contains('show') && tooltip.dataset.forIdx===dot.dataset.i;
+      if(already){ tooltip.classList.remove('show'); }
+      else{ showTip(p, t.clientX, t.clientY); tooltip.dataset.forIdx = dot.dataset.i; }
+    });
+  });
+  document.addEventListener('touchstart', (e)=>{
+    if(!e.target.classList.contains('dot')) tooltip.classList.remove('show');
+  });
+}
+
+/* ================= Player view: Overview ================= */
+let moveViewMode = 'avg';
+
+function renderMovementChart(player, summary){
+  if(moveViewMode==='avg' || player.dataType==='aggregate'){
+    document.getElementById('move-caption').textContent = player.dataType==='raw'
+      ? 'Avg IVB vs. HB, inches, by pitch type — dot size = pitch count'
+      : 'Avg IVB vs. HB, inches — hover a dot for values';
+    const points = summary.filter(p=>p.ivb!==null && p.hb!==null).map(p=>({
+      x:p.hb, y:p.ivb, n:p.n, color:cssColor(p.key),
+      tooltip:`<strong>${p.name}</strong>IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
+    }));
+    scatterChart('chart-move', points, 'Horz. break (in) →', '↑ IVB (in)', true);
+  } else {
+    document.getElementById('move-caption').textContent = 'IVB vs. HB, inches — one dot per pitch, hover for detail';
+    const points = player.rawPitches.filter(p=>p.ivb!==null && p.hb!==null && !DISCARD_KEYS.includes(effectiveType(p,player))).map(p=>({
+      x:p.hb, y:p.ivb, color:cssColor(TYPE_BY_KEY[effectiveType(p,player)].color),
+      tooltip:`<strong>#${p.no} · ${TYPE_BY_KEY[effectiveType(p,player)].name}</strong>IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
+    }));
+    scatterChart('chart-move', points, 'Horz. break (in) →', '↑ IVB (in)', false);
+  }
+}
+
+function buildFootnote(player, totalN){
+  if(player.dataType==='raw'){
+    return `${totalN} pitches from the ${player.sessionDate} practice feed this view — pitches classified or `+
+    `tagged "Other" are excluded from Overview, though they're still listed in the Pitch Log if you want to review `+
+    `or reclassify them. The session export's per-pitch color-coding didn't survive, so each remaining pitch's `+
+    `type above is an auto-classified best guess (nearest match on velocity + movement) — most reliable for `+
+    `Fastball and Sweeper, least reliable in the 66&ndash;70 mph cluster where Cutter, ChangeUp, and Splitter `+
+    `overlap. Check the Pitch Log tab to correct any pitch — it flows through everywhere above. Velo and Spin are `+
+    `true medians here since this export has every pitch — VAA isn't in this session's export, so that column `+
+    `reads blank. Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still `+
+    `yours to set by hand).`;
+  }
+  const bench = VELO_BENCH_BY_AGE[player.ageNum];
+  const discardNote = player.discardedUndefined>0
+    ? `${player.discardedUndefined===1?'One':player.discardedUndefined} Undefined pitch${player.discardedUndefined===1?'':'es'} from the export ${player.discardedUndefined===1?'is':'are'} discarded from this profile rather than guessed at.`
+    : `No Undefined pitches in this export, so nothing was discarded.`;
+  const benchNote = bench!==undefined
+    ? ` Velo is shaded against average fastball velocity for ${player.ageLabel} (${bench} mph) — red above the mark (better), blue below it (worse), darker meaning further off average either way. Max, IVB, and HB are wired for the same treatment but unshaded for now — no age-group norms for those yet, pending a fuller look once more players' data is in.`
+    : '';
+  return `Figures pulled directly from the Diamond Zone CT session export (${player.sessions} session${player.sessions===1?'':'s'}, ${totalN} pitches). Movement chart plots each pitch type's average break. ${discardNote}${benchNote} Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still yours to set by hand — no model behind it yet).`;
+}
+
+async function renderPitchTable(player, summary, totalN){
+  let savedGrades = {};
+  try{
+    const res = await window.storage.get(player.id+':grades', false);
+    if(res && res.value) savedGrades = JSON.parse(res.value);
+  }catch(e){ /* none saved yet */ }
+
+  const headCols = ['Pitch','#','Usage','Velo','Max','Spin','IVB','HB','VAA','Grade'];
+  let html = `<thead><tr>${headCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+  summary.forEach(p=>{
+    const share = Math.round(p.n/totalN*100)+'%';
+    const savedGrade = savedGrades[p.key] || 50;
+    const gradeOptions = GRADES.map(g=>`<option value="${g}" ${g===savedGrade?'selected':''}>${g}</option>`).join('');
+    html += `<tr>
+      <td class="pitch-cell"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${p.name}</td>
+      <td>${p.n}</td>
+      <td>${share}</td>
+      <td style="${benchmarkCellStyle('velo',p.key,p.velo,player.ageNum)}">${fmt(p.velo)}</td>
+      <td class="dim" style="${benchmarkCellStyle('veloMax',p.key,p.veloMax,player.ageNum)}">${fmt(p.veloMax)}</td>
+      <td>${p.spin===null?'<span class="na">—</span>':p.spin}</td>
+      <td style="${benchmarkCellStyle('ivb',p.key,p.ivb,player.ageNum)}">${p.ivb===null?'<span class="na">—</span>':fmt(p.ivb)}</td>
+      <td style="${benchmarkCellStyle('hb',p.key,p.hb,player.ageNum)}">${p.hb===null?'<span class="na">—</span>':fmt(p.hb)}</td>
+      <td>${p.vaa===null?'<span class="na">—</span>':fmt(p.vaa)}</td>
+      <td><select class="grade-select" data-pitch-key="${p.key}">${gradeOptions}</select></td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('pitch-table').innerHTML = html;
+
+  document.querySelectorAll('.grade-select').forEach(sel=>{
+    sel.style.background = gradeColor(+sel.value);
+    sel.addEventListener('change', async ()=>{
+      sel.style.background = gradeColor(+sel.value);
+      try{
+        const res = await window.storage.get(player.id+':grades', false).catch(()=>null);
+        const current = (res && res.value) ? JSON.parse(res.value) : {};
+        current[sel.dataset.pitchKey] = +sel.value;
+        await window.storage.set(player.id+':grades', JSON.stringify(current), false);
+      }catch(e){ window.DZ_SAVE_ERROR?.(e); }
+    });
+  });
+}
+
+function renderOverview(player){
+  const summary = getTypeSummary(player);
+  const totalN = summary.reduce((s,p)=>s+p.n,0);
+  const primary = summary.reduce((a,b)=> b.n>a.n?b:a, summary[0]);
+  const fb = summary.find(p=>p.key==='fb');
+
+  const kpiData = [
+    {label:'Total Pitches', value:totalN},
+    {label:'Sessions', value:player.sessions},
+    {label:'Pitch Types', value:summary.length},
+    {label:'Primary Pitch', value:primary.name, small:Math.round(primary.n/totalN*100)+'%'},
+    {label: player.dataType==='raw' ? 'Fastball Med.' : 'Fastball Avg', value: fb?fmt(fb.velo):'—', small:'mph'},
+  ];
+  document.getElementById('kpis').innerHTML = kpiData.map(k =>
+    `<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}${k.small?` <small>${k.small}</small>`:''}</div></div>`
+  ).join('');
+
+  document.getElementById('velo-title').textContent = 'Velocity';
+  document.getElementById('velo-caption').textContent = player.dataType==='raw'
+    ? 'Median / max, mph, by pitch type'
+    : "Avg / max, mph — this is the export's average, not a true median (needs per-pitch data)";
+  document.getElementById('velo-stats').innerHTML = summary.map(p=>`
+    <div class="velo-row">
+      <div class="velo-name"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${p.name}</div>
+      <div class="velo-nums">
+        <span class="velo-avg">${fmt(p.velo)}<small>${player.dataType==='raw'?'med':'avg'}</small></span>
+        <span class="velo-max">${fmt(p.veloMax)} max</span>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('move-toggle').style.display = player.dataType==='raw' ? 'flex' : 'none';
+  renderMovementChart(player, summary);
+
+  document.getElementById('usage-caption').textContent = `Share of ${totalN} tracked pitches`;
+  (function(){
+    const w=440,h=186,padL=90,padR=40,padT=6,padB=22;
+    const rowH=(h-padT-padB)/summary.length;
+    const scaleW = w-padL-padR;
+    const barW = pct => (pct/100)*scaleW;
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%">`;
+    summary.forEach((p,i)=>{
+      const y = padT + rowH*i + rowH*0.2;
+      const bh = rowH*0.6;
+      const sharePrecise = p.n/totalN*100;
+      const share = Math.round(sharePrecise);
+      svg += `<text x="${padL-10}" y="${y+bh/2+3.5}" font-size="10.5" fill="${cssColor('ink')}" text-anchor="end" font-family="Inter" font-weight="600">${p.name}</text>`;
+      svg += `<rect x="${padL}" y="${y}" width="${barW(sharePrecise)}" height="${bh}" fill="${cssColor(p.key)}"/>`;
+      svg += `<text x="${padL+barW(sharePrecise)+8}" y="${y+bh/2+3.5}" font-size="10" fill="${cssColor('ink-soft')}" font-family="Inter">${share}%</text>`;
+    });
+    const axisY = h-padB+8;
+    svg += `<line x1="${padL}" y1="${axisY}" x2="${padL+scaleW}" y2="${axisY}" stroke="${cssColor('line-strong')}" stroke-width="1"/>`;
+    svg += `<text x="${padL}" y="${axisY+11}" font-size="8.5" fill="${cssColor('ink-soft')}" text-anchor="start" font-family="Inter">0</text>`;
+    svg += `<text x="${padL+scaleW}" y="${axisY+11}" font-size="8.5" fill="${cssColor('ink-soft')}" text-anchor="end" font-family="Inter">100%</text>`;
+    svg += `</svg>`;
+    document.getElementById('chart-usage').innerHTML = svg;
+  })();
+
+  renderPitchTable(player, summary, totalN);
+  document.getElementById('overview-footnote').innerHTML = buildFootnote(player, totalN);
+}
+
+document.querySelectorAll('#move-toggle .toggle-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#move-toggle .toggle-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    moveViewMode = btn.dataset.view;
+    const player = PLAYERS[currentPlayerId];
+    if(player) renderMovementChart(player, getTypeSummary(player));
+  });
+});
+
+/* ================= Pitch Log (raw-data players) ================= */
+function sortedPitches(player){
+  const arr = player.rawPitches.slice();
+  if(player.logSortBy==='date'){
+    arr.sort((a,b)=> a.date===b.date ? a.no-b.no : (a.date<b.date?-1:1));
+  } else if(player.logSortBy==='type'){
+    arr.sort((a,b)=>{
+      const ta=TYPE_BY_KEY[effectiveType(a,player)].name, tb=TYPE_BY_KEY[effectiveType(b,player)].name;
+      return ta===tb ? a.no-b.no : ta.localeCompare(tb);
+    });
+  } else {
+    arr.sort((a,b)=>a.no-b.no);
+  }
+  return arr;
+}
+function renderPitchLog(player){
+  document.getElementById('log-sort').value = player.logSortBy;
+  const headCols = ['#','Date','Type','Speed','Spin','Tilt','IVB','HB','Ext','Rel. H','Rel. Side','Spin Eff.'];
+  let html = `<thead><tr>${headCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+  sortedPitches(player).forEach(p=>{
+    const t = effectiveType(p,player);
+    const typeOptions = TYPE_INFO.map(ti=>`<option value="${ti.key}" ${ti.key===t?'selected':''}>${ti.name}</option>`).join('');
+    html += `<tr>
+      <td class="dim">${p.no}</td>
+      <td class="dim">${p.date}</td>
+      <td style="text-align:left;"><select class="type-select" data-pitch-no="${p.no}">${typeOptions}</select></td>
+      <td>${fmt(p.speed)}</td>
+      <td>${p.spin ?? '<span class="na">—</span>'}</td>
+      <td class="dim">${p.tilt ?? '<span class="na">—</span>'}</td>
+      <td>${p.ivb===null?'<span class="na">—</span>':fmt(p.ivb)}</td>
+      <td>${p.hb===null?'<span class="na">—</span>':fmt(p.hb)}</td>
+      <td class="dim">${p.ext===null?'<span class="na">—</span>':fmt(p.ext,1)}</td>
+      <td class="dim">${p.relH===null?'<span class="na">—</span>':fmt(p.relH,1)}</td>
+      <td class="dim">${p.relSide===null?'<span class="na">—</span>':fmt(p.relSide,1)}</td>
+      <td>${p.spinEff===null?'<span class="na">—</span>':p.spinEff+'%'}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('pitchlog-table').innerHTML = html;
+
+  document.querySelectorAll('.type-select').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const no = +sel.dataset.pitchNo;
+      player.typeOverrides[no] = sel.value;
+      try{
+        await window.storage.set(player.id+':type-overrides', JSON.stringify(player.typeOverrides), false);
+      }catch(e){ /* not saved */ }
+      renderOverview(player);
+      renderPitchLog(player);
+    });
+  });
+}
+document.getElementById('log-sort').addEventListener('change', (e)=>{
+  const player = PLAYERS[currentPlayerId];
+  if(!player) return;
+  player.logSortBy = e.target.value;
+  renderPitchLog(player);
+});
+
+/* ================= Notes / Mechanics / Strength ================= */
+function makeNoteList(containerId, addBtnId, initialNotes){
+  let notes = (initialNotes && initialNotes.length) ? initialNotes.slice() : [''];
+  function render(){
+    const container = document.getElementById(containerId);
+    container.innerHTML = notes.map((_,i)=>`
+      <div class="note-box">
+        <textarea class="note-textarea" data-idx="${i}" placeholder="Add a note..."></textarea>
+        ${notes.length>1 ? `<button class="note-remove" type="button" data-idx="${i}" title="Remove this note">×</button>` : ''}
+      </div>`).join('');
+    container.querySelectorAll('.note-textarea').forEach((ta,i)=> ta.value = notes[i]);
+    container.querySelectorAll('.note-remove').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        container.querySelectorAll('.note-textarea').forEach((ta,i)=> notes[i]=ta.value);
+        notes.splice(+btn.dataset.idx,1); render();
+      });
+    });
+  }
+  render();
+  const addBtn = document.getElementById(addBtnId);
+  function capture(){ document.querySelectorAll('#'+containerId+' .note-textarea').forEach((ta,i)=> notes[i]=ta.value); }
+  addBtn.onclick = ()=>{ capture(); notes.push(''); render(); };
+  return { getValues(){
+    document.querySelectorAll('#'+containerId+' .note-textarea').forEach((ta,i)=> notes[i]=ta.value);
+    return notes.filter(t=>t.trim()!=='');
+  }};
+}
+function flashStatus(el, text){
+  el.textContent = text;
+  el.classList.add('show');
+  if(text==='Saved') setTimeout(()=>el.classList.remove('show'), 1800);
+}
+async function initPlayerNotes(player){
+  document.getElementById('notes-hint').textContent = `Anything you'd want another coach on staff to see before working with ${player.name.split(' ')[0]}.`;
+
+  let savedNotes = [];
+  try{ const res = await window.storage.get(player.id+':notes', false); if(res&&res.value) savedNotes = JSON.parse(res.value); }catch(e){}
+  player._notesList = makeNoteList('notes-list','notes-add', savedNotes);
+
+  let savedMech = {positives:[], negatives:[]};
+  try{ const res = await window.storage.get(player.id+':mechanics', false); if(res&&res.value) savedMech = JSON.parse(res.value); }catch(e){}
+  player._mechPosList = makeNoteList('mech-pos-list','mech-pos-add', savedMech.positives);
+  player._mechNegList = makeNoteList('mech-neg-list','mech-neg-add', savedMech.negatives);
+
+  let savedStrength = [];
+  try{ const res = await window.storage.get(player.id+':strength', false); if(res&&res.value) savedStrength = JSON.parse(res.value); }catch(e){}
+  player._strengthList = makeNoteList('strength-list','strength-add', savedStrength);
+}
+document.getElementById('notes-save').addEventListener('click', async ()=>{
+  const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-notes');
+  try{ await window.storage.set(player.id+':notes', JSON.stringify(player._notesList.getValues()), false); flashStatus(statusEl,'Saved'); }
+  catch(e){ flashStatus(statusEl,'Save failed — try again'); }
+});
+document.getElementById('mechanics-save').addEventListener('click', async ()=>{
+  const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-mechanics');
+  try{
+    const payload = { positives: player._mechPosList.getValues(), negatives: player._mechNegList.getValues() };
+    await window.storage.set(player.id+':mechanics', JSON.stringify(payload), false);
+    flashStatus(statusEl,'Saved');
+  }catch(e){ flashStatus(statusEl,'Save failed — try again'); }
+});
+document.getElementById('strength-save').addEventListener('click', async ()=>{
+  const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-strength');
+  try{ await window.storage.set(player.id+':strength', JSON.stringify(player._strengthList.getValues()), false); flashStatus(statusEl,'Saved'); }
+  catch(e){ flashStatus(statusEl,'Save failed — try again'); }
+});
+
+/* ================= Tabs ================= */
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ================= Navigation ================= */
+let currentPlayerId = null;
+
+function showHome(){
+  currentPlayerId = null;
+  document.getElementById('view-player').style.display = 'none';
+  document.getElementById('view-home').style.display = 'block';
+  renderHome();
+  window.scrollTo(0,0);
+}
+
+async function showPlayer(id){
+  const player = PLAYERS[id];
+  if(!player){ showHome(); return; }
+  currentPlayerId = id;
+  document.getElementById('view-home').style.display = 'none';
+  document.getElementById('view-player').style.display = 'block';
+
+  document.getElementById('player-name').textContent = player.name;
+  document.getElementById('player-sub').textContent = 'Pitcher · ' + player.ageLabel;
+  document.getElementById('session-tag-main').innerHTML =
+    `<span class="live-dot"></span><strong>${player.sessions} session${player.sessions===1?'':'s'}</strong> selected`;
+
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.tabbtn[data-tab="overview"]').classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-overview').classList.add('active');
+  document.getElementById('tab-pitchlog-btn').style.display = player.dataType==='raw' ? '' : 'none';
+
+  moveViewMode = 'avg';
+  document.querySelectorAll('#move-toggle .toggle-btn').forEach(b=>b.classList.remove('active'));
+  const avgBtn = document.querySelector('#move-toggle .toggle-btn[data-view="avg"]');
+  if(avgBtn) avgBtn.classList.add('active');
+
+  await ensureOverridesLoaded(player);
+  renderOverview(player);
+  if(player.dataType==='raw') renderPitchLog(player);
+  await initPlayerNotes(player);
+
+  window.scrollTo(0,0);
+}
+
+window.addEventListener('hashchange', ()=>{
+  if(!window.DZ_AUTHORIZED) return;
+  const id = decodeURIComponent(location.hash.slice(1));
+  if(PLAYERS[id]) showPlayer(id); else showHome();
+});
+</script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="./firebase-config.js"></script>
+<script src="./cloud.js"></script>
+</body>
+</html>
