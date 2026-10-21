@@ -65,6 +65,17 @@
   }
 
   function sortGroups() {
+    const coachGroup=$('roster-coach').closest('.group');
+    const groupIds=new Set(ROSTER_GROUPS.map(g=>g.containerId));
+    for(const p of Object.values(PLAYERS)){
+      const id='roster-'+p.ageNum+'u';
+      if(p.ageNum===28||groupIds.has(id))continue;
+      const section=document.createElement('div');section.className='group';
+      const title=document.createElement('p');title.className='group-title';title.append(document.createTextNode(p.ageNum+'U '));
+      const count=document.createElement('span');count.className='group-count';title.append(count);
+      const roster=document.createElement('div');roster.className='roster';roster.id=id;section.append(title,roster);coachGroup.before(section);
+      ROSTER_GROUPS.splice(ROSTER_GROUPS.length-1,0,{containerId:id,ids:[]});groupIds.add(id);
+    }
     const seen=new Set();
     for(const group of ROSTER_GROUPS) {
       group.ids=group.ids.filter(id=>PLAYERS[id] && !seen.has(id) && seen.add(id));
@@ -108,9 +119,10 @@
     await loadPlayers();
     const id=decodeURIComponent(location.hash.slice(1));
     if(PLAYERS[id]) await showPlayer(id);else showHome();
+    window.DZ_IMPORTER_INIT({firestore:db,currentUser:activeUser});
     if(staff.role==='admin') await listCoaches();
   }
-  window.DZ_RELOAD_ROSTER=async()=>{await loadRoster();};
+  window.DZ_RELOAD_ROSTER=async()=>{await loadPlayers();};
   window.DZ_CURRENT_PLAYER=()=>currentPlayerId;
   async function checkAccess(user) {
     const version=++accessVersion;
