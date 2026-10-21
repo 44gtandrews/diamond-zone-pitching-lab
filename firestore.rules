@@ -33,10 +33,28 @@ service cloud.firestore {
     }
     match /players/{playerId} {
       allow read: if approved();
-      allow create, update: if isAdmin()
+      allow create: if isAdmin() || (approved()
         && request.resource.data.id == playerId
         && request.resource.data.name is string
-        && request.resource.data.dataType in ['aggregate', 'raw'];
+        && request.resource.data.name.size() > 1
+        && request.resource.data.ageNum is int
+        && request.resource.data.sessions == 1
+        && request.resource.data.dataType == 'aggregate'
+        && request.resource.data.pitches is list
+        && request.resource.data.pitches.size() > 0
+        && request.resource.data.pitches.size() <= 8);
+      allow update: if isAdmin() || (approved()
+        && resource.data.dataType == 'aggregate'
+        && request.resource.data.dataType == 'aggregate'
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.ageNum == resource.data.ageNum
+        && request.resource.data.ageLabel == resource.data.ageLabel
+        && request.resource.data.sessions == resource.data.sessions + 1
+        && request.resource.data.pitches is list
+        && request.resource.data.pitches.size() > 0
+        && request.resource.data.pitches.size() <= 8
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pitches','sessions','updatedBy','updatedAt','importHistory']));
       allow delete: if isAdmin();
     }
     match /playerEdits/{playerId}/sections/{section} {
