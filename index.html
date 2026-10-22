@@ -523,32 +523,14 @@
   <div class="home-wrap">
     <section id="admin-panel">
       <h2 class="admin-title">Access Management &amp; Roster</h2>
-      <section class="dz-inactive-panel" aria-labelledby="cloud-inactive-heading">
-        <div class="admin-section-head">
-          <h3 id="cloud-inactive-heading" class="admin-title">Inactive Players <span id="cloud-inactive-count" class="dz-count">0</span></h3>
-          <button class="cloud-button secondary" id="cloud-refresh-inactive" type="button">Refresh list</button>
-        </div>
-        <p class="cloud-help">Inactive profiles are removed from the Internal and External directories and kept here with their pitching data, coaching notes and existing six-digit IDs. Reactivate them anytime.</p>
-        <ul class="dz-coach-list" id="cloud-inactive-list" aria-labelledby="cloud-inactive-heading"></ul>
-        <p class="cloud-status" id="cloud-inactive-status" role="status"></p>
-      </section>
-      <div class="dz-backup-section">
-        <h3 class="admin-title">Emergency data backup and restore</h3>
-        <p class="cloud-help">Download a private JSON snapshot of all players, linked six-digit IDs, coaching notes, grades, coach approvals and requests. Keep backups in a secure location.</p>
-        <div class="cloud-actions"><button class="cloud-button" id="cloud-full-backup" type="button">Download full backup JSON</button></div>
-        <label class="field-label" for="cloud-full-restore-file" style="display:block;margin-top:18px;">Restore a full backup</label>
-        <p class="cloud-help dz-backup-warning">Restoration can overwrite existing records. Review the file and type RESTORE before proceeding. Existing records absent from the file are not deleted.</p>
-        <input id="cloud-full-restore-file" type="file" accept=".json,application/json">
-        <div class="cloud-actions"><button class="cloud-button secondary" id="cloud-full-restore" type="button">Restore full backup</button></div>
-        <p class="cloud-status" role="status" id="cloud-full-status"></p>
-      </div>
-      <h3 class="admin-title">Legacy roster-only tools</h3>
-      <p class="cloud-help">Administrators manage private backups, account roles and player records. Pitching Coaches can add players, upload Trackman sessions and edit coaching notes. Coaches and Player/Parent accounts have read-only access appropriate to their roles.</p>
-      <label class="field-label" for="cloud-roster-file">Bulk import private roster JSON (not for Trackman PDFs)</label>
-      <p class="cloud-help">To create a player from a Trackman PDF, use <strong>+ Add Player · Upload File</strong> above. This admin-only field accepts the private roster backup JSON only.</p>
-      <input type="file" accept=".json,application/json" id="cloud-roster-file">
-      <div class="cloud-actions"><button class="cloud-button" id="cloud-import" type="button">Import players</button><button class="cloud-button secondary" id="cloud-backup" type="button">Export roster backup</button></div>
-      <p class="cloud-status" role="status" id="cloud-import-status"></p>
+      
+      <nav class="dz-admin-jumps" aria-label="Admin dashboard sections">
+        <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-requests">Access requests</button>
+        <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-permissions">Account roles</button>
+        <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-inactive">Inactive players</button>
+        <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-backups">Backups</button>
+      </nav>
+      <section id="dz-admin-requests" class="dz-admin-group">
       <div class="admin-section-head" style="margin-top:26px;">
         <h3 class="field-label" id="admin-pending-heading">Pending coach requests <span id="cloud-pending-count" class="dz-count">0</span></h3>
         <button type="button" id="cloud-refresh-requests" class="cloud-button secondary">Refresh requests</button>
@@ -557,6 +539,8 @@
       <ul class="dz-coach-list" id="cloud-pending-requests" aria-labelledby="admin-pending-heading"></ul>
       <h3 class="field-label" style="margin-top:24px;">Denied requests</h3>
       <ul class="dz-coach-list" id="cloud-denied-requests"></ul>
+      </section>
+      <section id="dz-admin-permissions" class="dz-admin-group">
       <h3 class="field-label" style="margin-top:24px;">Account Permissions</h3>
       <p class="cloud-help">Admins manage accounts and data. Pitching Coaches can upload Trackman and edit coaching notes. Coaches can view all players without edits. Players/Parents see only the single linked player you select. Admin access for another person should be used only as an emergency backup.</p>
       <form id="cloud-invite-form" class="cloud-actions">
@@ -573,6 +557,34 @@
       <p class="cloud-status" id="cloud-invite-status" role="status"></p>
       <ul id="cloud-allowlist" class="dz-coach-list"></ul>
       <p class="cloud-status" id="cloud-request-status" role="status"></p>
+      </section>
+      <section id="dz-admin-inactive" class="dz-inactive-panel" aria-labelledby="cloud-inactive-heading">
+        <div class="admin-section-head">
+          <h3 id="cloud-inactive-heading" class="admin-title">Inactive Players <span id="cloud-inactive-count" class="dz-count">0</span></h3>
+          <button class="cloud-button secondary" id="cloud-refresh-inactive" type="button">Refresh list</button>
+        </div>
+        <p class="cloud-help">Inactive profiles are removed from the Internal and External directories and kept here with their pitching data, coaching notes and existing six-digit IDs. Reactivate them anytime.</p>
+        <ul class="dz-coach-list" id="cloud-inactive-list" aria-labelledby="cloud-inactive-heading"></ul>
+        <p class="cloud-status" id="cloud-inactive-status" role="status"></p>
+      </section>
+      <div id="dz-admin-backups" class="dz-backup-section">
+        <h3 class="admin-title">Emergency data backup and restore</h3>
+        <p class="cloud-help">Download a private JSON snapshot of all players, linked six-digit IDs, coaching notes, grades, coach approvals and requests. Keep backups in a secure location.</p>
+        <div class="cloud-actions"><button class="cloud-button" id="cloud-full-backup" type="button">Download full backup JSON</button></div>
+        <label class="field-label" for="cloud-full-restore-file" style="display:block;margin-top:18px;">Restore a full backup</label>
+        <p class="cloud-help dz-backup-warning">Restoration can overwrite existing records. Review the file and type RESTORE before proceeding. Existing records absent from the file are not deleted.</p>
+        <input id="cloud-full-restore-file" type="file" accept=".json,application/json">
+        <div class="cloud-actions"><button class="cloud-button secondary" id="cloud-full-restore" type="button">Restore full backup</button></div>
+        <p class="cloud-status" role="status" id="cloud-full-status"></p>
+      </div>
+      <div id="dz-admin-legacy" class="dz-legacy-tools"><h3 class="admin-title">Legacy roster-only tools</h3>
+      <p class="cloud-help">Administrators manage private backups, account roles and player records. Pitching Coaches can add players, upload Trackman sessions and edit coaching notes. Coaches and Player/Parent accounts have read-only access appropriate to their roles.</p>
+      <label class="field-label" for="cloud-roster-file">Bulk import private roster JSON (not for Trackman PDFs)</label>
+      <p class="cloud-help">To create a player from a Trackman PDF, use <strong>+ Add Player · Upload File</strong> above. This admin-only field accepts the private roster backup JSON only.</p>
+      <input type="file" accept=".json,application/json" id="cloud-roster-file">
+      <div class="cloud-actions"><button class="cloud-button" id="cloud-import" type="button">Import players</button><button class="cloud-button secondary" id="cloud-backup" type="button">Export roster backup</button></div>
+      <p class="cloud-status" role="status" id="cloud-import-status"></p>
+      </div>
       <div class="dz-sms-note">
         <strong>New-coach text alerts</strong>
         <p>Optional SMS notifications can be enabled securely through Firebase Cloud Functions and an SMS provider. No phone number or messaging credentials are stored in the website.</p>
@@ -1366,6 +1378,14 @@ window.DZ_OPEN_ADMIN=()=>{
 };
 document.getElementById('cloud-directory-nav').addEventListener('click',()=>window.DZ_GO_HOME());
 document.getElementById('cloud-admin-nav').addEventListener('click',()=>window.DZ_OPEN_ADMIN());
+document.querySelectorAll('.dz-admin-jump').forEach(button=>{
+  button.addEventListener('click',()=>{
+    const section=document.getElementById(button.dataset.adminTarget);
+    if(section && document.getElementById('view-admin').style.display!=='none'){
+      section.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  });
+});
 function dzSetTopNav(view){
   document.getElementById('cloud-directory-nav').classList.toggle('active',view!=='admin');
   document.getElementById('cloud-admin-nav').classList.toggle('active',view==='admin');
