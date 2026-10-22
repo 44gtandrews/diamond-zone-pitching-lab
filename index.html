@@ -1521,7 +1521,7 @@
         <p class="page-sub">Diamond Zone program and lesson pitchers, with scouting grades and velocities.</p>
       </div>
       <div class="dz-home-actions">
-        <a class="dz-scale-link" href="#dz-scouting-key-title">20–80 scale <span aria-hidden="true">↗</span></a>
+        <button type="button" class="dz-scale-link" id="dz-scroll-scale">20–80 scale <span aria-hidden="true">↗</span></button>
         <section id="coach-upload-panel">
           <button class="cloud-button" id="cloud-add-player" type="button">+ Add Player</button>
         </section>
@@ -1595,7 +1595,7 @@
       <h2 class="admin-title">Access Management &amp; Roster</h2>
       
       <nav class="dz-admin-jumps" aria-label="Admin dashboard sections">
-        <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-requests">Access requests</button>
+        <button type="button" class="dz-admin-jump active" data-admin-target="dz-admin-requests">Access requests</button>
         <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-permissions">Account roles</button>
         <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-inactive">Inactive players</button>
         <button type="button" class="dz-admin-jump" data-admin-target="dz-admin-backups">Backups</button>
@@ -2573,6 +2573,7 @@ document.getElementById('cloud-directory-nav').addEventListener('click',()=>wind
 document.getElementById('cloud-admin-nav').addEventListener('click',()=>window.DZ_OPEN_ADMIN());
 document.querySelectorAll('.dz-admin-jump').forEach(button=>{
   button.addEventListener('click',()=>{
+    document.querySelectorAll('.dz-admin-jump').forEach(btn=>btn.classList.toggle('active',btn===button));
     const section=document.getElementById(button.dataset.adminTarget);
     if(section && document.getElementById('view-admin').style.display!=='none'){
       section.scrollIntoView({behavior:'smooth',block:'start'});
@@ -2594,6 +2595,9 @@ function showAdmin(){
   window.DZ_REFRESH_INACTIVE?.();
   window.scrollTo(0,0);
 }
+document.getElementById('dz-scroll-scale').addEventListener('click',()=>{
+  document.getElementById('dz-scouting-key-title').scrollIntoView({behavior:'smooth',block:'start'});
+});
 document.querySelector('#view-home').addEventListener('click',e=>{
   const row=e.target.closest('a.player-row[data-player-id]');
   if(!row || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button!==0)return;
