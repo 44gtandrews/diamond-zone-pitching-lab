@@ -1059,7 +1059,7 @@ async function renderPitchTable(player, summary, totalN){
       <td style="${benchmarkCellStyle('ivb',p.key,p.ivb,player.ageNum)}">${p.ivb===null?'<span class="na">—</span>':fmt(p.ivb)}</td>
       <td style="${benchmarkCellStyle('hb',p.key,p.hb,player.ageNum)}">${p.hb===null?'<span class="na">—</span>':fmt(p.hb)}</td>
       <td>${p.vaa===null?'<span class="na">—</span>':fmt(p.vaa)}</td>
-      <td><select class="grade-select" data-pitch-key="${p.key}">${gradeOptions}</select></td>
+      <td><select class="grade-select" data-pitch-key="${p.key}" ${window.DZ_EDIT_ENABLED?'':'disabled'}>${gradeOptions}</select></td>
     </tr>`;
   });
   html += '</tbody>';
@@ -1068,6 +1068,7 @@ async function renderPitchTable(player, summary, totalN){
   document.querySelectorAll('.grade-select').forEach(sel=>{
     sel.style.background = gradeColor(+sel.value);
     sel.addEventListener('change', async ()=>{
+      if(!window.DZ_EDIT_ENABLED)return;
       sel.style.background = gradeColor(+sel.value);
       try{
         const res = await window.storage.get(player.id+':grades', false).catch(()=>null);
@@ -1175,7 +1176,7 @@ function renderPitchLog(player){
     html += `<tr>
       <td class="dim">${p.no}</td>
       <td class="dim">${p.date}</td>
-      <td style="text-align:left;"><select class="type-select" data-pitch-no="${p.no}">${typeOptions}</select></td>
+      <td style="text-align:left;">${window.DZ_EDIT_ENABLED? `<select class="type-select" data-pitch-no="${p.no}">${typeOptions}</select>` : dzEscapeText(TYPE_BY_KEY[t]?.name||t)}</td>
       <td>${fmt(p.speed)}</td>
       <td>${p.spin ?? '<span class="na">—</span>'}</td>
       <td class="dim">${p.tilt ?? '<span class="na">—</span>'}</td>
@@ -1192,6 +1193,7 @@ function renderPitchLog(player){
 
   document.querySelectorAll('.type-select').forEach(sel=>{
     sel.addEventListener('change', async ()=>{
+      if(!window.DZ_EDIT_ENABLED)return;
       const no = +sel.dataset.pitchNo;
       player.typeOverrides[no] = sel.value;
       try{
@@ -1211,13 +1213,14 @@ document.getElementById('log-sort').addEventListener('change', (e)=>{
 
 /* ================= Notes / Mechanics / Strength ================= */
 function makeNoteList(containerId, addBtnId, initialNotes){
-  let notes = (initialNotes && initialNotes.length) ? initialNotes.slice() : [''];
+  let notes = (initialNotes && initialNotes.length) ? initialNotes.slice() : (window.DZ_EDIT_ENABLED?['']:[]);
+  const readOnly=!window.DZ_EDIT_ENABLED;
   function render(){
     const container = document.getElementById(containerId);
     container.innerHTML = notes.map((_,i)=>`
       <div class="note-box">
-        <textarea class="note-textarea" data-idx="${i}" placeholder="Add a note..."></textarea>
-        ${notes.length>1 ? `<button class="note-remove" type="button" data-idx="${i}" title="Remove this note">×</button>` : ''}
+        <textarea class="note-textarea" data-idx="${i}" placeholder="${readOnly?'No notes yet':'Add a note...'}" ${readOnly?'readonly':''}></textarea>
+        ${!readOnly && notes.length>1 ? `<button class="note-remove" type="button" data-idx="${i}" title="Remove this note">×</button>` : ''}
       </div>`).join('');
     container.querySelectorAll('.note-textarea').forEach((ta,i)=> ta.value = notes[i]);
     container.querySelectorAll('.note-remove').forEach(btn=>{
@@ -1230,7 +1233,8 @@ function makeNoteList(containerId, addBtnId, initialNotes){
   render();
   const addBtn = document.getElementById(addBtnId);
   function capture(){ document.querySelectorAll('#'+containerId+' .note-textarea').forEach((ta,i)=> notes[i]=ta.value); }
-  addBtn.onclick = ()=>{ capture(); notes.push(''); render(); };
+  addBtn.style.display=readOnly?'none':'';
+  addBtn.onclick = ()=>{ if(readOnly)return; capture(); notes.push(''); render(); };
   return { getValues(){
     document.querySelectorAll('#'+containerId+' .note-textarea').forEach((ta,i)=> notes[i]=ta.value);
     return notes.filter(t=>t.trim()!=='');
@@ -1258,11 +1262,13 @@ async function initPlayerNotes(player){
   player._strengthList = makeNoteList('strength-list','strength-add', savedStrength);
 }
 document.getElementById('notes-save').addEventListener('click', async ()=>{
+  if(!window.DZ_EDIT_ENABLED)return;
   const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-notes');
   try{ await window.storage.set(player.id+':notes', JSON.stringify(player._notesList.getValues()), false); flashStatus(statusEl,'Saved'); }
   catch(e){ flashStatus(statusEl,'Save failed — try again'); }
 });
 document.getElementById('mechanics-save').addEventListener('click', async ()=>{
+  if(!window.DZ_EDIT_ENABLED)return;
   const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-mechanics');
   try{
     const payload = { positives: player._mechPosList.getValues(), negatives: player._mechNegList.getValues() };
@@ -1271,6 +1277,7 @@ document.getElementById('mechanics-save').addEventListener('click', async ()=>{
   }catch(e){ flashStatus(statusEl,'Save failed — try again'); }
 });
 document.getElementById('strength-save').addEventListener('click', async ()=>{
+  if(!window.DZ_EDIT_ENABLED)return;
   const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-strength');
   try{ await window.storage.set(player.id+':strength', JSON.stringify(player._strengthList.getValues()), false); flashStatus(statusEl,'Saved'); }
   catch(e){ flashStatus(statusEl,'Save failed — try again'); }
@@ -1315,6 +1322,11 @@ function dzPlayerFromUrl() {
 }
 window.DZ_OPEN_CURRENT_URL=async()=>{
   if(!window.DZ_AUTHORIZED)return;
+  if(window.DZ_ROLE==='player_parent'){
+    const assigned=window.DZ_PARENT_PLAYER_ID;
+    if(assigned && PLAYERS[assigned] && PLAYERS[assigned].inactive!==true)await showPlayer(assigned);
+    return;
+  }
   if(new URLSearchParams(location.search).get('view')==='admin' && window.DZ_IS_ADMIN){
     showAdmin();
     return;
@@ -1323,6 +1335,7 @@ window.DZ_OPEN_CURRENT_URL=async()=>{
   if(id)await showPlayer(id);else showHome();
 };
 window.DZ_OPEN_PLAYER=async id=>{
+  if(window.DZ_ROLE==='player_parent'&&id!==window.DZ_PARENT_PLAYER_ID)return;
   const p=PLAYERS[id];
   if(!p || p.inactive===true)return;
   if(p.publicId && DZ_SIX_DIGITS.test(String(p.publicId))){
@@ -1334,6 +1347,10 @@ window.DZ_OPEN_PLAYER=async id=>{
   await showPlayer(id);
 };
 window.DZ_GO_HOME=()=>{
+  if(window.DZ_ROLE==='player_parent'){
+    window.DZ_OPEN_CURRENT_URL();
+    return;
+  }
   const u=dzCleanUrl();u.hash='';u.searchParams.delete('player');u.searchParams.delete('view');
   history.pushState({},'',u.href);
   showHome();
@@ -1376,6 +1393,10 @@ document.querySelectorAll('.back-link').forEach(a=>a.addEventListener('click',e=
 window.addEventListener('popstate',()=>window.DZ_OPEN_CURRENT_URL());
 
 function showHome(){
+  if(window.DZ_ROLE==='player_parent'){
+    window.DZ_OPEN_CURRENT_URL();
+    return;
+  }
   currentPlayerId = null;
   document.getElementById('view-admin').style.display = 'none';
   document.getElementById('view-player').style.display = 'none';
@@ -1405,6 +1426,7 @@ document.getElementById('player-copy-link').addEventListener('click',async()=>{
 });
 
 async function showPlayer(id){
+  if(window.DZ_ROLE==='player_parent' && window.DZ_PARENT_PLAYER_ID!==id)return;
   const player = PLAYERS[id];
   if(!player || player.inactive===true){ showHome(); return; }
   currentPlayerId = id;
@@ -1425,6 +1447,8 @@ async function showPlayer(id){
   document.getElementById('session-tag-main').innerHTML =
     `<span class="live-dot"></span><strong>${player.sessions} session${player.sessions===1?'':'s'}</strong> selected`;
 
+  document.getElementById('view-player').classList.toggle('dz-readonly',!window.DZ_EDIT_ENABLED);
+  document.querySelectorAll('#view-player .save-row').forEach(el=>el.style.display=window.DZ_EDIT_ENABLED?'':'none');
   document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.tabbtn[data-tab="overview"]').classList.add('active');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
