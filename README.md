@@ -1,3 +1,37 @@
+## Deploy the live website to Firebase Hosting (dzpitchingportal.app)
+
+The domain currently reaches **Firebase Hosting**, not GitHub Pages. A `Site Not Found` screen with the Firebase logo means the website files have not yet been deployed to the Hosting site (or the domain was connected to a different Hosting site).
+
+**Fastest first deployment — no local installation needed:**
+
+1. Open [Google Cloud Shell](https://console.cloud.google.com/?project=diamond-zone-pitching-lab&cloudshell=true) signed in with your Firebase project Google account.
+2. In its terminal run:
+
+   ```bash
+   git clone https://github.com/44gtandrews/diamond-zone-pitching-lab.git
+   cd diamond-zone-pitching-lab
+   bash deploy-to-firebase.sh
+   ```
+
+3. Verify the CLI reports **Deploy complete!** and open `https://diamond-zone-pitching-lab.web.app/` first.
+4. Firebase Console → **Build → Hosting**: confirm `dzpitchingportal.app` is attached to the **same Hosting site** and status Connected, then visit `https://dzpitchingportal.app/`.
+5. Firebase Console → **Authentication → Settings → Authorized domains**: include `dzpitchingportal.app`, then test coach sign-in.
+
+The script copies **only** `index.html`, `firebase-config.js`, `trackman-pdf.js`, `importer.js`, and `cloud.js` into the generated `.firebase-build/` directory and deploys that directory. It does not deploy private roster JSON or repository files. Do not upload any private roster backups to GitHub. **Firestore rules are not published by a Hosting-only deployment**; publish them separately in Firebase Console when changed.
+
+For subsequent manual deployments in the same Cloud Shell folder:
+
+```bash
+cd ~/diamond-zone-pitching-lab
+git pull origin main
+bash deploy-to-firebase.sh
+```
+
+To enable **automatic live deployment on future GitHub pushes**, run `firebase init hosting:github` in the repository (after the first successful deploy) and use the GitHub integration wizard to generate a service-account secret and workflow. Before enabling the generated workflow, it must run `bash prepare-firebase-hosting.sh` prior to deploying so the five app files are staged; otherwise a fresh CI checkout lacks the generated directory. Do not check service-account credentials into GitHub.
+
+**Do not point DNS at GitHub Pages while using Firebase Hosting.** The site is hosted by Firebase and maintained in GitHub.
+
+
 # Diamond Zone CT — Pitching Lab (shared coaching portal)
 
 A mobile-friendly, single-page pitching analytics app with shared Firestore notes, mechanical changes, strength/mobility notes, hand-entered grades, raw-pitch type overrides, and coach-uploaded Trackman sessions (PDF/CSV/JSON), plus administrator-managed bulk roster backups. All staff see the same saved work after opening the profile on their devices.
