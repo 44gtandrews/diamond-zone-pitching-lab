@@ -1292,10 +1292,10 @@ function dzPlayerFromUrl() {
   const code=new URLSearchParams(location.search).get('player');
   if(code && DZ_SIX_DIGITS.test(code)) {
     const match=Object.values(PLAYERS).find(p=>String(p.publicId)===code);
-    if(match) return match.id;
+    if(match && match.inactive!==true) return match.id;
   }
   const legacy=decodeURIComponent(location.hash.slice(1));
-  return PLAYERS[legacy]?legacy:null;
+  return PLAYERS[legacy] && PLAYERS[legacy].inactive!==true?legacy:null;
 }
 window.DZ_OPEN_CURRENT_URL=async()=>{
   if(!window.DZ_AUTHORIZED)return;
@@ -1308,7 +1308,7 @@ window.DZ_OPEN_CURRENT_URL=async()=>{
 };
 window.DZ_OPEN_PLAYER=async id=>{
   const p=PLAYERS[id];
-  if(!p)return;
+  if(!p || p.inactive===true)return;
   if(p.publicId && DZ_SIX_DIGITS.test(String(p.publicId))){
     history.pushState({},'',dzProfileUrl(p));
   }else{
@@ -1345,6 +1345,7 @@ function showAdmin(){
   document.getElementById('view-admin').style.display='block';
   dzSetTopNav('admin');
   window.DZ_REFRESH_COACH_REQUESTS?.();
+  window.DZ_REFRESH_INACTIVE?.();
   window.scrollTo(0,0);
 }
 document.querySelector('#view-home').addEventListener('click',e=>{
@@ -1389,7 +1390,7 @@ document.getElementById('player-copy-link').addEventListener('click',async()=>{
 
 async function showPlayer(id){
   const player = PLAYERS[id];
-  if(!player){ showHome(); return; }
+  if(!player || player.inactive===true){ showHome(); return; }
   currentPlayerId = id;
   // Returning from a profile opens the corresponding directory section.
   DZ_DIRECTORY_TAB=dzIsExternal(player)?'external':'internal';
