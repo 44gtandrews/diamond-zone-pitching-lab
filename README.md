@@ -1,3 +1,17 @@
+# Player Directory — age-relative scouting grades (October 22, 2026)
+
+The **Internal and External Player Directory** displays each pitcher's pitch types ordered by **recorded usage** (highest pitch count first), but the value beside each pitch is now the actual **saved scouting grade**, in the form `50 Grade`, rather than its usage percentage. The average pitch velocity (mph) continues to appear next to the grade.
+
+- Grades are read from the existing per-player `playerEdits/{playerId}/sections/grades` Firestore section, which is already permission-scoped for approved accounts. No pitch count or Trackman data is modified.
+- **Only previously assigned grades are displayed.** A pitch that has never received a saved grade shows `Not graded`. If a grade request fails, the directory shows `Grade unavailable`, not a guessed/default rating; the request can retry on subsequent navigation.
+- The player profile's grade selector also now displays `— Not graded —` before the first save. Selecting a grade explicitly saves it as before, and updates the in-memory grade cache so the Player Directory will reflect it when opened again. Existing saved 20–80 grades are preserved, including grades of 50.
+- The home page includes a **20–80 Scouting Scale** with the steps `20 Well below`, `30 Below`, `40 Slightly below`, `50 Average`, `60 Above`, `70 Plus`, `80 Elite`. The key explains that coach-assigned grades evaluate the quality of each pitch **relative to the pitcher's age group**, not against professional velocity or an automatically generated algorithm.
+- Both Internal and External tabs share the key. It is responsive on mobile. The original pitch-usage percentages remain available within the detailed player profile analytics; only the home-page rows change.
+- Reading grades is cached per in-memory player record during a session to reduce repeat Firestore reads. A fresh roster load rereads them. Failed grade reads retry.
+
+This is a **Hosting-only code and UI change**. No new Firestore security rules are required for the grade display; however the previous four-role access-control rules must still be deployed separately if not already published.
+
+
 # Mobile layout polish (October 22, 2026)
 
 The Pitching Portal now has a dedicated responsive layout for phone-sized browsers (especially approximately 320–640 px wide), without changing desktop features or Firestore records.
