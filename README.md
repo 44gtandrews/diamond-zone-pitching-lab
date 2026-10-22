@@ -55,6 +55,16 @@ Use **Export roster backup** to download a local copy before large imports. Back
 - **Limitation:** the existing coach/adult raw pitch-log profile cannot yet be updated with aggregate session uploads; the app blocks the save instead of corrupting the raw log. PDFs that cannot be parsed require manual entry before saving. No duplicate detection is possible if the same session is exported into two different files.
 - Coach updates are written in a Firestore transaction to avoid lost updates when two coaches upload concurrently. Admin bulk import remains available separately.
 
+## Trackman PDF uploads (Power BI Team Portal)
+
+Coaches can upload the **same one-page Trackman Team Portal pitching report PDF** they previously sent for profile creation. The PDF reader joins the **Release Slot**, **Movement**, and **Location** pitch tables by pitch type and fills the review form with count, average/max velocity, average/max spin, extension, IVB, HB, tilt, strike/strike-extension/out percentages, and VAA. Missing PDF fields remain blank. The report may include extra charts and axis labels; these are ignored.
+
+- For an **entirely new pitcher**, choose **+ Add Player · Upload File** on the home screen. Choose the PDF and click **Read File**. The pitcher name is filled from the report when recognized; **select the age group**, review the extracted rows, then click **Confirm & Save to Shared Database**. The new player appears in the group immediately after saving.
+- For an **existing pitcher**, open their profile and choose **+ Upload New Session · Trackman File**, then **Read File**, review, and save. The uploader verifies the player name when the PDF identifies it. Reports containing multiple selected sessions are blocked from being appended to avoid double-counting historical sessions. Export the *new session only* from Trackman before updating an existing player.
+- **Import private roster JSON** is a different administrator-only feature for the original 14-player starting database. It **does not accept PDFs**. Do not use that control for individual Trackman reports.
+- The review table is mandatory because different Team Portal export layouts may render columns differently, and blanks must not be invented. Re-uploading the identical file to the same player is blocked by file hash. A nonmatching file cannot be saved to the wrong profile.
+- Example format tested: a one-page September 2026 Team Portal PDF with Fastball, ChangeUp and Curveball pitch statistics, movement data, and location metrics.
+
 ## 6. Publish via GitHub Pages
 
 1. Open the repository: `https://github.com/44gtandrews/diamond-zone-pitching-lab`.
