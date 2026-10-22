@@ -378,6 +378,15 @@
   .dz-inactive-panel .dz-inactive-meta{font-size:12px;color:var(--ink-soft);margin-top:4px;}
   .dz-danger-button{border-color:#B85F67!important;color:#F9CBD0!important;}
   .dz-danger-button:hover{background:#54272E!important;color:white!important;}
+
+  .dz-role-select,.dz-linked-player{min-width:170px;max-width:280px;padding:9px!important;background:#0C171D!important;color:#FFFFFF!important;border:1px solid var(--line-strong)!important;}
+  .dz-role-controls{display:flex;flex:1 1 100%;flex-wrap:wrap;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--line-strong);}
+  .dz-role-controls .dz-linked-player{flex:1;max-width:430px;}
+  .dz-role-controls .cloud-button{min-height:35px;}
+  .dz-role-alert{font-size:12px;color:#E6A9A9;}
+  #view-player.dz-readonly .note-textarea{background:var(--paper-raised);cursor:default;}
+  #view-player.dz-readonly .note-box{border-color:var(--line-strong);}
+  @media(max-width:660px){.dz-role-select,.dz-linked-player{width:100%;max-width:100%;}}
   /* Administrator-only top-level tab and coach-request queue. */
   #cloud-bar .wrap{gap:14px;}
   .dz-site-tabs{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
@@ -544,15 +553,22 @@
         <h3 class="field-label" id="admin-pending-heading">Pending coach requests <span id="cloud-pending-count" class="dz-count">0</span></h3>
         <button type="button" id="cloud-refresh-requests" class="cloud-button secondary">Refresh requests</button>
       </div>
-      <p class="cloud-help">Coaches appear here automatically after signing up and verifying their email. They cannot access player profiles unless you approve them.</p>
+      <p class="cloud-help">Verified applicants appear here. Choose the correct role before approving. Player/Parent accounts must be linked to one specific player.</p>
       <ul class="dz-coach-list" id="cloud-pending-requests" aria-labelledby="admin-pending-heading"></ul>
       <h3 class="field-label" style="margin-top:24px;">Denied requests</h3>
       <ul class="dz-coach-list" id="cloud-denied-requests"></ul>
-      <h3 class="field-label" style="margin-top:24px;">Coach access management</h3>
+      <h3 class="field-label" style="margin-top:24px;">Account Permissions</h3>
+      <p class="cloud-help">Admins manage accounts and data. Pitching Coaches can upload Trackman and edit coaching notes. Coaches can view all players without edits. Players/Parents see only the single linked player you select. Admin access for another person should be used only as an emergency backup.</p>
       <form id="cloud-invite-form" class="cloud-actions">
         <input type="email" id="cloud-invite-email" required placeholder="coach@example.com" aria-label="Coach email">
-        <input type="hidden" id="cloud-invite-role" value="coach">
-        <button class="cloud-button" type="submit">Approve coach</button>
+        <select class="type-select dz-role-select" id="cloud-invite-role" aria-label="New account role">
+          <option value="coach">Coach · Read Only</option>
+          <option value="pitching_coach">Pitching Coach · Edit</option>
+          <option value="player_parent">Player / Parent · One Profile</option>
+          <option value="admin">Admin · Full Access</option>
+        </select>
+        <select class="type-select dz-linked-player" id="cloud-invite-player" aria-label="Linked player" style="display:none;"><option value="">Choose a player...</option></select>
+        <button class="cloud-button" type="submit">Approve Account</button>
       </form>
       <p class="cloud-status" id="cloud-invite-status" role="status"></p>
       <ul id="cloud-allowlist" class="dz-coach-list"></ul>
