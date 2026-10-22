@@ -1470,6 +1470,32 @@
     html{scroll-behavior:auto;}
   }
 
+
+  /* Clubhouse readability improvements: 20–80 button and roster names only. */
+  #view-home #dz-scroll-scale{
+    background:#103039!important;
+    color:#F2FCFE!important;
+    border:1px solid #5096A2!important;
+    font-weight:760;
+  }
+  #view-home #dz-scroll-scale:hover{
+    background:#19444E!important;
+    color:#FFFFFF!important;
+  }
+  #view-home .player-row .player-name{
+    font-size:18px!important;
+    font-weight:850;
+    line-height:1.26;
+    letter-spacing:-.018em;
+  }
+  #view-player .kpi:nth-child(4) .kpi-value{
+    font-size:21px;
+    overflow-wrap:anywhere;
+  }
+  @media(max-width:640px){
+    #view-home .player-row .player-name{font-size:17px!important;}
+    #view-player .kpi:nth-child(4) .kpi-value{font-size:19px;}
+  }
 </style>
 </head>
 <body>
@@ -2274,6 +2300,7 @@ async function renderPitchTable(player, summary, totalN){
         player._gradesByPitch={...current};
         player._gradesLoaded=true;
         player._gradesLoadFailed=false;
+        refreshHighestGradedPitchKpi(player);
       }catch(error){
         sel.value=GRADES.includes(previous)?String(previous):'';
         paintGrade();
@@ -2285,17 +2312,46 @@ async function renderPitchTable(player, summary, totalN){
   });
 }
 
+// Choose the highest coach-saved scouting grade. Because all pitch types
+// share one total, higher pitch count also means higher usage percentage.
+function highestGradedPitch(player,summary){
+  const stored=player._gradesByPitch||{};
+  let best=null;
+  for(const pitch of summary){
+    const grade=stored[pitch.key];
+    if(!GRADES.includes(grade))continue;
+    if(!best || grade>best.grade ||
+       (grade===best.grade && Number(pitch.n||0)>Number(best.n||0))){
+      best={...pitch,grade};
+    }
+  }
+  return best;
+}
+function refreshHighestGradedPitchKpi(player){
+  if(currentPlayerId!==player.id)return;
+  const field=document.querySelector('#kpis .kpi:nth-child(4) .kpi-value');
+  if(!field)return;
+  const best=highestGradedPitch(player,getTypeSummary(player));
+  const name=best?best.name:(player._gradesLoadFailed?'Grade unavailable':'Not graded');
+  field.textContent=name;
+  if(best){
+    const small=document.createElement('small');
+    small.textContent=best.grade+' Grade';
+    field.append(' ',small);
+  }
+}
+
 function renderOverview(player){
   const summary = getTypeSummary(player);
   const totalN = summary.reduce((s,p)=>s+p.n,0);
-  const primary = summary.reduce((a,b)=> b.n>a.n?b:a, summary[0]);
+  const topGraded = highestGradedPitch(player,summary);
   const fb = summary.find(p=>p.key==='fb');
 
   const kpiData = [
     {label:'Total Pitches', value:totalN},
     {label:'Sessions', value:player.sessions},
     {label:'Pitch Types', value:summary.length},
-    {label:'Primary Pitch', value:primary.name, small:Math.round(primary.n/totalN*100)+'%'},
+    {label:'Highest Graded Pitch', value:topGraded?topGraded.name:(player._gradesLoadFailed?'Grade unavailable':'Not graded'), small:topGraded?topGraded.grade+' Grade':''},
     {label: player.dataType==='raw' ? 'Fastball Med.' : 'Fastball Avg', value: fb?fmt(fb.velo):'—', small:'mph'},
   ];
   document.getElementById('kpis').innerHTML = kpiData.map(k =>
@@ -2678,6 +2734,7 @@ async function showPlayer(id){
   if(avgBtn) avgBtn.classList.add('active');
 
   await ensureOverridesLoaded(player);
+  await ensureGradesLoaded(player);
   renderOverview(player);
   if(player.dataType==='raw') renderPitchLog(player);
   await initPlayerNotes(player);
