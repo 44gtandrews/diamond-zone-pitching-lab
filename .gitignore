@@ -9,3 +9,7 @@ service-account*.json
 firebase-adminsdk*.json
 node_modules/
 .DS_Store
+
+# Local generated Firebase Hosting files
+.firebase-build/
+.firebase/
