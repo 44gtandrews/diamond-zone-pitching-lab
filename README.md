@@ -1,3 +1,25 @@
+# Approved Clubhouse interface release — October 22, 2026
+
+The live Pitching Portal now uses the approved Clubhouse / Performance Lab presentation on the Player Directory, navigation, Admin Dashboard and player-profile chrome. The original player-profile **format** stays intact: movement plot behavior, velocity chart, pitch usage chart, pitch table with editable grades, notes, mechanical changes, strength and mobility, pitch log and upload button are still the same sections in the same order. In particular, the player's name retains its original italic Barlow Condensed athletic font, weight and style.
+
+### Player Directory
+
+- Wider Clubhouse-style content width, branded top navigation, restrained borders and organized typography.
+- Existing Internal and External membership, age group groupings and alphabetical-by-last-name sorting remain driven by `sortGroups()`.
+- Pitches remain ranked by usage; grade labels come from saved 20–80 evaluations, with average velocity shown, and ungraded pitches clearly distinguished.
+- Functional client-side name search and age filters. These filter already-approved roster rows and do not query or modify Firestore.
+- Scouting reference in a right-hand column on desktop, below the roster on mobile. The jump button scrolls without changing the URL hash, so it does not interfere with legacy player links.
+
+### Admin and profile screens
+
+- Access requests, account roles, inactive player archive, roster/JSON backups, and all existing actions remain wired to their original elements; admin section links are visually simplified.
+- Profile visuals are updated to the common Clubhouse colors and navigation, but the analytics charts, notes sections, data calculations, grade selections, and layout order are not changed.
+- No changes to `importer.js`, `trackman-pdf.js`, `cloud.js`, `firestore.rules`, `firebase-config.js`, IDs, or upload workflows.
+
+### Deployment and rollback
+
+The approved design was staged on `clubhouse-ui-approved-20261022` first and merged to `main` only after static UI checks: inline JavaScript syntax, CSS brace balance, DOM identifier preservation, functional search/filter test, protected profile-code comparison, and confirmation that importer/Firestore files match pre-release SHAs. GitHub Actions automatically publishes `main` to Firebase Hosting. This release does not require new Firestore rules or data migration. Previous security-rule deployment requirements for four-role access remain separate.
+
 # Player Directory — age-relative scouting grades (October 22, 2026)
 
 The **Internal and External Player Directory** displays each pitcher's pitch types ordered by **recorded usage** (highest pitch count first), but the value beside each pitch is now the actual **saved scouting grade**, in the form `50 Grade`, rather than its usage percentage. The average pitch velocity (mph) continues to appear next to the grade.
