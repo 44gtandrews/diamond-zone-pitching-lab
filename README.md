@@ -1,3 +1,52 @@
+# Coach access requests, administrator tab and optional SMS alerts (Oct 2026)
+
+## Staff access: what changed
+
+- On **account creation**, Firebase Authentication sends the coach a verification email.
+- After verification and the next sign-in / **I've verified — continue**, the site creates `coachRequests/{uid}` with the verified account email and `status: pending`.
+- This is deliberately separate from `allowlist`: signing up or filing a request NEVER grants access to player data.
+- A user with an existing active `allowlist/<lowercase-email>` entry and `role: admin` sees a separate **Admin Dashboard** tab in the website's top navigation. Non-admin accounts do not see it.
+- The admin dashboard shows **Pending requests** (Approve / Deny), **Denied requests** (Approve / Reconsider), and the **approved/disabled coach list** (Disable / Reinstate). It also retains private roster bulk import/export.
+- The request queue cannot be viewed or modified by applicant accounts: Firestore Rules grant a verified applicant only `get/create` on their own request, while only existing admins can list or update requests.
+- Administrators can invite new coaches directly by email, but the web form **does not grant new admin roles**. Existing administrator privileges are unchanged.
+- A previously disabled coach cannot file a fresh request to regain access without administrator intervention.
+
+**Important: Deploy the updated Firestore Rules once for this release.** The routine GitHub workflow currently updates **Firebase Hosting only**. The request queue needs the `coachRequests` rule, so site updates alone are insufficient. On the Mac where Firebase CLI was authorized:
+
+```bash
+cd ~/diamond-zone-pitching-lab
+git pull origin main
+npx --yes firebase-tools@latest deploy --only firestore:rules --project diamond-zone-pitching-lab
+```
+
+Alternatively, copy the repository's `firestore.rules` into the Firebase Console → Firestore Database → Rules editor and click **Publish**. **Do not** grant test-mode/public access. The new collection won't work until the rules are live. Check that a verified coach appears under `coachRequests` in Firestore Data and cannot read `players` until approved.
+
+The URL of the admin dashboard is `https://dzpitchingportal.app/?view=admin`. The web UI checks the approved administrator role **and Firestore rules enforce it**, so the URL alone grants no access.
+
+## Optional: SMS to the administrator when access is requested
+
+A prebuilt but **not activated** second-generation Firebase Cloud Function lives in `functions/index.js`, exported as `notifyCoachAccessRequestSms`. On first creation of a verified `coachRequests/{uid}` document, it can send a text containing only the applicant's verified email and a link to your admin dashboard. The function includes an event de-duplication lock and a 20-message-per-UTC-day cap, limiting unexpected provider charges; errors are logged. It is intentionally **NOT part of the website's automatic GitHub Hosting deploy** until you configure it.
+
+**You must supply privately:** a Twilio business account, an SMS-capable sender number, your destination mobile number, and Twilio API credentials. Firebase Cloud Functions require the **Blaze pay-as-you-go plan** and can incur Google Cloud charges; Twilio separately bills phone numbers and messages. US messages sent from a 10DLC number generally need A2P 10DLC registration / approved campaign; follow Twilio's documentation and messaging rules. Never paste API secrets or your private phone number into GitHub or the public client files.
+
+To activate after the provider and billing are ready, run locally:
+
+```bash
+cd ~/diamond-zone-pitching-lab
+git pull origin main
+cd functions && npm install && cd ..
+npx --yes firebase-tools@latest functions:secrets:set TWILIO_ACCOUNT_SID --project diamond-zone-pitching-lab
+npx --yes firebase-tools@latest functions:secrets:set TWILIO_AUTH_TOKEN --project diamond-zone-pitching-lab
+npx --yes firebase-tools@latest functions:secrets:set TWILIO_FROM_NUMBER --project diamond-zone-pitching-lab
+npx --yes firebase-tools@latest functions:secrets:set ADMIN_SMS_TO_NUMBER --project diamond-zone-pitching-lab
+npx --yes firebase-tools@latest deploy --only functions:notifyCoachAccessRequestSms --project diamond-zone-pitching-lab
+```
+
+The four commands prompt for their values and store them in Google Cloud Secret Manager. Use E.164 phone-number format (+1...). **Only new access requests created after this function is deployed** trigger notifications; pending requests already in Firestore are not automatically sent again. Test with a fresh, verified account only after sender registration is completed.
+
+Documentation: [Firebase Firestore triggers](https://firebase.google.com/docs/functions/firestore-events), [Firebase function secrets](https://firebase.google.com/docs/functions/config-env), [Twilio A2P messaging compliance](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc).
+
+
 # Automatic deployment and Diamond Zone branding (October 2026)
 
 **GitHub → Firebase Hosting automatic publishing is configured in the repository.** The production workflow is `.github/workflows/deploy-firebase.yml`. Pushing updates to `main` (including changes explicitly committed from ChatGPT) triggers a GitHub Actions job that:
