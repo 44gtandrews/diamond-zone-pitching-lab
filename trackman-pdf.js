@@ -11,7 +11,103 @@
   for(const it of source){let r=rows[rows.length-1];if(!r||Math.abs(it.y-r.y)>3.7){r={y:it.y,items:[]};rows.push(r);}r.items.push(it);r.y=r.items.reduce((s,c)=>s+c.y,0)/r.items.length;}
   for(const r of rows)r.items.sort((a,b)=>a.x-b.x);return rows;
  }
+
+ // Second supported Team Portal layout: "Stats by Pitch Type" with release
+ // point/spin columns rather than the count-based three-section summary.
+ // Bind cells by their actual PDF x-coordinate: blank cells must NOT shift
+ // neighbouring columns (notably the absent Cutter extension in this layout).
+ const advancedTypes={
+   fastball:['fb','Fastball'],fourseam:['fb','Fastball'],
+   curveball:['cb','Curveball'],slider:['sl','Slider'],cutter:['ct','Cutter'],
+   changeup:['ch','ChangeUp'],sinker:['sk','Sinker'],sweeper:['sw','Sweeper'],
+   splitter:['sp','Splitter'],knuckleball:['kn','Knuckleball'],other:['ot','Other']
+ };
+ function parseReleaseSummary(pages){
+   const columns=[
+     ['velo',/(^mph$|pitch\s*speed)/i],
+     ['spin',/^rpm$/i],
+     ['ivb',/^ivb$/i],
+     ['hb',/^hb$/i],
+     ['ext',/^extension$/i],
+     ['relHeight',/rel\s*height/i],
+     ['relSide',/rel\s*side/i],
+     ['axis2d',/^2d\s*spin\s*axis$/i],
+     ['axis3d',/^3d\s*spin\s*axis$/i],
+     ['gyro',/^gyro$/i]
+   ];
+   const seen=new Map(),names=[],hands=[];
+   for(const page of pages){
+     const scale=612/(page.width||612);
+     const lines=group((page.items||[]).map(it=>({
+       x:it.x*scale,y:it.y*scale,s:String(it.s||'').replace(/\u00a0/g,' ').trim()
+     })));
+     for(let i=0;i<lines.length;i++){
+       const row=lines[i],strings=row.items.map(it=>it.s);
+       const full=strings.join(' ').replace(/\s+/g,' ').trim();
+       if(row.y<130){
+         const name=strings.find(x=>/^[A-Za-z][A-Za-z .'-]+,\s*[A-Za-z][A-Za-z .'-]+$/.test(x));
+         if(name)names.push(name.replace(/^([^,]+),\s*(.*)$/,'$2 $1').trim());
+         if(/\bLHP\b/.test(full))hands.push('L');
+         else if(/\bRHP\b/.test(full))hands.push('R');
+       }
+       const headerItems=row.items.filter(it=>columns.some(([,pattern])=>pattern.test(it.s)));
+       const isHeader=headerItems.some(it=>/rel\s*height/i.test(it.s)) &&
+         headerItems.some(it=>/rel\s*side/i.test(it.s)) &&
+         headerItems.some(it=>/^mph$/i.test(it.s));
+       if(!isHeader)continue;
+       const positions={};
+       for(const [field,pat] of columns){
+         const found=row.items.find(it=>pat.test(it.s));
+         if(found)positions[field]=found.x;
+       }
+       if(Object.keys(positions).length<7)continue;
+       for(let j=i+1;j<lines.length;j++){
+         const record=lines[j];
+         if(record.y-row.y>165)break;
+         if(record.items.some(it=>/reset filters|pitch location|release point|stats by pitch|see pitches by/i.test(it.s)))break;
+         const first=record.items.find(it=>it.x>=20&&it.x<positions.velo-8 &&
+           advancedTypes[it.s.toLowerCase().replace(/[^a-z]/g,'')]);
+         if(!first)continue;
+         const tuple=advancedTypes[first.s.toLowerCase().replace(/[^a-z]/g,'')];
+         const out={
+           key:tuple[0],name:tuple[1],n:null,velo:null,veloMax:null,spin:null,
+           spinMax:null,ext:null,ivb:null,hb:null,tilt:null,strike:null,
+           strikeExt:null,out:null,vaa:null,relHeight:null,relSide:null,
+           axis2d:null,axis3d:null,gyro:null
+         };
+         for(const it of record.items){
+           const value=number(it.s);
+           if(value===null || it.x<positions.velo-4)continue;
+           let closest=null,d=Infinity;
+           for(const [field,x] of Object.entries(positions)){
+             const distance=Math.abs(it.x-x);
+             if(distance<d){d=distance;closest=field;}
+           }
+           // Require close physical alignment, so decorative plot coordinates
+           // cannot become pitch data; blank values remain null.
+           if(closest&&d<13)out[closest]=value;
+         }
+         if(out.velo!==null && out.velo>=20 && out.velo<=120)seen.set(out.key,out);
+       }
+     }
+   }
+   return {
+     pitches:[...seen.values()],
+     playerName:names[0]||null,throwingHand:hands[0]||null,
+     selectedSessions:null,
+     reportFormat:'pitch-type-summary',hasPitchCounts:false,
+     text:'Pitch-type averages only: pitch counts, usage, maximums and exact session count are unavailable in this export.'
+   };
+ }
+ function isReleaseSummary(pages){
+   return pages.some(page=>{
+     const s=(page.items||[]).map(it=>String(it.s||'').replace(/\u00a0/g,' ')).join(' ');
+     return /rel\s*height\s*\(?ft\)?/i.test(s)&&/rel\s*side\s*\(?ft\)?/i.test(s)&&/spin\s*axis/i.test(s);
+   });
+ }
+
  function parsePages(pages){
+  if(isReleaseSummary(pages))return parseReleaseSummary(pages);
   const byKey=new Map(),debug=[],names=[],sessions=[];
   for(const page of pages){
    const scale=612/(page.width||612),lines=group((page.items||[]).map(it=>({x:it.x*scale,y:it.y*scale,s:String(it.s||'').trim()})));
@@ -60,7 +156,7 @@
    }
   }
   const pitches=[...byKey.values()].filter(p=>Number.isInteger(p.n)&&p.n>0&&p.velo>0).map(p=>{for(const f of ['spin','spinMax','strike','strikeExt','out'])if(p[f]!==null)p[f]=Math.round(p[f]);return p;}).sort((a,b)=>b.n-a.n);
-  return {pitches,text:debug.join('\n'),playerName:names[0]||null,selectedSessions:sessions[0]||null};
+  return {pitches,text:debug.join('\n'),playerName:names[0]||null,selectedSessions:sessions[0]||null,reportFormat:'count-summary',hasPitchCounts:true};
  }
  async function fromFile(file){
   if(!window.pdfjsLib)throw Error('PDF reader unavailable. Check your connection and reload the page.');
