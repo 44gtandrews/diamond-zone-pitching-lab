@@ -838,6 +838,638 @@
     .dz-scouting-steps{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 6px;}
   }
 
+
+  /* ================================================================
+     APPROVED CLUBHOUSE DESIGN · 2026-10-22
+     Visual identity and directory/admin organization only. Profile
+     sections, chart logic, notes, imports, Firebase remain unchanged.
+     The original .masthead .player-name font is intentionally retained.
+     ================================================================ */
+  :root{
+    --paper:#091217;
+    --paper-raised:#101E24;
+    --line:#233740;
+    --line-strong:#34505A;
+    --ink:#EFF6F7;
+    --ink-soft:#9CB2BA;
+    --accent:#009AA6;
+    --accent-deep:#007E87;
+  }
+  html{scroll-behavior:smooth;}
+  body{
+    min-width:320px;
+    background:radial-gradient(ellipse 72% 35% at 100% 0%,rgba(0,113,126,.09),transparent 70%),#091217;
+    color:var(--ink);
+  }
+  .wrap,.home-wrap{max-width:1248px;padding-inline:28px;}
+  a,button,select,input{touch-action:manipulation;}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{
+    outline:2px solid #36CBD5;outline-offset:2px;
+  }
+  /* True brand navigation rather than boxed dashboard buttons. */
+  #cloud-bar{
+    background:#0C181E;border-bottom:1px solid #2B3F47;min-height:72px;
+  }
+  #cloud-bar .wrap{
+    display:flex;align-items:center;justify-content:flex-start;
+    flex-wrap:nowrap;gap:34px;min-height:72px;padding-block:0;
+    font-size:12px;
+  }
+  .dz-nav-brand{
+    display:flex;align-items:center;gap:10px;
+    flex:0 0 auto;white-space:nowrap;min-width:185px;
+  }
+  .dz-nav-brand img{height:44px;width:44px;object-fit:contain;}
+  .dz-nav-brand>div{display:flex;flex-direction:column;gap:3px;}
+  .dz-nav-brand strong{
+    font-family:Inter,system-ui,sans-serif;font-size:14px;
+    color:#F0F7F8;font-weight:800;letter-spacing:-.025em;
+  }
+  .dz-nav-brand small{
+    color:#85C7CB;text-transform:uppercase;
+    font-size:9px;font-weight:750;letter-spacing:.145em;
+  }
+  #cloud-bar .dz-site-tabs{
+    display:flex;align-self:stretch;align-items:stretch;
+    flex:1 1 auto;width:auto;gap:12px;min-width:0;
+  }
+  #cloud-bar .dz-site-tab{
+    min-height:72px;align-self:stretch;display:inline-flex;
+    align-items:center;justify-content:center;
+    background:transparent;border:0;border-bottom:2px solid transparent;
+    padding:0 11px;border-radius:0;color:#96ACB4;
+    font-family:Inter,system-ui,sans-serif;font-weight:700;
+    font-size:12px;letter-spacing:.005em;text-transform:none;
+    box-shadow:none;white-space:nowrap;
+  }
+  #cloud-bar .dz-site-tab:hover{background:#15262C;color:#F5FBFC;}
+  #cloud-bar .dz-site-tab.active{
+    background:transparent;color:#F3FBFC;
+    border-color:#35C8D0;box-shadow:none;
+  }
+  #cloud-bar .dz-session-controls{
+    display:flex;align-items:center;gap:13px;
+    margin-left:auto;min-width:0;flex:0 1 auto;
+  }
+  #cloud-identity{
+    max-width:300px;color:#AFC7CD;
+    font-size:11px;white-space:normal;text-align:right;
+    overflow-wrap:anywhere;
+  }
+  #cloud-bar #cloud-signout{
+    flex:none;min-height:39px;
+    background:transparent;border:1px solid #37525B;
+    color:#D5E9ED;font-family:Inter,sans-serif;
+    font-size:11px;font-weight:700;padding:8px 12px;border-radius:4px;
+  }
+  #cloud-bar #cloud-signout:hover{background:#162A32;}
+
+  /* Directory and admin header, unlike the unchanged profile name font. */
+  #view-home .masthead,#view-admin .masthead{
+    background:transparent;border-bottom:0;
+    padding:35px 0 13px;
+  }
+  #view-home .masthead .facility,#view-admin .masthead .facility{
+    display:flex;align-items:center;gap:8px;
+    color:#62D0D7;font-family:Inter,sans-serif;font-style:normal;
+    font-size:10px;font-weight:800;letter-spacing:.13em;
+    text-transform:uppercase;margin-bottom:10px;
+  }
+  #view-home .facility::before,#view-admin .facility::before{
+    content:'';width:19px;height:2px;background:#30BCC8;display:inline-block;
+  }
+  #view-home .page-title,#view-admin .page-title{
+    color:#F3F8F9!important;font-family:Inter,system-ui,sans-serif!important;
+    font-style:normal!important;text-transform:none!important;
+    font-weight:800!important;letter-spacing:-.052em!important;
+    font-size:clamp(31px,3.1vw,40px);line-height:1.15;
+    text-shadow:none!important;
+  }
+  #view-home .page-sub,#view-admin .page-sub{
+    font-size:13px;line-height:1.6;color:#9BAFB6;
+    margin:9px 0 0;max-width:680px;
+  }
+  .dz-home-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:25px;}
+  .dz-home-actions{display:flex;align-items:center;gap:10px;flex:none;padding-bottom:3px;}
+  #view-home #coach-upload-panel{
+    border:0!important;background:transparent!important;
+    padding:0!important;margin:0!important;display:block;
+  }
+  .dz-scale-link{
+    display:flex;align-items:center;justify-content:center;
+    min-height:43px;padding:9px 13px;border-radius:4px;
+    border:1px solid #3A5761;
+    color:#C8E2E6;text-decoration:none;
+    font-family:Inter,sans-serif;font-weight:720;font-size:12px;
+  }
+  .dz-scale-link:hover{background:#172A32;color:#F4FFFF;}
+  #view-home #cloud-add-player{
+    min-height:43px;padding:10px 16px;
+    background:#0099A4;color:#031719;border:1px solid #0099A4;
+    border-radius:4px;font-family:Inter,sans-serif;
+    font-size:12px;font-weight:850;letter-spacing:.004em;text-transform:none;
+  }
+  #view-home #cloud-add-player:hover{background:#2ACAD4;color:#041719;}
+  .dz-home-shell{padding-bottom:55px;}
+  .dz-home-toolbar{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:22px;border-bottom:1px solid #36525B;
+    padding:0;margin-top:28px;
+  }
+  #view-home .dz-directory-tabs{
+    display:flex;flex:none;gap:23px;
+    align-items:flex-end;margin:0;border:0;
+  }
+  #view-home .dz-directory-tab{
+    display:flex;align-items:center;gap:4px;
+    padding:12px 1px 14px;min-height:43px;
+    color:#A7BAC0;background:transparent!important;
+    border:0;border-bottom:2px solid transparent;
+    border-radius:0;
+    font-family:Inter,sans-serif;font-size:13px;
+    font-weight:750;text-transform:none;letter-spacing:0;
+  }
+  #view-home .dz-directory-tab.active{
+    color:#F8FBFC;background:transparent;border-color:#35C7D0;
+  }
+  #view-home .dz-directory-tab:hover{color:#FFFFFF;}
+  #view-home .dz-directory-count,
+  #view-home .dz-directory-tab.active .dz-directory-count{
+    background:transparent;color:#8BB0B8;
+    padding:0;margin:0;font-family:Inter,sans-serif;
+    font-size:10px;font-weight:750;
+  }
+  .dz-directory-search{
+    display:flex;align-items:center;gap:8px;
+    width:270px;max-width:45%;min-width:185px;
+    min-height:40px;border:1px solid #38525A;
+    background:#0E2026;padding:0 10px;margin-bottom:9px;
+    border-radius:4px;
+  }
+  .dz-search-icon{font-size:21px;color:#87A7AE;line-height:1;}
+  #dz-player-search{
+    width:100%;min-width:0;border:0;background:transparent;
+    outline:0!important;color:#EDF5F6;
+    font:500 12px Inter,sans-serif;
+    padding:7px 0;-webkit-appearance:none;
+  }
+  #dz-player-search::placeholder{color:#83A0A8;}
+  .dz-visually-hidden{
+    position:absolute;width:1px;height:1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;clip-path:inset(50%);
+  }
+  .dz-home-layout{
+    display:grid;grid-template-columns:minmax(0,1fr) 265px;
+    align-items:start;gap:30px;margin-top:22px;
+  }
+  .dz-home-roster{min-width:0;}
+  .dz-directory-tools{
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:10px;margin:0 0 15px;
+  }
+  .dz-age-filters{
+    display:flex;align-items:center;gap:5px;
+    flex-wrap:wrap;min-height:36px;
+  }
+  .dz-age-btn{
+    min-height:33px;padding:7px 10px;
+    background:transparent;border:1px solid transparent;border-radius:3px;
+    font-family:Inter,sans-serif;font-size:11px;
+    font-weight:720;color:#A1B5BC;letter-spacing:0;
+  }
+  .dz-age-btn.active{
+    border-color:#236D76;background:#153942;color:#C6F0F2;
+  }
+  .dz-age-btn:not(.active):hover{color:#E8FAFC;background:#17282F;}
+  .dz-directory-order{
+    flex:none;white-space:nowrap;
+    color:#78959D;font-family:Inter,sans-serif;font-size:10px;
+    font-weight:600;
+  }
+  #view-home .group{margin-top:21px;}
+  #view-home .group-title{
+    display:flex;align-items:baseline;justify-content:flex-start;
+    gap:10px;padding:0;margin:0 0 10px;
+    border:0;color:#F0F8FA;
+    font-family:Inter,sans-serif;font-size:14px;
+    font-weight:850;letter-spacing:0;text-transform:uppercase;
+  }
+  #view-home .group-title::after{
+    content:'';height:1px;background:#2E444C;
+    flex:1;align-self:center;margin-left:2px;
+  }
+  #view-home .group-count{
+    color:#8DA5AD;font-family:Inter,sans-serif;
+    font-size:10px;font-weight:500;
+  }
+  #view-home .roster{
+    background:transparent;border:0;border-top:1px solid #3A555E;
+    border-radius:0;overflow:visible;
+  }
+  .dz-roster-columns{
+    display:grid;grid-template-columns:minmax(175px,.38fr) minmax(0,1fr) 20px;
+    gap:13px;align-items:center;padding:11px 13px;
+    color:#88A5AE;border-bottom:1px solid #2B424B;
+    font-family:Inter,sans-serif;font-size:10px;
+    font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  }
+  .dz-roster-columns small{
+    color:#79939B;font-size:10px;font-weight:500;letter-spacing:0;text-transform:none;
+  }
+  #view-home .player-row{
+    display:grid;grid-template-columns:minmax(175px,.38fr) minmax(0,1fr) 20px;
+    align-items:center;gap:13px;min-height:76px;
+    padding:16px 13px;border-bottom:1px solid #253943;
+    background:transparent;text-decoration:none;
+    transition:background .14s ease;
+  }
+  #view-home .roster a.player-row:hover,
+  #view-home .roster a.player-row:focus-visible{
+    background:#12252C;
+  }
+  #view-home .dz-roster-person{min-width:0;display:flex;flex-direction:column;gap:5px;}
+  #view-home .player-row .player-name{
+    font-family:Inter,system-ui,sans-serif!important;
+    font-size:14px;line-height:1.25;
+    color:#F0F5F7;font-weight:800;letter-spacing:-.016em;
+    font-style:normal;text-transform:none;
+  }
+  .dz-roster-meta{font-family:Inter,sans-serif;font-size:10px;color:#8BA7B0;}
+  #view-home .dz-pitch-usage{
+    display:flex;flex-wrap:wrap;align-items:flex-start;
+    gap:11px 18px;margin:0;min-width:0;
+  }
+  #view-home .dz-usage-item{
+    display:flex;flex-direction:column;align-items:flex-start;
+    justify-content:flex-start;
+    min-width:76px;max-width:145px;flex:0 1 auto;
+    gap:3px;padding:0 0 0 8px;
+    border-radius:0;border-left:2px solid var(--dz-pitch-color,#009AA6);
+    background:transparent;
+    line-height:1.3;white-space:normal;color:#DCE9EC;
+    font-family:Inter,sans-serif;font-size:11px;
+  }
+  #view-home .dz-usage-dot{display:none;}
+  #view-home .dz-pitch-name{
+    font-size:10.5px;font-weight:850;color:#E9F3F4;
+    line-height:1.15;white-space:nowrap;
+  }
+  #view-home .dz-usage-grade{
+    display:block;background:transparent!important;border:0!important;
+    padding:0!important;min-width:0;
+    font:750 11px Inter,sans-serif;
+    color:#F2F9FA;white-space:nowrap;line-height:1.3;
+  }
+  #view-home .dz-usage-grade--unset{
+    color:#829EA6!important;font-weight:600;font-size:10px;
+  }
+  #view-home .dz-usage-velo{
+    display:block;white-space:nowrap;color:#91ABB3;
+    font-size:10.5px;margin:0;line-height:1.2;
+  }
+  #view-home .chevron{
+    font-family:Inter,sans-serif;font-size:24px;
+    line-height:1;color:#6CAEB8;align-self:center;
+  }
+  #view-home .home-footnote{
+    color:#77939A;font-size:10.5px;margin:30px 0 0;
+    padding-top:16px;line-height:1.65;border-color:#274049;
+  }
+  .dz-search-empty{
+    margin:23px 0;padding:22px;text-align:center;
+    border:1px dashed #38535B;border-radius:4px;
+  }
+  /* Compact but always-visible scouting reference in the right column. */
+  .dz-home-aside{position:sticky;top:22px;min-width:0;}
+  #view-home .dz-scouting-key{
+    margin:0;padding:19px 18px;
+    background:#112127;border:1px solid #2E4851;
+    border-top:2px solid #286F7A;border-left:1px solid #2E4851;
+    border-radius:2px;
+  }
+  #view-home .dz-scouting-key-heading{
+    display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  }
+  #view-home .dz-scouting-key h2{
+    order:2;margin:0;font-family:Inter,sans-serif;font-weight:800;
+    font-size:16px;letter-spacing:-.02em;text-transform:none;
+  }
+  #view-home .dz-scouting-age-label{
+    order:1;color:#69C9D0;font:800 9px Inter,sans-serif;
+    letter-spacing:.12em;
+  }
+  #view-home .dz-scouting-key>p{
+    font-family:Inter,sans-serif;color:#A8BFC5;
+    font-size:11px;line-height:1.62;margin:11px 0;
+  }
+  #view-home .dz-scouting-steps{
+    display:flex;flex-direction:column;gap:0;
+    margin-top:13px;
+  }
+  #view-home .dz-scouting-step{
+    display:grid;grid-template-columns:27px 1fr;gap:9px;
+    align-items:center;text-align:left;padding:8px 1px;
+    border-bottom:1px solid #274049;
+    color:#A4BAC1;font-size:10.5px;line-height:1.3;
+  }
+  #view-home .dz-scouting-step:last-child{border-bottom:0;}
+  #view-home .dz-scouting-number{
+    background:transparent!important;border:0;
+    padding:0;min-height:0;width:auto;max-width:none;
+    display:block;text-align:left;
+    font:850 13px Inter,sans-serif;color:#8DA9B3;
+  }
+  #view-home .dz-scouting-step:nth-child(1) .dz-scouting-number{color:#6D9DD2;}
+  #view-home .dz-scouting-step:nth-child(2) .dz-scouting-number{color:#87ACCD;}
+  #view-home .dz-scouting-step:nth-child(3) .dz-scouting-number{color:#8EABB8;}
+  #view-home .dz-scouting-step:nth-child(4) .dz-scouting-number{color:#95BEC6;}
+  #view-home .dz-scouting-step:nth-child(5) .dz-scouting-number{color:#52BCC6;}
+  #view-home .dz-scouting-step:nth-child(6) .dz-scouting-number{color:#4BCCD1;}
+  #view-home .dz-scouting-step:nth-child(7) .dz-scouting-number{color:#83E4E7;}
+  #view-home .dz-scouting-key .dz-scouting-footnote{
+    border-top:1px solid #2A4650;
+    margin:14px 0 0;padding-top:12px;
+    font-size:10px;color:#91ACB4;
+  }
+
+  /* Admin organization: flat operational hierarchy, not nested big cards. */
+  #view-admin #admin-panel{
+    border:0;background:transparent;margin-top:6px;
+    padding:0 0 60px;
+  }
+  #view-admin #admin-panel>h2{
+    display:none;
+  }
+  #view-admin .dz-admin-jumps{
+    display:flex;align-items:center;flex-wrap:wrap;gap:24px;
+    margin:12px 0 27px;padding:0;border-bottom:1px solid #38525A;
+  }
+  #view-admin .dz-admin-jump{
+    flex:0 0 auto;min-height:42px;padding:0 0 13px;
+    border:0;border-bottom:2px solid transparent;border-radius:0;
+    color:#9AB0B7;background:transparent;
+    font-family:Inter,sans-serif;font-weight:740;font-size:12px;
+    letter-spacing:0;text-transform:none;
+  }
+  #view-admin .dz-admin-jump:hover{color:#F5FBFC;}
+  #view-admin .dz-admin-jump.active{color:#F5FBFC;border-bottom-color:#2BC9D4;}
+  #view-admin .dz-admin-group,#view-admin .dz-inactive-panel,
+  #view-admin .dz-backup-section,#view-admin .dz-legacy-tools{
+    margin:19px 0 30px;padding:0 0 24px;
+    background:transparent;border:0;border-bottom:1px solid #2B424A;
+    border-radius:0;
+  }
+  #view-admin .dz-admin-group>h3,#view-admin .dz-inactive-panel h3,
+  #view-admin .dz-backup-section h3,#view-admin .dz-legacy-tools>h3{
+    font-family:Inter,sans-serif;text-transform:none;
+    font-size:17px!important;font-weight:800;letter-spacing:-.02em;
+    color:#F0F6F7;
+  }
+  #view-admin .admin-section-head{align-items:center;flex-direction:row;}
+  #view-admin .admin-section-head .field-label{font-family:Inter,sans-serif;font-size:17px;}
+  #view-admin .cloud-help{
+    font-family:Inter,sans-serif;color:#93ACB3;
+    font-size:12px;line-height:1.65;
+  }
+  #view-admin .dz-coach-list{gap:0;margin-top:17px;}
+  #view-admin #admin-panel .dz-coach-list>li{
+    display:flex;flex-direction:row;align-items:center;
+    flex-wrap:wrap;gap:12px;
+    padding:14px 8px;border:0;border-bottom:1px solid #27414A;
+    border-radius:0;background:transparent;
+  }
+  #view-admin .dz-coach-detail{flex:1 1 240px;}
+  #view-admin .dz-coach-email{
+    font-family:Inter,sans-serif;font-size:12.5px;font-weight:750;
+  }
+  #view-admin .dz-coach-meta{color:#8EA8B0;}
+  #view-admin .dz-coach-actions{width:auto;flex:none;}
+  #view-admin .dz-coach-actions .cloud-button{min-width:90px;}
+  #view-admin .dz-role-controls{
+    display:flex;flex:1 1 100%;align-items:center;
+    gap:12px;padding:9px 0 0;border-color:#293F47;
+  }
+  #view-admin .dz-role-controls label{margin:0;white-space:nowrap;font-size:11px;}
+  #view-admin .dz-role-select,#view-admin .dz-linked-player{
+    min-width:195px;min-height:39px;max-width:260px;
+    border-radius:3px;font-family:Inter,sans-serif;font-size:12px;
+  }
+  #view-admin #cloud-invite-form{
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;
+    gap:10px;
+  }
+  #view-admin #cloud-invite-email{
+    flex:1 1 220px;max-width:440px;min-height:43px;
+  }
+  #view-admin #cloud-invite-form .cloud-button{min-width:165px;}
+  #view-admin .dz-backup-section{background:transparent;}
+  #view-admin .dz-sms-note{border-radius:3px;}
+
+  /* Profile components keep exact original order, content, and handlers.
+     The existing italic Barlow Condensed name rules are untouched. */
+  #view-player .masthead{
+    position:relative;overflow:hidden;
+    background:linear-gradient(115deg,#091319,#0C2027 72%,#0E2C34);
+    border-bottom:2px solid #037F8B;
+  }
+  #view-player .masthead::after{
+    content:'';position:absolute;right:-55px;top:-118px;
+    width:390px;height:390px;
+    background:url('./dz-logo.svg') center/contain no-repeat;
+    opacity:.035;pointer-events:none;
+  }
+  #view-player .masthead>.wrap{position:relative;z-index:1;}
+  #view-player .masthead-row{align-items:center;}
+  #view-player .dz-brand-logo{filter:drop-shadow(0 3px 13px rgba(0,150,165,.15));}
+  #view-player .dz-profile-identity{gap:24px;}
+  #view-player .session-tag{font-family:Inter,sans-serif;font-size:11px;}
+  #view-player .kpis{
+    border:1px solid #2D4852;background:#102029;
+    margin-top:0;
+  }
+  #view-player .kpi{padding:18px 18px;border-color:#28424B;}
+  #view-player .kpi-label{color:#98B1B9;font-size:10px;}
+  #view-player .kpi-value{color:#F5FCFD;}
+  #view-player .dz-profile-actions{margin-top:17px;gap:10px;}
+  #view-player .dz-profile-actions .cloud-button{
+    border-radius:4px;
+  }
+  #view-player .tabbar{
+    border-bottom:1px solid #314A53;margin-top:20px;
+    gap:0;
+  }
+  #view-player .tabbtn{
+    font-family:'Barlow Condensed','Oswald',sans-serif;
+    font-size:16px;font-weight:750;
+    padding:12px 16px;letter-spacing:.035em;
+  }
+  #view-player .tabbtn.active{
+    color:#46D8E0;border-bottom-color:#1DD0DA;
+  }
+  #view-player .chart-row{
+    grid-template-columns:1.26fr .94fr .94fr;
+    border-color:#2A4650;background:#2A4650;
+    gap:1px;
+  }
+  #view-player .chart-card{
+    background:#102028;min-width:0;padding:18px 16px 13px;
+  }
+  #view-player .chart-title{font-size:16px;color:#F5FAFA;}
+  #view-player .table-card{
+    background:#0F1E25;border-color:#2B4952;
+  }
+  #view-player thead th{color:#A9C2C9;}
+  #view-player tbody td{border-bottom-color:#243C46;}
+  #view-player .panel.active{min-width:0;}
+  #view-player textarea{background:#0F2027;border:1px solid #34515B;}
+  #view-player .field-label{color:#E6F3F5;}
+
+  @media(max-width:1020px){
+    .wrap,.home-wrap{padding-inline:22px;}
+    #cloud-bar .wrap{gap:20px;}
+    .dz-home-layout{grid-template-columns:minmax(0,1fr) 215px;gap:19px;}
+    .dz-directory-order{display:none;}
+    .dz-roster-columns,#view-home .player-row{
+      grid-template-columns:minmax(135px,.37fr) minmax(0,1fr) 18px;
+      gap:10px;
+    }
+    #view-home .dz-pitch-usage{gap:9px 12px;}
+    #view-home .dz-usage-item{min-width:72px;}
+    #view-player .chart-row{grid-template-columns:1.2fr .9fr .9fr;}
+  }
+  @media(max-width:820px){
+    .dz-home-layout{grid-template-columns:minmax(0,1fr);}
+    .dz-home-aside{position:static;margin-top:24px;}
+    #view-home .dz-scouting-key{padding:17px;}
+    #view-home .dz-scouting-steps{
+      display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+      gap:4px;
+    }
+    #view-home .dz-scouting-step{
+      display:flex;flex-direction:column;
+      text-align:center;border:0;padding:7px 2px;
+      gap:4px;font-size:9px;
+    }
+    #view-home .dz-scouting-number{text-align:center;}
+    #view-player .chart-row{grid-template-columns:1fr;}
+  }
+  @media(max-width:640px){
+    .wrap,.home-wrap{padding-inline:16px;}
+    #cloud-bar .wrap{
+      display:grid;grid-template-columns:minmax(0,1fr) auto;
+      min-height:0;gap:7px 10px;padding-block:10px;
+    }
+    .dz-nav-brand{min-width:0;grid-column:1;gap:7px;}
+    .dz-nav-brand img{width:37px;height:37px;}
+    .dz-nav-brand strong{font-size:12px;}
+    .dz-nav-brand small{font-size:8px;}
+    #cloud-bar .dz-session-controls{
+      grid-column:2;grid-row:1;display:flex;
+      width:auto;margin:0;justify-content:flex-end;
+    }
+    #cloud-identity{display:none;}
+    #cloud-bar #cloud-signout{min-height:39px;font-size:11px;}
+    #cloud-bar .dz-site-tabs{
+      display:flex;grid-column:1/-1;grid-row:2;
+      align-items:stretch;gap:10px;
+      min-height:44px;width:100%;
+    }
+    #cloud-bar .dz-site-tab{
+      flex:1;min-height:44px;text-align:center;
+      border:0;border-bottom:2px solid transparent;
+      padding:9px 12px;font-size:12px;
+    }
+    #view-home .masthead,#view-admin .masthead{padding:25px 0 5px;}
+    .dz-home-hero{flex-direction:column;align-items:stretch;gap:15px;}
+    .dz-home-actions{justify-content:space-between;}
+    .dz-home-actions>*{flex:1 1 0;}
+    #view-home #coach-upload-panel{display:flex;justify-content:flex-end;}
+    #view-home #cloud-add-player{width:100%;}
+    .dz-scale-link{white-space:nowrap;}
+    #view-home .page-title,#view-admin .page-title{font-size:31px;}
+    #view-home .page-sub,#view-admin .page-sub{font-size:12px;}
+    .dz-home-toolbar{
+      display:flex;flex-direction:column;
+      align-items:stretch;gap:12px;margin-top:15px;
+    }
+    #view-home .dz-directory-tabs{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;
+      width:100%;
+    }
+    #view-home .dz-directory-tab{
+      justify-content:center;padding:10px 7px;
+      min-height:46px;
+    }
+    .dz-directory-search{
+      width:100%;min-width:0;max-width:100%;margin:0 0 12px;
+      min-height:44px;
+    }
+    #dz-player-search{font-size:16px;}
+    .dz-home-layout{margin-top:14px;}
+    .dz-directory-tools{margin-bottom:10px;}
+    .dz-age-filters{
+      flex-wrap:nowrap;max-width:100%;overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      padding:0 0 4px;min-height:42px;
+    }
+    .dz-age-btn{flex:none;white-space:nowrap;min-height:38px;}
+    #view-home .group{margin-top:23px;}
+    #view-home .group-title{font-size:14px;}
+    .dz-roster-columns{display:none;}
+    #view-home .player-row{
+      display:grid;grid-template-columns:minmax(0,1fr) 16px;
+      gap:8px;padding:14px 10px;min-height:0;
+    }
+    #view-home .dz-roster-person{grid-column:1;grid-row:1;}
+    #view-home .dz-pitch-usage{
+      grid-column:1;grid-row:2;
+      display:flex;flex-wrap:wrap;gap:10px 12px;
+      margin-top:7px;
+    }
+    #view-home .dz-usage-item{min-width:76px;}
+    #view-home .chevron{grid-column:2;grid-row:1/3;}
+    #view-home .player-row .player-name{font-size:14px;}
+    #view-home .dz-scouting-steps{
+      display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:9px 5px;
+    }
+    #view-home .dz-scouting-step{font-size:9.5px;}
+    #view-admin #admin-panel{padding:0 0 36px;margin-top:6px;}
+    #view-admin .dz-admin-jumps{
+      flex-wrap:nowrap;gap:18px;
+      overflow-x:auto;-webkit-overflow-scrolling:touch;
+    }
+    #view-admin .dz-admin-jump{
+      flex:0 0 auto;white-space:nowrap;
+      padding:7px 0 12px;min-height:44px;font-size:12px;
+    }
+    #view-admin .dz-admin-group,#view-admin .dz-inactive-panel,
+    #view-admin .dz-backup-section,#view-admin .dz-legacy-tools{
+      padding-bottom:20px;margin-bottom:23px;
+    }
+    #view-admin #admin-panel .dz-coach-list>li{
+      flex-direction:column;align-items:stretch;
+    }
+    #view-admin .dz-coach-detail{width:100%;flex:auto;}
+    #view-admin .dz-coach-actions{width:100%;display:grid;grid-template-columns:repeat(2,1fr);}
+    #view-admin .dz-role-controls{
+      display:grid;grid-template-columns:minmax(0,1fr);
+      gap:8px;
+    }
+    #view-admin .dz-role-select,#view-admin .dz-linked-player{
+      min-width:0;max-width:100%;width:100%;
+    }
+    #view-admin #cloud-invite-form{flex-direction:column;align-items:stretch;}
+    #view-admin #cloud-invite-email{max-width:100%;}
+    #view-player .masthead::after{width:250px;height:250px;top:-35px;right:-35px;}
+    #view-player .dz-profile-identity{gap:11px;}
+    #view-player .chart-row{grid-template-columns:1fr;}
+    #view-player .tabbar{overflow-x:auto;flex-wrap:nowrap;}
+  }
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto;}
+  }
+
 </style>
 </head>
 <body>
@@ -1484,7 +2116,8 @@ async function renderHome(){
         <span class="chevron" aria-hidden="true">›</span>
       </a>`;
     }));
-    document.getElementById(group.containerId).innerHTML = rows.join('');
+    document.getElementById(group.containerId).innerHTML =
+      '<div class="dz-roster-columns" aria-hidden="true"><span>Pitcher</span><span>Pitch arsenal <small>· ranked by usage</small></span><span></span></div>'+rows.join('');
   }
   dzBuildAgeFilters();
   dzApplyDirectoryFilters();
