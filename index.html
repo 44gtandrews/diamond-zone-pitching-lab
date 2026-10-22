@@ -1605,7 +1605,7 @@
         <h2 id="dz-scouting-key-title">20–80 Scouting Scale</h2>
         <span class="dz-scouting-age-label">AGE-BASED GRADES</span>
       </div>
-      <p>Grades are assigned by a coach <strong>relative to pitchers in the same age group</strong>—not to professional players. A <strong>50 Grade</strong> means average for that age; higher is better. Pitches below remain ordered by usage, highest first.</p>
+      <p>Grades are assigned by a coach <strong>relative to pitchers in the same age group</strong>—not to professional players. A <strong>50 Grade</strong> means average for that age; higher is better. Where counts are available, pitches below are ordered by usage, highest first.</p>
       <div class="dz-scouting-steps" aria-label="Scouting grade definitions from 20 through 80">
         <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(211,75%,33%)">20</span><span>Well below</span></div>
         <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(211,59%,29%)">30</span><span>Below</span></div>
@@ -2161,7 +2161,7 @@ async function renderHome(){
           <span class="player-name">${dzEscapeText(player.name)}</span>
           <span class="dz-roster-meta">${dzEscapeText(player.ageLabel||'')} · ${affiliation}</span>
         </div>
-        <div class="dz-pitch-usage" aria-label="Pitches ordered by usage, with age-based scouting grades and average velocity">${usage||'<span class="player-blurb">No pitches recorded</span>'}</div>
+        <div class="dz-pitch-usage" aria-label="${player.summaryOnly?'Pitch-type averages; usage unavailable':'Pitches ordered by usage'} with age-based scouting grades and average velocity">${usage||'<span class="player-blurb">No pitches displayed</span>'}</div>
         <span class="chevron" aria-hidden="true">›</span>
       </a>`;
     }));
@@ -2251,7 +2251,7 @@ function renderMovementChart(player, summary){
 
 function buildFootnote(player, totalN){
   if(player.summaryOnly){
-    return 'Pitch-type averages from the Trackman Team Portal report. This format does not contain pitch counts, true usage percentages, maximum pitch velocities or a precise number of sessions, so the portal intentionally leaves those values unknown. Release height and release side represent averages for each pitch type, not measured anatomical arm angle. Coaches may hide unwanted pitch types without deleting the imported measurements. Grades remain manually assigned and age-relative.';
+    return 'Pitch-type averages from the Trackman Team Portal report. This format does not contain pitch counts, true usage percentages, maximum pitch velocities or a precise number of sessions, so the portal intentionally leaves those values unknown. Release height and release side represent averages for each pitch type, not measured anatomical arm angle. Coaches may hide unwanted pitch types without deleting the imported measurements. Grades remain manually assigned and age-relative. If two pitches share the highest grade, usage cannot resolve the tie in this report because counts are missing.';
   }
   if(player.dataType==='raw'){
     return `${totalN} pitches from the ${player.sessionDate} practice feed this view — pitches classified or `+
@@ -2439,6 +2439,15 @@ function refreshHighestGradedPitchKpi(player){
   }
 }
 
+
+function trackmanSessionCount(player){
+  const history=Array.isArray(player.importHistory)?player.importHistory:[];
+  if(!history.length||history.length!==player.sessions)return player.sessions;
+  return history.reduce((n,entry)=>n+
+    (Number.isInteger(entry?.sourceSessionCount)&&entry.sourceSessionCount>0
+      ?entry.sourceSessionCount:1),0);
+}
+
 function renderOverview(player){
   const summary = getTypeSummary(player);
   const totalN = summary.reduce((s,p)=>s+(Number.isFinite(p.n)?p.n:0),0);
@@ -2447,7 +2456,7 @@ function renderOverview(player){
 
   const kpiData = [
     {label:'Total Pitches', value:player.summaryOnly?'—':totalN},
-    {label:player.summaryOnly?'Reports Imported':'Sessions', value:player.sessions},
+    {label:player.summaryOnly?'Reports Imported':'Sessions', value:player.summaryOnly?player.sessions:trackmanSessionCount(player)},
     {label:'Pitch Types', value:summary.length},
     {label:'Highest Graded Pitch', value:topGraded?topGraded.name:(player._gradesLoadFailed?'Grade unavailable':'Not graded'), small:topGraded?topGraded.grade+' Grade':''},
     {label: player.dataType==='raw' ? 'Fastball Med.' : 'Fastball Avg', value: fb?fmt(fb.velo):'—', small:'mph'},
@@ -2823,7 +2832,7 @@ async function showPlayer(id){
   document.getElementById('session-tag-main').innerHTML =
     player.summaryOnly
       ?`<span class="live-dot"></span><strong>${player.sessions} report${player.sessions===1?'':'s'}</strong> imported · pitch counts unavailable`
-      :`<span class="live-dot"></span><strong>${player.sessions} session${player.sessions===1?'':'s'}</strong> selected`;
+      :`<span class="live-dot"></span><strong>${trackmanSessionCount(player)} session${trackmanSessionCount(player)===1?'':'s'}</strong> represented in imported reports`;
 
   document.getElementById('view-player').classList.toggle('dz-readonly',!window.DZ_EDIT_ENABLED);
   document.querySelectorAll('#view-player .save-row').forEach(el=>el.style.display=window.DZ_EDIT_ENABLED?'':'none');
