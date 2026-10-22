@@ -25,7 +25,7 @@ exports.notifyCoachAccessRequestSms = onDocumentCreated({
   const data = event.data?.data();
   if (!data || data.status !== "pending") return;
   const email = String(data.email || "");
-  if (!/^[^\\s/@]+@[^\\s/@]+\\.[^\\s/@]+$/.test(email)) return;
+  if (!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email)) return;
 
   // At-least-once event delivery can produce duplicates. Claim the event
   // before sending and send at most 20 notifications per UTC day.
