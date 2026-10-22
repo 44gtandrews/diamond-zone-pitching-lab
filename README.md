@@ -1,3 +1,47 @@
+# Player directory, profile editing and full emergency JSON backups (Oct 22, 2026)
+
+## Player directory
+- The Player Directory row shows **every tracked pitch type** with its share of recorded pitches (one decimal place), including a matching pitch-color dot.
+- The directory no longer displays sessions, a primary pitch, or fastball velocity in each roster row. Player profile KPI cards and pitching analyses are unchanged.
+
+## Editing player identity (admin only)
+- On any player profile, an approved administrator sees **Edit Profile** beside **Upload New Session**.
+- Update **player name** and **age group** (10U–18U or Coach / Adult), then save.
+- Edits update the original Firestore `players/{id}` document, never recreating it or changing its permanent internal ID or six-digit public ID; its stats, grades, notes, links and history are preserved.
+- A player moved to a different age group appears under the newly appropriate Player Directory grouping after saving.
+- Non-admin coaches may still upload sessions and coaching notes under the existing security rules, but cannot edit player identity.
+
+## Full administrator backup
+Open **Admin Dashboard → Emergency data backup and restore → Download full backup JSON**.
+
+The download is a **private, unencrypted** `diamond-zone-full-backup-YYYY-MM-DD.json` containing:
+- All `players` (including aggregated pitching data, stored session history, player metadata)
+- All permanent `playerCodes` reservations
+- Every player `playerEdits/{id}/sections` entry (notes, mechanics, strength, grades, overrides)
+- The `allowlist` of staff approvals / disabled accounts and `coachRequests`
+
+Timestamp values are serialized with a typed wrapper so they can be restored. The snapshot is generated from Firestore reads immediately before downloading, not from just the user's currently loaded roster. Store backups **securely or encrypted**: they contain private youth player data and staff email addresses. Prefer keeping an offline copy after each meaningful data update.
+
+**Not included:** Firebase Authentication user accounts/passwords (those cannot be exported from this browser-only Firestore workflow), Firebase project/IAM configuration, security rules, hosted source code, Firebase Functions credentials or SMS messages. Project rules/source remain versioned in GitHub. Recovering a completely deleted Firebase project requires additional administrative recovery work and is **not** a one-click restore.
+
+## Emergency restore
+1. While signed in with an approved administrator account, open **Admin Dashboard → Restore a full backup** and choose the JSON export.
+2. Click **Restore full backup**. The app validates file format, Firebase project ID, player records, all six-digit reservations and any clashes with current player IDs.
+3. Read the confirmation carefully and type `RESTORE` to proceed.
+4. The app writes player records, restores missing code reservations, restores notes and pitch grades, restores coach-level access and missing applications, then refreshes the directory.
+5. **Records not included in the backup are never deleted.** Records included in the backup (player data, notes, coach approvals) may be overwritten, so this should be used only for emergency recovery. Existing admin roles are never altered or created, and newer review decisions on existing applications are not overwritten.
+6. If an operation fails partway through, earlier batches may already be restored; repeat the same file after resolving permissions or connectivity.
+
+**Required rules release:** the repository's updated `firestore.rules` allows admins to restore historic coaching notes and requests. The existing automatic GitHub Actions workflow deploys **Hosting only**, so after this code update you must publish the new Firestore rules once. In a terminal in the repository:
+
+```bash
+cd ~/diamond-zone-pitching-lab
+git pull origin main
+npx --yes firebase-tools@latest deploy --only firestore:rules --project diamond-zone-pitching-lab
+```
+
+Or copy `firestore.rules` from GitHub into **Firebase Console → Firestore Database → Rules** and publish. Do not weaken the rules or use public test mode. The app remains available while rules are updated.
+
 # Coach access requests, administrator tab and optional SMS alerts (Oct 2026)
 
 ## Staff access: what changed
