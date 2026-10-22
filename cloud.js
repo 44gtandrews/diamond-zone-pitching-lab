@@ -730,7 +730,9 @@
     }
     for(const item of decoded.allowlist){
       if(!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(item.id)||
-        !['admin','coach'].includes(item.data.role)||typeof item.data.active!=='boolean')
+        !ALLOWED_ROLES.includes(item.data.role)||typeof item.data.active!=='boolean' ||
+        (item.data.role==='player_parent' &&
+          (typeof item.data.playerId!=='string'||!backupPlayers.has(item.data.playerId))))
         throw Error('Invalid staff approval entry.');
     }
     for(const item of decoded.coachRequests){
@@ -816,9 +818,10 @@
         item=>db.collection('playerEdits').doc(item.playerId).collection('sections').doc(item.section),
         item=>item.data,8);
 
-      // Stage 4: restore coach access without touching ANY admin role or this account.
+      // Stage 4: restore non-admin permissions without touching any administrator.
+      // The role and linked-player fields are included in the emergency backup.
       const safeCoaches=decoded.allowlist.filter(item=>
-        item.data.role==='coach'&&item.id!==emailKey(activeUser.email)&&
+        item.data.role!=='admin'&&item.id!==emailKey(activeUser.email)&&
         liveStaff.get(item.id)?.role!=='admin');
       if(safeCoaches.length){
         dzBackupMessage('Restoring '+safeCoaches.length+' coach access records...');
@@ -1029,6 +1032,9 @@
       $('cloud-pending-badge').textContent=String(pendingCount);
       $('cloud-pending-badge').style.display=pendingCount?'inline-block':'none';
 
+      const lastInvited=invitePlayer.value;
+      playerOptions(invitePlayer,lastInvited);
+      syncInvitePlayer();
       const entriesApproved=Array.from(allowlist.docs).sort((a,b)=>a.id.localeCompare(b.id));
       for(const doc of entriesApproved){
         const d=doc.data(),mine=doc.id===emailKey(activeUser.email);
