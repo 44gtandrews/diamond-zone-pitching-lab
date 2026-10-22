@@ -762,6 +762,8 @@
     try{
       const parsed=JSON.parse(await file.text());
       const {decoded,backupPlayers,codes}=dzValidateBackup(parsed);
+      // Restoring roles must not occur while legacy broad permissions are live.
+      await requirePermissionRules();
       dzBackupMessage('Checking permanent player IDs and current database...');
       const [playerSnaps,codeSnaps,requestSnaps,staffSnaps]=await Promise.all([
         db.collection('players').get(),
