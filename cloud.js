@@ -10,13 +10,16 @@
   let auth, db, activeUser=null, staff=null;
   let accessVersion=0;
   window.DZ_AUTHORIZED = false;
+  window.DZ_IS_ADMIN = false;
 
   function showAuth(title, description, mode='login', message='') {
     window.DZ_AUTHORIZED=false;
+    window.DZ_IS_ADMIN=false;
     authScreen.style.display='block';
     $('cloud-bar').style.display='none';
     $('view-home').style.display='none';
     $('view-player').style.display='none';
+    $('view-admin').style.display='none';
     $('cloud-auth-title').textContent=title;
     $('cloud-auth-description').textContent=description;
     loginForm.style.display=mode==='login'?'grid':'none';
@@ -149,11 +152,12 @@
   };
   async function showAllowed() {
     window.DZ_AUTHORIZED=true;
+    window.DZ_IS_ADMIN=staff?.role==='admin';
     installStorage();
     authScreen.style.display='none';
     $('cloud-bar').style.display='block';
     $('cloud-identity').textContent=activeUser.email+' · '+(staff.role==='admin'?'Administrator':'Coach');
-    $('admin-panel').style.display=staff.role==='admin'?'block':'none';
+    $('cloud-admin-nav').style.display=window.DZ_IS_ADMIN?'':'none';
     await loadPlayers();
     if(staff.role==='admin' && Object.values(PLAYERS).some(p=>!hasPublicId(p))){
       try {
@@ -187,7 +191,36 @@
       const doc=await db.collection('allowlist').doc(emailKey(user.email)).get();
       if(version!==accessVersion) return;
       if(!doc.exists||doc.data().active!==true){
-        showAuth('Coach approval required','Your email is verified but has not been approved by the Diamond Zone administrator.','verify');
+        // An authenticated, email-verified coach may create ONE pending request.
+        // Firestore denies all roster reads until a separate admin approval.
+        const requestRef=db.collection('coachRequests').doc(user.uid);
+        let request;
+        try {
+          request=await requestRef.get();
+          if(!request.exists){
+            await requestRef.set({
+              uid:user.uid,
+              email:emailKey(user.email),
+              status:'pending',
+              requestedAt:firebase.firestore.FieldValue.serverTimestamp()
+            });
+            request=await requestRef.get();
+          }
+        }catch(e){
+          if(version===accessVersion){
+            showAuth('Approval request unavailable','Your account is verified, but the access request could not be submitted. Please try again after the latest Firestore rules are published.','verify',friendly(e));
+          }
+          return;
+        }
+        if(version!==accessVersion)return;
+        const state=request.data()?.status;
+        if(state==='denied'){
+          showAuth('Access request denied','The administrator has declined access for this account. Contact Diamond Zone if you believe this was a mistake.','verify');
+        }else if(state==='approved'){
+          showAuth('Approval processing','Your request has been approved. Sign in again shortly; contact the administrator if your roster access is not enabled.','verify');
+        }else{
+          showAuth('Access request pending','Your verified account has been submitted to Diamond Zone for review. You cannot access player data until the administrator approves it.','verify');
+        }
         return;
       }
       staff=doc.data();
@@ -278,40 +311,133 @@
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
 
+  function coachCard(email, meta, actions) {
+    const li=document.createElement('li');
+    const detail=document.createElement('div');detail.className='dz-coach-detail';
+    const address=document.createElement('div');address.className='dz-coach-email';address.textContent=email;
+    const description=document.createElement('div');description.className='dz-coach-meta';description.textContent=meta;
+    detail.append(address,description);li.appendChild(detail);
+    if(actions.length) {
+      const buttons=document.createElement('div');buttons.className='dz-coach-actions';
+      for(const entry of actions){
+        const btn=document.createElement('button');
+        btn.type='button';btn.className='cloud-button'+(entry.secondary?' secondary':'');
+        btn.textContent=entry.label;
+        btn.addEventListener('click',async()=>{
+          btn.disabled=true;
+          try{await entry.run();await listCoaches();}
+          catch(e){notify($('cloud-request-status'),friendly(e),true);}
+          finally{btn.disabled=false;}
+        });
+        buttons.appendChild(btn);
+      }
+      li.appendChild(buttons);
+    }
+    return li;
+  }
+  function emptyCoachRow(message){
+    const li=document.createElement('li');li.className='dz-empty-requests';
+    li.textContent=message;return li;
+  }
+  const requestDate=d=>d?.requestedAt?.toDate?.().toLocaleString?.()||'Recently submitted';
+  async function decideRequest(doc,decision){
+    if(staff?.role!=='admin')throw Error('Administrator required');
+    const data=doc.data(),email=emailKey(data.email);
+    if(email===emailKey(activeUser.email))throw Error('Cannot modify your own administrator access');
+    if(!['approved','denied','pending'].includes(decision))throw Error('Unknown decision');
+    const allowRef=db.collection('allowlist').doc(email);
+    const current=await allowRef.get();
+    if(current.exists && current.data().role==='admin')
+      throw Error('Another administrator account cannot be changed from the request queue');
+    const batch=db.batch(),stamp=firebase.firestore.FieldValue.serverTimestamp();
+    if(decision==='approved'){
+      batch.set(allowRef,{
+        active:true,role:'coach',approvedBy:activeUser.email,updatedAt:stamp
+      },{merge:true});
+    }else if(current.exists){
+      batch.update(allowRef,{active:false,updatedAt:stamp});
+    }
+    batch.update(doc.ref,{status:decision,reviewedAt:stamp,reviewedBy:activeUser.email});
+    await batch.commit();
+    notify($('cloud-request-status'),
+      email+' — '+(decision==='approved'?'approved':decision==='denied'?'denied':'moved back to pending')+'.');
+  }
   async function listCoaches() {
     if(staff?.role!=='admin')return;
-    const list=$('cloud-allowlist');list.replaceChildren();
-    try{
-      const snapshot=await db.collection('allowlist').get();
-      snapshot.forEach(doc=>{
-        const d=doc.data(),li=document.createElement('li'),label=document.createElement('span');
-        label.textContent=doc.id+' · '+d.role+' · '+(d.active?'Active':'Disabled')+' ';
-        li.appendChild(label);
-        if(doc.id!==emailKey(activeUser.email)){
-          const btn=document.createElement('button');btn.type='button';
-          btn.className='cloud-button secondary';btn.style.cssText='min-height:32px;padding:5px 9px';
-          btn.textContent=d.active?'Disable':'Enable';
-          btn.addEventListener('click',async()=>{
-            try{await doc.ref.update({active:!d.active});await listCoaches();}
-            catch(e){notify($('cloud-invite-status'),friendly(e),true);}
-          });
-          li.appendChild(btn);
+    const pending=$('cloud-pending-requests'),denied=$('cloud-denied-requests'),list=$('cloud-allowlist');
+    pending.replaceChildren();denied.replaceChildren();list.replaceChildren();
+    notify($('cloud-request-status'),'Loading coach access requests...');
+    try {
+      const [allowlist,requests]=await Promise.all([
+        db.collection('allowlist').get(),
+        db.collection('coachRequests').get()
+      ]);
+      let pendingCount=0,deniedCount=0;
+      const entries=Array.from(requests.docs)
+        .sort((a,b)=>(b.data().requestedAt?.toMillis?.()||0)-(a.data().requestedAt?.toMillis?.()||0));
+      for(const request of entries){
+        const d=request.data(),email=emailKey(d.email);
+        if(!email||!d.uid)continue;
+        const meta=requestDate(d)+' · Email verified';
+        if(d.status==='pending'){
+          pendingCount++;
+          pending.appendChild(coachCard(email,meta,[
+            {label:'Approve',run:()=>decideRequest(request,'approved')},
+            {label:'Deny',secondary:true,run:()=>decideRequest(request,'denied')}
+          ]));
+        }else if(d.status==='denied'){
+          deniedCount++;
+          denied.appendChild(coachCard(email,'Denied · '+meta,[
+            {label:'Approve',run:()=>decideRequest(request,'approved')},
+            {label:'Reconsider',secondary:true,run:()=>decideRequest(request,'pending')}
+          ]));
         }
-        list.appendChild(li);
-      });
-    }catch(e){notify($('cloud-invite-status'),friendly(e),true);}
+      }
+      if(!pendingCount)pending.appendChild(emptyCoachRow('No pending requests.'));
+      if(!deniedCount)denied.appendChild(emptyCoachRow('No denied requests.'));
+      $('cloud-pending-count').textContent=String(pendingCount);
+      $('cloud-pending-badge').textContent=String(pendingCount);
+      $('cloud-pending-badge').style.display=pendingCount?'inline-block':'none';
+
+      const approved=[];
+      allowlist.forEach(doc=>approved.push(doc));
+      approved.sort((a,b)=>a.id.localeCompare(b.id));
+      for(const doc of approved){
+        const d=doc.data(),mine=doc.id===emailKey(activeUser.email);
+        const statusText=d.active?'Approved':'Disabled';
+        const actions=mine?[]:[{
+          label:d.active?'Disable access':'Reinstate',
+          secondary:!!d.active,
+          run:async()=>{
+            await doc.ref.update({
+              active:!d.active,
+              updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+            });
+            notify($('cloud-request-status'),doc.id+(d.active?' disabled.':' reinstated.'));
+          }
+        }];
+        list.appendChild(coachCard(doc.id,d.role+' · '+statusText+(mine?' · You':''),actions));
+      }
+      if(!approved.length)list.appendChild(emptyCoachRow('No approved coaches yet.'));
+      notify($('cloud-request-status'),'Coach access list refreshed.');
+    }catch(e){
+      notify($('cloud-request-status'),'Unable to load coach requests: '+friendly(e),true);
+      pending.appendChild(emptyCoachRow('Please check that the new Firestore security rules are deployed.'));
+    }
   }
+  window.DZ_REFRESH_COACH_REQUESTS=()=>listCoaches();
+  $('cloud-refresh-requests').addEventListener('click',()=>listCoaches());
   $('cloud-invite-form').addEventListener('submit',async e=>{
     e.preventDefault();if(staff?.role!=='admin')return;
-    const email=emailKey($('cloud-invite-email').value),role=$('cloud-invite-role').value;
-    if(!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email)||!['admin','coach'].includes(role)){
-      notify($('cloud-invite-status'),'Enter a valid email and role.',true);return;
+    const email=emailKey($('cloud-invite-email').value),role='coach';
+    if(!/^[^\\s/@]+@[^\\s/@]+\\.[^\\s/@]+$/.test(email)){
+      notify($('cloud-invite-status'),'Enter a valid email.',true);return;
     }
     try{
       await db.collection('allowlist').doc(email).set({
         active:true,role,invitedBy:activeUser.email,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      },{merge:true});
       $('cloud-invite-email').value='';
       notify($('cloud-invite-status'),email+' approved. The coach can create and verify an account.');
       await listCoaches();
