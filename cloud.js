@@ -875,57 +875,152 @@
     li.textContent=message;return li;
   }
   const requestDate=d=>d?.requestedAt?.toDate?.().toLocaleString?.()||'Recently submitted';
-  async function decideRequest(doc,decision){
+  // A successful get of this virtual document means Role Policy v2 has been
+  // deployed; old rules return permission-denied instead. Prevent giving a
+  // family member an approved account while old (too-broad) rules are active.
+  async function requirePermissionRules() {
+    try{ await db.collection('rolePolicy').doc('v2').get(); }
+    catch(e){throw Error('Publish the new Firestore security rules before changing account roles. Access changes were not saved.');}
+  }
+  function playerOptions(select,chosen=''){
+    select.replaceChildren();
+    const placeholder=document.createElement('option');
+    placeholder.value='';placeholder.textContent='Select linked player...';
+    select.appendChild(placeholder);
+    const players=Object.values(PLAYERS)
+      .filter(p=>p.inactive!==true).sort(byLastName);
+    for(const player of players){
+      const option=document.createElement('option');
+      option.value=player.id;
+      option.textContent=player.name+' · '+player.ageLabel+
+        (player.publicId?' · #'+player.publicId:'')+
+        (player.affiliation==='external'?' · External':' · Internal');
+      select.appendChild(option);
+    }
+    if(chosen && players.some(p=>p.id===chosen))select.value=chosen;
+  }
+  function rolePicker(role='coach',playerId=''){
+    const controls=document.createElement('div');
+    controls.className='dz-role-controls';
+    const label=document.createElement('label');label.className='dz-coach-meta';
+    label.textContent='Role';
+    const select=document.createElement('select');
+    select.className='type-select dz-role-select';
+    select.setAttribute('aria-label','Account role');
+    for(const key of ALLOWED_ROLES){
+      const option=document.createElement('option');
+      option.value=key;option.textContent=ROLE_LABELS[key];
+      select.appendChild(option);
+    }
+    select.value=ALLOWED_ROLES.includes(role)?role:'coach';
+    const linked=document.createElement('select');
+    linked.className='type-select dz-linked-player';
+    linked.setAttribute('aria-label','Player assigned to family account');
+    playerOptions(linked,playerId);
+    const render=()=>{linked.style.display=select.value==='player_parent'?'':'none';};
+    select.addEventListener('change',render);
+    render();
+    controls.append(label,select,linked);
+    return {controls,select,linked};
+  }
+  function validateRoleChange(role,playerId){
+    if(!ALLOWED_ROLES.includes(role))throw Error('Choose a valid role.');
+    if(role==='player_parent' && (!playerId ||
+       !PLAYERS[playerId] || PLAYERS[playerId].inactive===true))
+      throw Error('Choose an active player before assigning Player / Parent access.');
+    return role==='player_parent'?playerId:null;
+  }
+  function confirmAdminRole(email,oldRole,newRole){
+    if(newRole==='admin' && oldRole!=='admin'){
+      if(window.prompt('Emergency full administrator access for '+email+
+        '. This grants every player, account and backup permission. Type ADMIN to confirm:')!=='ADMIN')
+        throw Error('Admin promotion cancelled.');
+    }
+    if(oldRole==='admin' && newRole!=='admin'){
+      if(window.prompt('Remove administrator permissions from '+email+
+        '? Type DEMOTE to confirm:')!=='DEMOTE')
+        throw Error('Admin demotion cancelled.');
+    }
+  }
+  async function decideRequest(doc,decision,role='coach',playerId=''){
     if(staff?.role!=='admin')throw Error('Administrator required');
     const data=doc.data(),email=emailKey(data.email);
     if(email===emailKey(activeUser.email))throw Error('Cannot modify your own administrator access');
     if(!['approved','denied','pending'].includes(decision))throw Error('Unknown decision');
+    await requirePermissionRules();
     const allowRef=db.collection('allowlist').doc(email);
     const current=await allowRef.get();
     if(current.exists && current.data().role==='admin')
-      throw Error('Another administrator account cannot be changed from the request queue');
+      throw Error('Change administrator permissions from the Account Permissions list instead.');
     const batch=db.batch(),stamp=firebase.firestore.FieldValue.serverTimestamp();
     if(decision==='approved'){
-      batch.set(allowRef,{
-        active:true,role:'coach',approvedBy:activeUser.email,updatedAt:stamp
-      },{merge:true});
+      const linkedId=validateRoleChange(role,playerId);
+      confirmAdminRole(email,current.exists?current.data().role:null,role);
+      const next={...(current.exists?current.data():{}),
+        active:true,role,approvedBy:activeUser.email,updatedAt:stamp};
+      if(linkedId)next.playerId=linkedId;else delete next.playerId;
+      batch.set(allowRef,next);
     }else if(current.exists){
       batch.update(allowRef,{active:false,updatedAt:stamp});
     }
     batch.update(doc.ref,{status:decision,reviewedAt:stamp,reviewedBy:activeUser.email});
     await batch.commit();
-    notify($('cloud-request-status'),
-      email+' — '+(decision==='approved'?'approved':decision==='denied'?'denied':'moved back to pending')+'.');
+    notify($('cloud-request-status'),email+' — '+(decision==='approved'?
+      ROLE_LABELS[role]+' approved':decision==='denied'?'denied':'moved back to pending')+'.');
+  }
+  async function saveAccountRole(doc,role,playerId){
+    if(staff?.role!=='admin')throw Error('Administrator required');
+    if(doc.id===emailKey(activeUser.email))
+      throw Error('You cannot change your own administrator role.');
+    await requirePermissionRules();
+    const linkedId=validateRoleChange(role,playerId);
+    const live=await doc.ref.get();
+    if(!live.exists)throw Error('Account no longer exists. Refresh the list.');
+    confirmAdminRole(doc.id,live.data().role,role);
+    const next={...live.data(),role,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:activeUser.email};
+    if(linkedId)next.playerId=linkedId;else delete next.playerId;
+    await doc.ref.set(next);
+    notify($('cloud-request-status'),doc.id+' updated to '+ROLE_LABELS[role]+'.');
   }
   async function listCoaches() {
     if(staff?.role!=='admin')return;
     const pending=$('cloud-pending-requests'),denied=$('cloud-denied-requests'),list=$('cloud-allowlist');
     pending.replaceChildren();denied.replaceChildren();list.replaceChildren();
-    notify($('cloud-request-status'),'Loading coach access requests...');
-    try {
+    notify($('cloud-request-status'),'Loading account access requests...');
+    try{
       const [allowlist,requests]=await Promise.all([
-        db.collection('allowlist').get(),
-        db.collection('coachRequests').get()
+        db.collection('allowlist').get(),db.collection('coachRequests').get()
       ]);
-      let pendingCount=0,deniedCount=0;
       const entries=Array.from(requests.docs)
-        .sort((a,b)=>(b.data().requestedAt?.toMillis?.()||0)-(a.data().requestedAt?.toMillis?.()||0));
+        .sort((a,b)=>(b.data().requestedAt?.toMillis?.()||0)-
+                     (a.data().requestedAt?.toMillis?.()||0));
+      let pendingCount=0,deniedCount=0;
       for(const request of entries){
         const d=request.data(),email=emailKey(d.email);
-        if(!email||!d.uid)continue;
-        const meta=requestDate(d)+' · Email verified';
+        if(!email || !d.uid)continue;
+        const meta=requestDate(d)+' · Verified email';
         if(d.status==='pending'){
           pendingCount++;
-          pending.appendChild(coachCard(email,meta,[
-            {label:'Approve',run:()=>decideRequest(request,'approved')},
+          const picker=rolePicker();
+          const li=coachCard(email,meta,[
+            {label:'Approve role',run:()=>decideRequest(
+              request,'approved',picker.select.value,picker.linked.value)},
             {label:'Deny',secondary:true,run:()=>decideRequest(request,'denied')}
-          ]));
+          ]);
+          li.appendChild(picker.controls);
+          pending.appendChild(li);
         }else if(d.status==='denied'){
           deniedCount++;
-          denied.appendChild(coachCard(email,'Denied · '+meta,[
-            {label:'Approve',run:()=>decideRequest(request,'approved')},
+          const picker=rolePicker();
+          const li=coachCard(email,'Denied · '+meta,[
+            {label:'Approve role',run:()=>decideRequest(
+              request,'approved',picker.select.value,picker.linked.value)},
             {label:'Reconsider',secondary:true,run:()=>decideRequest(request,'pending')}
-          ]));
+          ]);
+          li.appendChild(picker.controls);
+          denied.appendChild(li);
         }
       }
       if(!pendingCount)pending.appendChild(emptyCoachRow('No pending requests.'));
@@ -934,47 +1029,79 @@
       $('cloud-pending-badge').textContent=String(pendingCount);
       $('cloud-pending-badge').style.display=pendingCount?'inline-block':'none';
 
-      const approved=[];
-      allowlist.forEach(doc=>approved.push(doc));
-      approved.sort((a,b)=>a.id.localeCompare(b.id));
-      for(const doc of approved){
+      const entriesApproved=Array.from(allowlist.docs).sort((a,b)=>a.id.localeCompare(b.id));
+      for(const doc of entriesApproved){
         const d=doc.data(),mine=doc.id===emailKey(activeUser.email);
-        const statusText=d.active?'Approved':'Disabled';
-        const actions=mine?[]:[{
-          label:d.active?'Disable access':'Reinstate',
-          secondary:!!d.active,
-          run:async()=>{
-            await doc.ref.update({
-              active:!d.active,
-              updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-            });
-            notify($('cloud-request-status'),doc.id+(d.active?' disabled.':' reinstated.'));
-          }
-        }];
-        list.appendChild(coachCard(doc.id,d.role+' · '+statusText+(mine?' · You':''),actions));
+        const statusText=d.active?'Active':'Disabled';
+        const li=coachCard(doc.id,(ROLE_LABELS[d.role]||d.role)+' · '+statusText+(mine?' · You':''),[]);
+        if(!mine){
+          const picker=rolePicker(d.role,d.playerId);
+          const save=document.createElement('button');
+          save.className='cloud-button';save.type='button';save.textContent='Save role';
+          save.addEventListener('click',async()=>{
+            save.disabled=true;
+            try{await saveAccountRole(doc,picker.select.value,picker.linked.value);await listCoaches();}
+            catch(e){notify($('cloud-request-status'),friendly(e),true);}
+            finally{save.disabled=false;}
+          });
+          const toggle=document.createElement('button');
+          toggle.className='cloud-button secondary';toggle.type='button';
+          toggle.textContent=d.active?'Disable access':'Reinstate';
+          toggle.addEventListener('click',async()=>{
+            toggle.disabled=true;
+            try{
+              await requirePermissionRules();
+              if(d.role==='admin' && d.active && 
+                !window.confirm('Disable emergency administrator '+doc.id+'?'))return;
+              await doc.ref.update({active:!d.active,
+                updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+              await listCoaches();
+            }catch(e){notify($('cloud-request-status'),friendly(e),true);}
+            finally{toggle.disabled=false;}
+          });
+          picker.controls.append(save,toggle);
+          li.appendChild(picker.controls);
+        }
+        list.appendChild(li);
       }
-      if(!approved.length)list.appendChild(emptyCoachRow('No approved coaches yet.'));
-      notify($('cloud-request-status'),'Coach access list refreshed.');
+      if(!entriesApproved.length)list.appendChild(emptyCoachRow('No approved accounts yet.'));
+      notify($('cloud-request-status'),'Account permissions refreshed.');
     }catch(e){
-      notify($('cloud-request-status'),'Unable to load coach requests: '+friendly(e),true);
-      pending.appendChild(emptyCoachRow('Please check that the new Firestore security rules are deployed.'));
+      notify($('cloud-request-status'),'Unable to load account permissions: '+friendly(e),true);
+      pending.appendChild(emptyCoachRow('Check that updated Firestore rules are deployed.'));
     }
   }
   window.DZ_REFRESH_COACH_REQUESTS=()=>listCoaches();
   $('cloud-refresh-requests').addEventListener('click',()=>listCoaches());
+  const inviteRole=$('cloud-invite-role'),invitePlayer=$('cloud-invite-player');
+  function syncInvitePlayer(){
+    invitePlayer.style.display=inviteRole.value==='player_parent'?'':'none';
+  }
+  inviteRole.addEventListener('change',syncInvitePlayer);
+  syncInvitePlayer();
   $('cloud-invite-form').addEventListener('submit',async e=>{
     e.preventDefault();if(staff?.role!=='admin')return;
-    const email=emailKey($('cloud-invite-email').value),role='coach';
+    const email=emailKey($('cloud-invite-email').value),role=inviteRole.value;
     if(!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email)){
       notify($('cloud-invite-status'),'Enter a valid email.',true);return;
     }
+    if(email===emailKey(activeUser.email)){
+      notify($('cloud-invite-status'),'You cannot change your own administrator account here.',true);return;
+    }
     try{
-      await db.collection('allowlist').doc(email).set({
-        active:true,role,invitedBy:activeUser.email,
-        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
+      await requirePermissionRules();
+      const linkedId=validateRoleChange(role,invitePlayer.value);
+      const target=db.collection('allowlist').doc(email),prior=await target.get();
+      if(prior.exists)throw Error('Account already exists. Use its role controls instead.');
+      confirmAdminRole(email,null,role);
+      const data={active:true,role,invitedBy:activeUser.email,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+      if(linkedId)data.playerId=linkedId;
+      await target.set(data);
       $('cloud-invite-email').value='';
-      notify($('cloud-invite-status'),email+' approved. The coach can create and verify an account.');
+      inviteRole.value='coach';invitePlayer.value='';syncInvitePlayer();
+      notify($('cloud-invite-status'),email+' approved as '+ROLE_LABELS[role]+
+        '. They can register and verify their account.');
       await listCoaches();
     }catch(err){notify($('cloud-invite-status'),friendly(err),true);}
   });
