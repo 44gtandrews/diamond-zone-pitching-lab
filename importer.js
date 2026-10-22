@@ -62,12 +62,40 @@ $('session-save').onclick=async()=>{
  const seen=new Set();for(const r of rows){if(seen.has(r.key))throw Error('Duplicate pitch type');seen.add(r.key);if(!Number.isInteger(r.n)||r.n<1)throw Error(r.name+': pitch count must be a positive integer');if(r.velo==null||r.velo<20||r.velo>120)throw Error(r.name+': average velocity must be 20–120 mph');if(r.veloMax!=null&&r.veloMax<r.velo)throw Error(r.name+': max velocity is below average');for(const f of ['strike','strikeExt','out'])if(r[f]!=null&&(r[f]<0||r[f]>100))throw Error(r.name+': invalid '+f);}
  const playerName=$('session-player-name').value.trim(),age=$('session-player-age').value;
  if(mode==='new'&&(!/^[A-Za-z][A-Za-z .'-]{1,99}$/.test(playerName)||!age))throw Error('Enter player name and age group.');
- const pid=mode==='new'?playerName.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim().replace(/\s+/g,'-'):id;
+ // New players use opaque internal document keys. Their separate six-digit ID is the permanent share link.
+ const pid=mode==='new'?'p-'+crypto.randomUUID().replace(/-/g,''):id;
  const ref=db.collection('players').doc(pid),now=firebase.firestore.FieldValue.serverTimestamp(),incoming=rows.map(r=>({...r,name:names[r.key]})).sort((a,b)=>b.n-a.n);
  const audit={file:fileName,sha256:fileHash,by:user.email,at:new Date().toISOString(),pitchCount:incoming.reduce((s,r)=>s+r.n,0)};
  $('session-save').disabled=true;err('Saving shared player data...');
- await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(mode==='new'){if(snap.exists)throw Error('Player already exists. Upload from their profile instead.');tx.set(ref,{id:pid,name:playerName,ageLabel:age==='Coach'?'Coach / Adult':age+'U',ageNum:age==='Coach'?28:Number(age),sessions:1,dataType:'aggregate',discardedUndefined:0,pitches:incoming,createdBy:user.email,updatedBy:user.email,updatedAt:now,importHistory:[audit]});}else{if(!snap.exists)throw Error('Player no longer exists');const old=snap.data();if(old.dataType!=='aggregate')throw Error('Raw pitch-log players cannot yet receive aggregate session uploads.');const history=Array.isArray(old.importHistory)?old.importHistory.slice(-49):[];if(history.some(h=>h.sha256===fileHash))throw Error('This exact file was already imported for this player.');history.push(audit);tx.update(ref,{pitches:merge(old.pitches,incoming),sessions:old.sessions+1,updatedBy:user.email,updatedAt:now,importHistory:history});}});
- await window.DZ_RELOAD_ROSTER();close();if(mode==='new')location.hash=pid;else await showPlayer(pid);
+ if(mode==='new'){
+   let created=false;
+   for(let attempt=0;attempt<24&&!created;attempt++){
+     const random=new Uint32Array(1);crypto.getRandomValues(random);
+     const publicId=String(100000+(random[0]%900000));
+     const codeRef=db.collection('playerCodes').doc(publicId);
+     created=await db.runTransaction(async tx=>{
+       const [playerSnap,codeSnap]=await Promise.all([tx.get(ref),tx.get(codeRef)]);
+       if(playerSnap.exists)throw Error('Player record already exists. Please retry.');
+       if(codeSnap.exists)return false; // reserve a different six-digit number
+       tx.set(codeRef,{playerId:pid});
+       tx.set(ref,{id:pid,publicId,name:playerName,ageLabel:age==='Coach'?'Coach / Adult':age+'U',ageNum:age==='Coach'?28:Number(age),sessions:1,dataType:'aggregate',discardedUndefined:0,pitches:incoming,createdBy:user.email,updatedBy:user.email,updatedAt:now,importHistory:[audit]});
+       return true;
+     });
+   }
+   if(!created)throw Error('Unable to reserve a unique six-digit ID. Please try again.');
+ }else{
+   await db.runTransaction(async tx=>{
+     const snap=await tx.get(ref);
+     if(!snap.exists)throw Error('Player no longer exists');
+     const old=snap.data();
+     if(old.dataType!=='aggregate')throw Error('Raw pitch-log players cannot yet receive aggregate session uploads.');
+     const history=Array.isArray(old.importHistory)?old.importHistory.slice(-49):[];
+     if(history.some(h=>h.sha256===fileHash))throw Error('This exact file was already imported for this player.');
+     history.push(audit);
+     tx.update(ref,{pitches:merge(old.pitches,incoming),sessions:old.sessions+1,updatedBy:user.email,updatedAt:now,importHistory:history});
+   });
+ }
+ await window.DZ_RELOAD_ROSTER();close();if(mode==='new')await window.DZ_OPEN_PLAYER(pid);else await showPlayer(pid);
  }catch(e){err(e);}finally{$('session-save').disabled=false;}
 };
 window.DZ_IMPORTER_INIT=({firestore,currentUser})=>{db=firestore;user=currentUser;};
