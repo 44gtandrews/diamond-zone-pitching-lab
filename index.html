@@ -1191,7 +1191,7 @@ function renderPitchLog(player){
   html += '</tbody>';
   document.getElementById('pitchlog-table').innerHTML = html;
 
-  document.querySelectorAll('.type-select').forEach(sel=>{
+  document.querySelectorAll('#pitchlog-table .type-select[data-pitch-no]').forEach(sel=>{
     sel.addEventListener('change', async ()=>{
       if(!window.DZ_EDIT_ENABLED)return;
       const no = +sel.dataset.pitchNo;
