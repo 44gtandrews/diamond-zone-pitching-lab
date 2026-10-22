@@ -81,7 +81,13 @@
     }
     const seen=new Set();
     for(const group of ROSTER_GROUPS) {
-      group.ids=group.ids.filter(id=>PLAYERS[id] && !seen.has(id) && seen.add(id));
+      group.ids=group.ids.filter(id=>{
+        const p=PLAYERS[id];
+        if(!p || seen.has(id))return false;
+        const slug=/coach|adult/i.test(p.ageLabel)?'coach':p.ageNum+'u';
+        if(group.containerId!=='roster-'+slug)return false;
+        seen.add(id);return true;
+      });
     }
     for(const p of Object.values(PLAYERS)) {
       if(seen.has(p.id)) continue;
@@ -158,6 +164,7 @@
     $('cloud-bar').style.display='block';
     $('cloud-identity').textContent=activeUser.email+' · '+(staff.role==='admin'?'Administrator':'Coach');
     $('cloud-admin-nav').style.display=window.DZ_IS_ADMIN?'':'none';
+    $('cloud-edit-profile').style.display=window.DZ_IS_ADMIN?'':'none';
     await loadPlayers();
     if(staff.role==='admin' && Object.values(PLAYERS).some(p=>!hasPublicId(p))){
       try {
@@ -275,6 +282,60 @@
   });
   $('cloud-verify-signout').addEventListener('click',()=>auth.signOut());
   $('cloud-signout').addEventListener('click',()=>auth.signOut());
+
+  // Edit only mutable profile identity fields; all player IDs and sessions remain intact.
+  let editingPlayer=null;
+  const editOverlay=$('cloud-edit-overlay');
+  function closeProfileEdit(){
+    editOverlay.style.display='none';
+    editingPlayer=null;
+    notify($('cloud-edit-status'),'');
+  }
+  $('cloud-edit-profile').addEventListener('click',()=>{
+    if(!window.DZ_IS_ADMIN)return;
+    const player=PLAYERS[window.DZ_CURRENT_PLAYER()];
+    if(!player)return;
+    editingPlayer=player.id;
+    $('cloud-edit-name').value=player.name;
+    $('cloud-edit-age').value=/coach|adult/i.test(player.ageLabel)?'Coach':String(player.ageNum);
+    notify($('cloud-edit-status'),'');
+    editOverlay.style.display='flex';
+    $('cloud-edit-name').focus();
+  });
+  $('cloud-edit-cancel').addEventListener('click',closeProfileEdit);
+  editOverlay.addEventListener('click',e=>{if(e.target===editOverlay)closeProfileEdit();});
+  editOverlay.addEventListener('keydown',e=>{if(e.key==='Escape')closeProfileEdit();});
+  $('cloud-edit-form').addEventListener('submit',async e=>{
+    e.preventDefault();
+    if(!window.DZ_IS_ADMIN||!editingPlayer)return;
+    const id=editingPlayer;
+    const name=$('cloud-edit-name').value.trim().replace(/\s+/g,' ');
+    const age=$('cloud-edit-age').value;
+    if(!/^[A-Za-z][A-Za-z .'-]{1,99}$/.test(name)){
+      notify($('cloud-edit-status'),'Enter a valid player name (2–100 letters, spaces or basic punctuation).',true);return;
+    }
+    if(age!=='Coach' && (!/^\d{2}$/.test(age)||Number(age)<10||Number(age)>18)){
+      notify($('cloud-edit-status'),'Select a valid age group.',true);return;
+    }
+    const changes={name,ageNum:age==='Coach'?28:Number(age),ageLabel:age==='Coach'?'Coach / Adult':age+'U',
+      updatedBy:activeUser.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const btn=$('cloud-edit-save');btn.disabled=true;
+    try{
+      notify($('cloud-edit-status'),'Saving player profile...');
+      const doc=db.collection('players').doc(id);
+      // Transaction: never recreate a missing player or change their permanent identity.
+      await db.runTransaction(async tx=>{
+        const snap=await tx.get(doc);
+        if(!snap.exists)throw Error('Player no longer exists.');
+        tx.update(doc,changes);
+      });
+      await loadPlayers();
+      closeProfileEdit();
+      await window.DZ_OPEN_CURRENT_URL();
+    }catch(error){
+      notify($('cloud-edit-status'),'Profile update failed: '+friendly(error),true);
+    }finally{btn.disabled=false;}
+  });
 
   function validPlayer(p) {
     if(!p||typeof p!=='object'||!/^[a-z0-9-]{1,65}$/.test(p.id||'')||typeof p.name!=='string'||
