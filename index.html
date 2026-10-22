@@ -1180,6 +1180,10 @@ function dzPlayerFromUrl() {
 }
 window.DZ_OPEN_CURRENT_URL=async()=>{
   if(!window.DZ_AUTHORIZED)return;
+  if(new URLSearchParams(location.search).get('view')==='admin' && window.DZ_IS_ADMIN){
+    showAdmin();
+    return;
+  }
   const id=dzPlayerFromUrl();
   if(id)await showPlayer(id);else showHome();
 };
@@ -1195,10 +1199,35 @@ window.DZ_OPEN_PLAYER=async id=>{
   await showPlayer(id);
 };
 window.DZ_GO_HOME=()=>{
-  const u=dzCleanUrl();u.hash='';u.searchParams.delete('player');
+  const u=dzCleanUrl();u.hash='';u.searchParams.delete('player');u.searchParams.delete('view');
   history.pushState({},'',u.href);
   showHome();
 };
+window.DZ_OPEN_ADMIN=()=>{
+  if(!window.DZ_AUTHORIZED || !window.DZ_IS_ADMIN){
+    window.DZ_GO_HOME();
+    return;
+  }
+  const u=dzCleanUrl();u.hash='';u.searchParams.delete('player');u.searchParams.set('view','admin');
+  history.pushState({},'',u.href);
+  showAdmin();
+};
+document.getElementById('cloud-directory-nav').addEventListener('click',()=>window.DZ_GO_HOME());
+document.getElementById('cloud-admin-nav').addEventListener('click',()=>window.DZ_OPEN_ADMIN());
+function dzSetTopNav(view){
+  document.getElementById('cloud-directory-nav').classList.toggle('active',view!=='admin');
+  document.getElementById('cloud-admin-nav').classList.toggle('active',view==='admin');
+}
+function showAdmin(){
+  if(!window.DZ_AUTHORIZED || !window.DZ_IS_ADMIN){showHome();return;}
+  currentPlayerId=null;
+  document.getElementById('view-player').style.display='none';
+  document.getElementById('view-home').style.display='none';
+  document.getElementById('view-admin').style.display='block';
+  dzSetTopNav('admin');
+  window.DZ_REFRESH_COACH_REQUESTS?.();
+  window.scrollTo(0,0);
+}
 document.querySelector('#view-home').addEventListener('click',e=>{
   const row=e.target.closest('a.player-row[data-player-id]');
   if(!row || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button!==0)return;
@@ -1212,8 +1241,10 @@ window.addEventListener('popstate',()=>window.DZ_OPEN_CURRENT_URL());
 
 function showHome(){
   currentPlayerId = null;
+  document.getElementById('view-admin').style.display = 'none';
   document.getElementById('view-player').style.display = 'none';
   document.getElementById('view-home').style.display = 'block';
+  dzSetTopNav('home');
   renderHome();
   window.scrollTo(0,0);
 }
@@ -1240,8 +1271,10 @@ async function showPlayer(id){
   const player = PLAYERS[id];
   if(!player){ showHome(); return; }
   currentPlayerId = id;
+  document.getElementById('view-admin').style.display = 'none';
   document.getElementById('view-home').style.display = 'none';
   document.getElementById('view-player').style.display = 'block';
+  dzSetTopNav('player');
 
   document.getElementById('player-name').textContent = player.name;
   document.getElementById('player-sub').textContent = 'Pitcher · ' + player.ageLabel;
