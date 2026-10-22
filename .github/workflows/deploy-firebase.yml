@@ -1,0 +1,42 @@
+name: Deploy Pitching Portal to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pitching-portal-production
+  cancel-in-progress: false
+
+jobs:
+  deploy_live:
+    name: Publish dzpitchingportal.app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the latest Pitching Portal code
+        uses: actions/checkout@v4
+
+      - name: Stage only approved public app files
+        run: bash prepare-firebase-hosting.sh
+
+      - name: Verify the one-time Firebase authorization is configured
+        env:
+          DEPLOY_AUTH: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DIAMOND_ZONE_PITCHING_LAB }}
+        shell: bash
+        run: |
+          if [ -z "$DEPLOY_AUTH" ]; then
+            echo "::error::Missing GitHub secret FIREBASE_SERVICE_ACCOUNT_DIAMOND_ZONE_PITCHING_LAB. Run firebase init hosting:github once in Google Cloud Shell to connect Firebase to this repository."
+            exit 1
+          fi
+
+      - name: Publish the latest build to the Firebase live channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DIAMOND_ZONE_PITCHING_LAB }}
+          projectId: diamond-zone-pitching-lab
+          channelId: live
