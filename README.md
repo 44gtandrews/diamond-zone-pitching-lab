@@ -1,3 +1,32 @@
+# Player status, deletion and last-name sorting (October 2026)
+
+## Directory sorting by surname
+
+- **All active Internal age-group rosters** are sorted alphabetically by players' **last names**, not given names.
+- **External** lesson players are also sorted by last name in the single alphabetic list.
+- **Inactive Players** in the administrator dashboard are sorted by last name.
+- The comparison ignores common generational suffixes (Jr., Sr., II–V) when identifying a surname; it uses the complete name as a tie-breaker and preserves hyphenated surnames.
+
+## Inactivate and reactivate (administrator only)
+
+- From an **active player profile**, click **Inactivate Player** and confirm.
+- Inactive players disappear from the Internal / External directories and normal player links. The Firestore player document remains intact with the optional field `inactive: true` and audit fields `statusChangedBy` and `statusChangedAt`.
+- The administrator tab has **Inactive Players**, with counts and records (name, Internal/External, age group, six-digit ID), plus **Reactivate** and **Delete** controls. Reactivation sets `inactive: false` and the player returns to their appropriate program/age-group directory.
+- Historic players lacking the new `inactive` flag remain active automatically; no migration or reimport is required.
+- Importing new Trackman sessions into an inactive profile is blocked until reactivation. An active player's profile remains editable as before.
+- Inactivation is a **roster display/archive action**, not a new Firestore security boundary. Approved coaches' existing database read permissions are unchanged. For confidentiality restrictions on archived records, database architecture/rules would need further work.
+
+## Permanently delete a player (administrator only)
+
+- Administrators can choose **Delete Player** on an active profile or **Delete** in the Inactive Players admin list.
+- The operation requires typing `DELETE` into a confirmation dialog, and displays a warning to download a full emergency backup first.
+- Upon confirmation the app atomically deletes the player's Firestore document and all `playerEdits/{playerId}/sections` coaching notes, grading, strength, mechanical and pitch-override records.
+- The original six-digit `playerCodes/{code}` reservation remains as a **non-identifying tombstone** pointing to the retired internal ID, to stop old player links from being reassigned to unrelated athletes.
+- Deletion is permanent for active Firestore player and coaching data. Recovery from an earlier full JSON backup remains possible while keeping the original ID reservation.
+- The existing `firestore.rules` already permit administrator deletion of `players` and `playerEdits`, and administrator changes to `players.inactive`; **this update requires no new Firestore rules deployment**, assuming the previously published rules are current.
+- Only admins see the deletion/inactivation controls. Regular coaches cannot use these controls.
+
+
 # Internal / External roster tabs and directory velocity (October 22, 2026)
 
 ## Directory membership
