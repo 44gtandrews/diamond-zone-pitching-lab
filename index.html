@@ -1498,6 +1498,19 @@
     #view-home .player-row .player-name{font-size:17px!important;}
     #view-player .kpi:nth-child(4) .kpi-value{font-size:19px;}
   }
+
+  .dz-hidden-pitches{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:12px 3px 6px;
+    color:#95B3BB;font:500 11px Inter,sans-serif;line-height:1.55;}
+  .dz-hidden-pitches strong{color:#E3F4F6;font-size:12px;}
+  .dz-hide-pitch,.dz-restore-pitch{background:#132F36;border:1px solid #46636A;color:#D6ECEF;
+    border-radius:4px;padding:6px 9px;font:700 11px Inter,sans-serif;min-height:34px;cursor:pointer;}
+  .dz-hide-pitch:hover,.dz-restore-pitch:hover{background:#205260;color:#FFFFFF;}
+  .dz-no-counts{padding:24px 10px;color:#ADC5CB;font:500 12px/1.65 Inter,sans-serif;}
+  .dz-import-warning{background:#122D36;border-left:3px solid #37B5BE;padding:10px 12px;
+    margin:8px 0 14px;color:#D2E8EB;font-size:12px;}
+  @media(max-width:640px){.dz-hidden-pitches{padding:14px 2px;gap:10px;}
+    .dz-hide-pitch,.dz-restore-pitch{min-height:42px;}}
+
 </style>
 </head>
 <body>
@@ -1788,6 +1801,7 @@
       </div>
       <p class="dz-mobile-table-hint">Swipe sideways to see all pitch metrics <span aria-hidden="true">→</span></p>
       <div class="table-card" tabindex="0" role="region" aria-label="Pitch metrics table, scroll horizontally"><table id="pitch-table"></table></div>
+      <div id="dz-hidden-pitches" class="dz-hidden-pitches" aria-live="polite"></div>
       <p class="footnote" id="overview-footnote"></p>
     </div>
 
@@ -2227,7 +2241,7 @@ function renderMovementChart(player, summary){
     scatterChart('chart-move', points, 'Horz. break (in) →', '↑ IVB (in)', true);
   } else {
     document.getElementById('move-caption').textContent = 'IVB vs. HB, inches — one dot per pitch, hover for detail';
-    const points = player.rawPitches.filter(p=>p.ivb!==null && p.hb!==null && !DISCARD_KEYS.includes(effectiveType(p,player))).map(p=>({
+    const points = player.rawPitches.filter(p=>p.ivb!==null && p.hb!==null && !DISCARD_KEYS.includes(effectiveType(p,player)) && !(player._hiddenPitchTypes||[]).includes(effectiveType(p,player))).map(p=>({
       x:p.hb, y:p.ivb, color:cssColor(TYPE_BY_KEY[effectiveType(p,player)].color),
       tooltip:`<strong>#${p.no} · ${TYPE_BY_KEY[effectiveType(p,player)].name}</strong>IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
     }));
@@ -2236,6 +2250,9 @@ function renderMovementChart(player, summary){
 }
 
 function buildFootnote(player, totalN){
+  if(player.summaryOnly){
+    return 'Pitch-type averages from the Trackman Team Portal report. This format does not contain pitch counts, true usage percentages, maximum pitch velocities or a precise number of sessions, so the portal intentionally leaves those values unknown. Release height and release side represent averages for each pitch type, not measured anatomical arm angle. Coaches may hide unwanted pitch types without deleting the imported measurements. Grades remain manually assigned and age-relative.';
+  }
   if(player.dataType==='raw'){
     return `${totalN} pitches from the ${player.sessionDate} practice feed this view — pitches classified or `+
     `tagged "Other" are excluded from Overview, though they're still listed in the Pitch Log if you want to review `+
@@ -2255,6 +2272,65 @@ function buildFootnote(player, totalN){
     ? ` Velo is shaded against average fastball velocity for ${player.ageLabel} (${bench} mph) — red above the mark (better), blue below it (worse), darker meaning further off average either way. Max, IVB, and HB are wired for the same treatment but unshaded for now — no age-group norms for those yet, pending a fuller look once more players' data is in.`
     : '';
   return `Figures pulled directly from the Diamond Zone CT session export (${player.sessions} session${player.sessions===1?'':'s'}, ${totalN} pitches). Movement chart plots each pitch type's average break. ${discardNote}${benchNote} Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still yours to set by hand — no model behind it yet).`;
+}
+
+
+// Non-destructive visibility controls share the existing grades section.
+// Backups already include that section, so no Firestore migration is required.
+async function setPitchHidden(player,key,hide){
+  if(!window.DZ_EDIT_ENABLED)return;
+  const available=player.dataType==='aggregate'
+    ?(player.pitches||[]).some(p=>p.key===key)
+    :TYPE_INFO.some(p=>p.key===key);
+  if(!available)return;
+  const name=(player.pitches||[]).find(p=>p.key===key)?.name||TYPE_BY_KEY[key]?.name||key;
+  if(hide&&!window.confirm('Remove '+name+' from '+player.name+"'s report? It will disappear from the directory, charts and tables, but the original data will be kept and you can restore it."))return;
+  try{
+    const res=await window.storage.get(player.id+':grades',false);
+    const raw=res?.value?JSON.parse(res.value):{};
+    const current=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
+    const set=new Set(Array.isArray(current.__hiddenPitchTypes)?current.__hiddenPitchTypes:[]);
+    if(hide)set.add(key);else set.delete(key);
+    current.__hiddenPitchTypes=[...set];
+    await window.storage.set(player.id+':grades',JSON.stringify(current),false);
+    player._hiddenPitchTypes=current.__hiddenPitchTypes;
+    player._gradesByPitch=Object.fromEntries(
+      Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&GRADES.includes(v))
+    );
+    player._gradesLoaded=true;player._gradesLoadFailed=false;
+    if(currentPlayerId===player.id){
+      renderOverview(player);
+      if(player.dataType==='raw')renderPitchLog(player);
+    }
+  }catch(error){
+    window.DZ_SAVE_ERROR?.(error);
+  }
+}
+function renderHiddenPitchControls(player){
+  const area=document.getElementById('dz-hidden-pitches');
+  if(!area)return;
+  area.replaceChildren();
+  if(!window.DZ_EDIT_ENABLED){area.style.display='none';return;}
+  const hidden=(player._hiddenPitchTypes||[]).filter(key=>
+    player.dataType==='aggregate'
+      ?(player.pitches||[]).some(p=>p.key===key)
+      :TYPE_INFO.some(p=>p.key===key)
+  );
+  area.style.display='';
+  if(!hidden.length){
+    area.textContent='To exclude an unwanted pitch type, use Remove in its row. The original values remain safely stored.';
+    return;
+  }
+  const label=document.createElement('strong');
+  label.textContent=hidden.length+' pitch type'+(hidden.length===1?'':'s')+' hidden:';
+  area.append(label);
+  for(const key of hidden){
+    const b=document.createElement('button');
+    b.type='button';b.className='dz-restore-pitch';
+    b.textContent='Restore '+((player.pitches||[]).find(p=>p.key===key)?.name||TYPE_BY_KEY[key]?.name||key);
+    b.addEventListener('click',()=>setPitchHidden(player,key,false));
+    area.append(b);
+  }
 }
 
 async function renderPitchTable(player, summary, totalN){
@@ -2441,7 +2517,7 @@ document.querySelectorAll('#move-toggle .toggle-btn').forEach(btn=>{
 
 /* ================= Pitch Log (raw-data players) ================= */
 function sortedPitches(player){
-  const arr = player.rawPitches.slice();
+  const arr = player.rawPitches.filter(p=>!(player._hiddenPitchTypes||[]).includes(effectiveType(p,player)));
   if(player.logSortBy==='date'){
     arr.sort((a,b)=> a.date===b.date ? a.no-b.no : (a.date<b.date?-1:1));
   } else if(player.logSortBy==='type'){
@@ -2745,7 +2821,9 @@ async function showPlayer(id){
   document.getElementById('player-copy-link').disabled=!hasCode;
   document.getElementById('player-copy-status').textContent='';
   document.getElementById('session-tag-main').innerHTML =
-    `<span class="live-dot"></span><strong>${player.sessions} session${player.sessions===1?'':'s'}</strong> selected`;
+    player.summaryOnly
+      ?`<span class="live-dot"></span><strong>${player.sessions} report${player.sessions===1?'':'s'}</strong> imported · pitch counts unavailable`
+      :`<span class="live-dot"></span><strong>${player.sessions} session${player.sessions===1?'':'s'}</strong> selected`;
 
   document.getElementById('view-player').classList.toggle('dz-readonly',!window.DZ_EDIT_ENABLED);
   document.querySelectorAll('#view-player .save-row').forEach(el=>el.style.display=window.DZ_EDIT_ENABLED?'':'none');
@@ -2791,10 +2869,11 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
     <div class="cloud-actions"><button type="button" class="cloud-button" id="session-read">Read File</button><button type="button" class="cloud-button secondary" id="session-cancel">Cancel</button></div>
     <p class="cloud-status" id="session-import-status" role="status"></p>
     <section id="session-review" style="display:none;">
-      <h3 class="field-label">Review Pitch Summary · One Session</h3>
-      <p class="cloud-help">Confirm each pitch count and average velocity, correct other fields as needed. Empty optional cells stay unknown. “Undefined” and “Other” are excluded. A new session is merged using pitch-count-weighted averages; previous notes and grades are retained. Do not upload the same session twice.</p>
+      <h3 class="field-label" id="session-review-title">Review Pitch Summary · One Session</h3>
+      <p class="cloud-help dz-import-warning" id="session-import-warning" role="note"></p>
+      <p class="cloud-help">Confirm each pitch count and average velocity, correct other fields as needed. Empty optional cells stay unknown. Use Remove in the review table to omit an unwanted pitch type before saving. A new session is merged using pitch-count-weighted averages; previous notes and grades are retained. Do not upload the same session twice.</p>
       <p class="dz-mobile-table-hint">Swipe sideways to review and edit all Trackman columns <span aria-hidden="true">→</span></p>
-      <div class="session-table-wrap" tabindex="0" role="region" aria-label="Trackman pitch review table, scroll horizontally"><table><thead><tr><th>Pitch</th><th>#</th><th>Velo</th><th>Max</th><th>Spin</th><th>Max Spin</th><th>Ext</th><th>IVB</th><th>HB</th><th>Tilt</th><th>Strike %</th><th>Ext Strike %</th><th>Out %</th><th>VAA</th><th></th></tr></thead><tbody id="session-pitch-rows"></tbody></table></div>
+      <div class="session-table-wrap" tabindex="0" role="region" aria-label="Trackman pitch review table, scroll horizontally"><table><thead><tr><th>Pitch</th><th>#</th><th>Velo</th><th>Max</th><th>Spin</th><th>Max Spin</th><th>Ext</th><th>IVB</th><th>HB</th><th>Tilt</th><th>Strike %</th><th>Ext Strike %</th><th>Out %</th><th>VAA</th><th>Rel H</th><th>Rel Side</th><th>2D Axis</th><th>3D Axis</th><th>Gyro</th><th></th></tr></thead><tbody id="session-pitch-rows"></tbody></table></div>
       <div class="cloud-actions"><button class="cloud-button secondary" type="button" id="session-add-pitch">+ Add pitch type</button><button class="cloud-button" type="button" id="session-save">Confirm &amp; Save to Shared Database</button></div>
       <details><summary>Extracted PDF text (reference only)</summary><pre id="session-pdf-text" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow-y:auto;"></pre></details>
     </section>
