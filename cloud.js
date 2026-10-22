@@ -613,7 +613,7 @@
         dzBackupMessage('Restoring '+missingRequests.length+' missing access requests...');
         await dzRestoreBatch(missingRequests,
           item=>db.collection('coachRequests').doc(item.id),
-          item=>item.data,30);
+          item=>({...item.data,restoredFromBackup:true}),30);
       }
       await loadPlayers();
       await listCoaches();
