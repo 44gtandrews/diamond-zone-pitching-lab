@@ -266,7 +266,7 @@
     const version=++accessVersion;
     activeUser=user;staff=null;
     if(!user) {
-      showAuth('Coach sign in','Approved Diamond Zone coaches can access secure profiles and shared notes.');
+      showAuth('Account sign in','Approved staff and linked player/family accounts can securely view their authorized profiles.');
       return;
     }
     if(!user.emailVerified) {
@@ -356,7 +356,7 @@
   });
   $('cloud-recheck').addEventListener('click',async()=>{
     try{
-      if(!auth.currentUser){showAuth('Coach sign in','Sign in to continue.');return;}
+      if(!auth.currentUser){showAuth('Account sign in','Sign in to continue.');return;}
       await auth.currentUser.reload();await auth.currentUser.getIdToken(true);await checkAccess(auth.currentUser);
     }catch(e){notify(status,friendly(e),true);}
   });
