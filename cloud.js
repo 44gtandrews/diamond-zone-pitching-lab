@@ -109,6 +109,44 @@
     });
     sortGroups();
   }
+  const hasPublicId=p=>/^[1-9][0-9]{5}$/.test(String(p.publicId||''));
+  function makePublicId() {
+    const a=new Uint32Array(1);
+    crypto.getRandomValues(a);
+    return String(100000+(a[0]%900000));
+  }
+  // One-time, admin-only migration: reserve each six-digit ID atomically.
+  // Keep the original /players/{id} document ID unchanged so prior notes/grades survive.
+  async function assignMissingPublicIds() {
+    if(staff?.role!=='admin')return 0;
+    let assigned=0;
+    for(const p of Object.values(PLAYERS).filter(p=>!hasPublicId(p))) {
+      const playerRef=db.collection('players').doc(p.id);
+      let success=false;
+      for(let attempt=0;attempt<24 && !success;attempt++) {
+        const code=makePublicId(),codeRef=db.collection('playerCodes').doc(code);
+        success=await db.runTransaction(async tx=>{
+          const [playerSnap,reservedSnap]=await Promise.all([tx.get(playerRef),tx.get(codeRef)]);
+          if(!playerSnap.exists)return true;
+          if(hasPublicId(playerSnap.data()))return true;
+          if(reservedSnap.exists)return false;
+          tx.set(codeRef,{playerId:p.id});
+          tx.update(playerRef,{publicId:code});
+          return true;
+        });
+      }
+      if(!success)throw Error('Unable to reserve a unique six-digit ID for '+p.name);
+      assigned++;
+    }
+    return assigned;
+  }
+  window.DZ_ASSIGN_PUBLIC_IDS=async()=>{
+    if(staff?.role!=='admin')throw Error('Administrator required');
+    const count=await assignMissingPublicIds();
+    await loadPlayers();
+    if(window.DZ_OPEN_CURRENT_URL) await window.DZ_OPEN_CURRENT_URL();
+    return count;
+  };
   async function showAllowed() {
     window.DZ_AUTHORIZED=true;
     installStorage();
@@ -117,8 +155,16 @@
     $('cloud-identity').textContent=activeUser.email+' · '+(staff.role==='admin'?'Administrator':'Coach');
     $('admin-panel').style.display=staff.role==='admin'?'block':'none';
     await loadPlayers();
-    const id=decodeURIComponent(location.hash.slice(1));
-    if(PLAYERS[id]) await showPlayer(id);else showHome();
+    if(staff.role==='admin' && Object.values(PLAYERS).some(p=>!hasPublicId(p))){
+      try {
+        await assignMissingPublicIds();
+        await loadPlayers();
+      } catch(e) {
+        console.warn('Public player ID assignment pending:', e);
+        notify($('cloud-import-status'),'Player ID assignment pending: '+friendly(e)+'. Publish the updated Firestore rules, then reload.',true);
+      }
+    }
+    await window.DZ_OPEN_CURRENT_URL();
     window.DZ_IMPORTER_INIT({firestore:db,currentUser:activeUser});
     if(staff.role==='admin') await listCoaches();
   }
@@ -211,11 +257,16 @@
       notify(msg,'Importing '+players.length+' player records...');
       for(let i=0;i<players.length;i+=300){
         const batch=db.batch();
-        for(const p of players.slice(i,i+300))batch.set(db.collection('players').doc(p.id),p);
+        for(const p of players.slice(i,i+300)){
+          const {publicId,...safe}=p; // Never overwrite an assigned ID from a roster JSON.
+          batch.set(db.collection('players').doc(p.id),safe,{merge:true});
+        }
         await batch.commit();
       }
-      await loadPlayers();showHome();
-      notify(msg,'Imported '+players.length+' players. Existing saved notes, grades and mechanical changes were preserved.');
+      await loadPlayers();
+      const count=await assignMissingPublicIds();
+      await loadPlayers();window.DZ_GO_HOME();
+      notify(msg,'Imported '+players.length+' players; assigned '+count+' new six-digit IDs. Existing notes, grades and public IDs were preserved.');
     }catch(e){notify(msg,'Import failed: '+friendly(e),true);}
     finally{$('cloud-import').disabled=false;}
   });
