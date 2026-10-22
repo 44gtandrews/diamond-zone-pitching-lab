@@ -2131,12 +2131,11 @@ async function renderHome(){
         }).join('');
       const searchKey=dzEscapeText((player.name+' '+(player.ageLabel||'')).toLowerCase());
       const ageKey=player.ageNum===28?'coach':String(player.ageNum)+'u';
-      const publicCode=player.publicId?'#'+dzEscapeText(player.publicId):'ID pending';
       const affiliation=player.affiliation==='external'?'Lesson':'Program';
       return `<a class="player-row" data-player-id="${dzEscapeText(id)}" data-search="${searchKey}" data-age="${ageKey}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
         <div class="dz-roster-person">
           <span class="player-name">${dzEscapeText(player.name)}</span>
-          <span class="dz-roster-meta">${publicCode} · ${dzEscapeText(player.ageLabel||'')} · ${affiliation}</span>
+          <span class="dz-roster-meta">${dzEscapeText(player.ageLabel||'')} · ${affiliation}</span>
         </div>
         <div class="dz-pitch-usage" aria-label="Pitches ordered by usage, with age-based scouting grades and average velocity">${usage||'<span class="player-blurb">No pitches recorded</span>'}</div>
         <span class="chevron" aria-hidden="true">›</span>
