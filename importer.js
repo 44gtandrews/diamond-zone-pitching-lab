@@ -90,6 +90,7 @@ $('session-save').onclick=async()=>{
      const snap=await tx.get(ref);
      if(!snap.exists)throw Error('Player no longer exists');
      const old=snap.data();
+     if(old.inactive===true)throw Error('This player is inactive. An administrator must reactivate the profile before uploading another session.');
      if(old.dataType!=='aggregate')throw Error('Raw pitch-log players cannot yet receive aggregate session uploads.');
      const history=Array.isArray(old.importHistory)?old.importHistory.slice(-49):[];
      if(history.some(h=>h.sha256===fileHash))throw Error('This exact file was already imported for this player.');
