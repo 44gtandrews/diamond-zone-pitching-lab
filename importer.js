@@ -19,12 +19,20 @@ function csv(text){
  return data;
 }
 async function pdf(file){
- if(!window.pdfjsLib)throw Error('PDF reader unavailable; try summary CSV');
- const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,lines=[];
- for(let p=1;p<=Math.min(doc.numPages,20);p++){const t=await(await doc.getPage(p)).getTextContent(),m=new Map();t.items.forEach(x=>{const y=Math.round(x.transform[5]/3)*3;const a=m.get(y)||[];a.push({x:x.transform[4],s:x.str});m.set(y,a);});[...m].sort((a,b)=>b[0]-a[0]).forEach(([,a])=>lines.push(a.sort((x,y)=>x.x-y.x).map(x=>x.s).join(' | ')));}
- pdfText=lines.join('\n');const result=[];
- for(const line of lines){const b=line.split(/\s*\|\s*/);const k=key(b[0]);if(!k||b.length<5)continue;const r=empty(k);r.n=num(b[1],true);r.velo=num(b[2]);r.veloMax=num(b[3]);r.spin=num(b[4],true);if(r.n>0&&r.velo>0)result.push(r);}
- return result;
+ if(!window.DZ_TRACKMAN_PDF)throw Error('Trackman PDF reader did not load. Refresh the page and try again.');
+ const data=await window.DZ_TRACKMAN_PDF.fromFile(file);
+ pdfText=data.text||'';
+ if(mode==='new' && data.playerName && !$('session-player-name').value.trim()){
+  $('session-player-name').value=data.playerName;
+ }
+ if(mode==='update' && data.playerName && PLAYERS[id]?.name
+   && data.playerName.trim().toLowerCase()!==PLAYERS[id].name.trim().toLowerCase()){
+  throw Error('The report is for '+data.playerName+', but this is '+PLAYERS[id].name+"'s profile. Open the matching player profile instead.");
+ }
+ if(mode==='update' && data.selectedSessions>1){
+  throw Error('This PDF contains '+data.selectedSessions+' selected sessions. Choose only the NEW session in Trackman before uploading to avoid counting old pitches twice.');
+ }
+ return data.pitches;
 }
 function render(){
  const body=$('session-pitch-rows');body.replaceChildren();
