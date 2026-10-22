@@ -343,6 +343,50 @@
     .dz-profile-identity .dz-brand-logo{height:58px}
     .dz-branded-head,.dz-profile-identity{gap:10px;align-items:flex-start}
   }
+
+  /* Administrator-only top-level tab and coach-request queue. */
+  #cloud-bar .wrap{gap:14px;}
+  .dz-site-tabs{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+  .dz-site-tab{
+    border:1px solid transparent;background:transparent;color:#B4C7CD;
+    font:700 16px 'Barlow Condensed','Oswald',sans-serif;
+    letter-spacing:.05em;text-transform:uppercase;padding:7px 11px;
+    cursor:pointer;border-radius:3px;
+  }
+  .dz-site-tab:hover,.dz-site-tab.active{background:#16353D;color:#FFFFFF;border-color:#296F79;}
+  .dz-site-tab.active{box-shadow:inset 0 -2px #008D97;}
+  .dz-pending-badge{font:700 11px Inter,sans-serif;display:inline-block;margin-left:6px;
+    color:#051419;background:#36C7D3;border-radius:999px;padding:3px 7px;vertical-align:middle;}
+  .dz-session-controls{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-left:auto;}
+  #view-admin #admin-panel{display:block;margin:24px 0 60px;}
+  #view-admin .admin-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  #view-admin .admin-section-head .field-label{margin:0;font-size:20px;}
+  .dz-count{display:inline-flex;justify-content:center;align-items:center;min-width:26px;height:26px;
+    background:#008D97;color:#FFFFFF;border-radius:999px;font:700 13px Inter,sans-serif;padding:0 6px;}
+  .dz-coach-list{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  .dz-coach-list li{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;
+    gap:10px;padding:13px 14px;border:1px solid var(--line-strong);border-radius:3px;background:#0E1B22;}
+  .dz-coach-detail{min-width:0;overflow-wrap:anywhere;flex:1;}
+  .dz-coach-email{font-size:13px;font-weight:600;color:#F5FAFB;}
+  .dz-coach-meta{font-size:11px;color:var(--ink-soft);margin-top:4px;}
+  .dz-coach-actions{display:flex;flex-wrap:wrap;gap:7px;}
+  .dz-coach-list button{min-height:36px;padding:6px 11px;}
+  .dz-empty-requests{color:var(--ink-soft)!important;font-size:12px!important;}
+  #cloud-invite-form{align-items:center;}
+  #cloud-invite-email{background:#0C171D;color:#FFFFFF;border:1px solid var(--line-strong);
+    border-radius:2px;padding:10px;min-width:210px;flex:1;font:14px Inter,sans-serif;}
+  .dz-sms-note{border-left:3px solid #008D97;background:#12242C;padding:12px 15px;margin-top:24px;}
+  .dz-sms-note strong{color:#FFFFFF;font-size:14px;}
+  .dz-sms-note p{font-size:12px;line-height:1.6;color:var(--ink-soft);margin:5px 0 0;}
+  @media(max-width:600px){
+    #cloud-bar .wrap{align-items:flex-start;}
+    .dz-site-tabs{width:100%;}
+    .dz-session-controls{margin-left:0;width:100%;justify-content:space-between;}
+    #cloud-invite-form{flex-direction:column;align-items:stretch;}
+    #cloud-invite-email{min-width:0;width:100%;}
+    .dz-coach-actions{width:100%;}
+    .dz-coach-actions button{flex:1;}
+  }
 </style>
 </head>
 <body>
@@ -368,7 +412,15 @@
     <div id="cloud-auth-status" role="status" class="cloud-status"></div>
   </div>
 </section>
-<div id="cloud-bar" style="display:none;"><div class="wrap"><span id="cloud-identity"></span><button type="button" id="cloud-signout">Sign out</button></div></div>
+<div id="cloud-bar" style="display:none;">
+  <div class="wrap">
+    <nav class="dz-site-tabs" aria-label="Pitching Portal sections">
+      <button type="button" id="cloud-directory-nav" class="dz-site-tab active">Player Directory</button>
+      <button type="button" id="cloud-admin-nav" class="dz-site-tab" style="display:none;">Admin Dashboard <span id="cloud-pending-badge" class="dz-pending-badge" style="display:none;"></span></button>
+    </nav>
+    <div class="dz-session-controls"><span id="cloud-identity"></span><button type="button" id="cloud-signout">Sign out</button></div>
+  </div>
+</div>
 
 
 <!-- ============== HOME VIEW ============== -->
@@ -388,23 +440,6 @@
       <h2 class="admin-title">Pitcher Directory</h2>
       <p class="cloud-help">Upload your original Trackman Power BI pitching-report PDF directly. The app reads the Release Slot, Movement and Location tables to populate a new player profile. Select the age group and review the numbers before saving.</p>
       <button class="cloud-button" id="cloud-add-player" type="button">+ Add Player · Upload File</button>
-    </section>
-    <section id="admin-panel" style="display:none;">
-      <h2 class="admin-title">Admin · Roster &amp; Coach Access</h2>
-      <p class="cloud-help">Administrators can bulk-import or back up the roster. All approved coaches can add a player or upload an additional session from a player profile. Saved notes and grades remain separate.</p>
-      <label class="field-label" for="cloud-roster-file">Bulk import private roster JSON (not for Trackman PDFs)</label>
-      <p class="cloud-help">To create a player from a Trackman PDF, use <strong>+ Add Player · Upload File</strong> above. This admin-only field accepts the private roster backup JSON only.</p>
-      <input type="file" accept=".json,application/json" id="cloud-roster-file">
-      <div class="cloud-actions"><button class="cloud-button" id="cloud-import" type="button">Import players</button><button class="cloud-button secondary" id="cloud-backup" type="button">Export roster backup</button></div>
-      <p class="cloud-status" role="status" id="cloud-import-status"></p>
-      <div class="field-label" style="margin-top:20px;">Approved coach emails</div>
-      <form id="cloud-invite-form" class="cloud-actions">
-        <input type="email" id="cloud-invite-email" required placeholder="coach@example.com" aria-label="Coach email">
-        <select class="type-select" id="cloud-invite-role" aria-label="Coach permissions"><option value="coach">Coach</option><option value="admin">Admin</option></select>
-        <button class="cloud-button" type="submit">Approve coach</button>
-      </form>
-      <p class="cloud-status" id="cloud-invite-status" role="status"></p>
-      <ul id="cloud-allowlist"></ul>
     </section>
     <p id="cloud-empty" class="cloud-help" style="display:none;">No players have been imported yet. An administrator should import the private roster JSON above.</p>
     <div class="group">
@@ -428,6 +463,54 @@
       back. Stats on this roster are computed live from each player's own data, so they always match what's inside
       their profile.
     </p>
+  </div>
+</div>
+
+
+<!-- ============== ADMIN-ONLY VIEW ============== -->
+<div id="view-admin" style="display:none;">
+  <div class="masthead">
+    <div class="home-wrap dz-branded-head">
+      <img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="106" height="92">
+      <div class="dz-head-copy">
+        <p class="facility">Diamond Zone CT · Pitching Lab</p>
+        <h1 class="page-title">Admin Dashboard</h1>
+        <p class="page-sub">Access requests, coach permissions and roster management</p>
+      </div>
+    </div>
+  </div>
+  <div class="home-wrap">
+    <section id="admin-panel">
+      <h2 class="admin-title">Coach Access &amp; Roster Management</h2>
+      <p class="cloud-help">Administrators can bulk-import or back up the roster. All approved coaches can add a player or upload an additional session from a player profile. Saved notes and grades remain separate.</p>
+      <label class="field-label" for="cloud-roster-file">Bulk import private roster JSON (not for Trackman PDFs)</label>
+      <p class="cloud-help">To create a player from a Trackman PDF, use <strong>+ Add Player · Upload File</strong> above. This admin-only field accepts the private roster backup JSON only.</p>
+      <input type="file" accept=".json,application/json" id="cloud-roster-file">
+      <div class="cloud-actions"><button class="cloud-button" id="cloud-import" type="button">Import players</button><button class="cloud-button secondary" id="cloud-backup" type="button">Export roster backup</button></div>
+      <p class="cloud-status" role="status" id="cloud-import-status"></p>
+      <div class="admin-section-head" style="margin-top:26px;">
+        <h3 class="field-label" id="admin-pending-heading">Pending coach requests <span id="cloud-pending-count" class="dz-count">0</span></h3>
+        <button type="button" id="cloud-refresh-requests" class="cloud-button secondary">Refresh requests</button>
+      </div>
+      <p class="cloud-help">Coaches appear here automatically after signing up and verifying their email. They cannot access player profiles unless you approve them.</p>
+      <ul class="dz-coach-list" id="cloud-pending-requests" aria-labelledby="admin-pending-heading"></ul>
+      <h3 class="field-label" style="margin-top:24px;">Denied requests</h3>
+      <ul class="dz-coach-list" id="cloud-denied-requests"></ul>
+      <h3 class="field-label" style="margin-top:24px;">Coach access management</h3>
+      <form id="cloud-invite-form" class="cloud-actions">
+        <input type="email" id="cloud-invite-email" required placeholder="coach@example.com" aria-label="Coach email">
+        <select class="type-select" id="cloud-invite-role" aria-label="Coach permissions"><option value="coach">Coach</option><option value="admin">Admin</option></select>
+        <button class="cloud-button" type="submit">Approve coach</button>
+      </form>
+      <p class="cloud-status" id="cloud-invite-status" role="status"></p>
+      <ul id="cloud-allowlist" class="dz-coach-list"></ul>
+      <p class="cloud-status" id="cloud-request-status" role="status"></p>
+      <div class="dz-sms-note">
+        <strong>New-coach text alerts</strong>
+        <p>Optional SMS notifications can be enabled securely through Firebase Cloud Functions and an SMS provider. No phone number or messaging credentials are stored in the website.</p>
+      </div>
+    </section>
+
   </div>
 </div>
 
