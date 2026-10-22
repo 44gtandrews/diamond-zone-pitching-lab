@@ -1,3 +1,31 @@
+# Internal / External roster tabs and directory velocity (October 22, 2026)
+
+## Directory membership
+
+- The **Player Directory** has separate **Internal** and **External** tabs for all approved coaches.
+- **Internal** means the athlete plays for the Diamond Zone program. Internal players are grouped by age (10U–18U, and Coach / Adult) with age groups ordered from youngest to oldest.
+- **External** means the athlete attends lessons but plays on another team. External players are displayed in one alphabetical-by-name list, **not separated by age**.
+- Both tabs display the number of players assigned to each group. The home subtitle shows Internal, External and total counts.
+- Players created before this feature who lack the `affiliation` field are automatically treated as **Internal**. No migration is needed, and no roster or coaching data is discarded.
+
+## Adding and updating pitchers
+
+- **+ Add Player → Program affiliation**: select `Internal · Diamond Zone program` (default) or `External · Lessons / other teams`; also select the player's age for performance analysis. The affiliation is stored in `players/{id}.affiliation`.
+- **Edit Profile** (admin-only, beside Upload New Session) can update name, age group and affiliation. Switching External → Internal moves the player to the Internal age-group directory; Internal → External moves them into the alphabetical External directory.
+- Affiliation changes update the existing Firestore document and preserve the player's stable internal ID, six-digit public URL, sessions, pitch data and notes.
+- The category is also shown beneath the player's name on their profile.
+- Both groups are visible to **approved coaches** under the existing Firestore permissions; "External" is a roster category, not a separate permission/security boundary.
+
+## Pitch usage and average velocity on the directory
+
+- Each pitcher row shows **all tracked pitch types**, descending by usage percentage, with colored pitch dots.
+- Each pitch now also shows **average velocity in mph** (one decimal place) beside the usage percentage. Examples: `Four-Seam 62.5% 73.4 mph`, `Changeup 37.5% 65.2 mph`.
+- Imported aggregate Trackman summary velocity is the recorded / pitch-count-weighted average stored by the importer. For raw per-pitch logs the directory computes an **arithmetic mean** across raw pitch speeds of that pitch type. The profile's existing velocity analyses, including raw median values, remain unchanged.
+- Missing velocity reads `— mph`. Session counts and the single "primary pitch" label remain excluded from roster rows.
+
+This update changes **Hosting files only**. Firestore's existing `players` create and admin update permissions already allow the optional `affiliation` field, so **no rules deployment is required for these features**. With the connected GitHub Actions → Firebase workflow, approved code updates on `main` publish automatically. If that workflow fails, inspect the GitHub Actions run before retrying a manual deployment.
+
+
 # Player directory, profile editing and full emergency JSON backups (Oct 22, 2026)
 
 ## Player directory
