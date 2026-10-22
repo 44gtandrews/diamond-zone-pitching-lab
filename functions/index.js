@@ -23,7 +23,7 @@ exports.notifyCoachAccessRequestSms = onDocumentCreated({
   secrets: [sid, token, sender, recipient]
 }, async event => {
   const data = event.data?.data();
-  if (!data || data.status !== "pending") return;
+  if (!data || data.status !== "pending" || data.restoredFromBackup === true) return;
   const email = String(data.email || "");
   if (!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email)) return;
 
