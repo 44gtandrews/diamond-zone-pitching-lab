@@ -430,6 +430,349 @@
     .dz-coach-actions{width:100%;}
     .dz-coach-actions button{flex:1;}
   }
+
+  /* ===============================================================
+     MOBILE PORTAL LAYOUT · phone-first adjustments (October 2026)
+     Keeps desktop dashboards and all application permissions intact.
+     =============================================================== */
+  .dz-mobile-table-hint,.dz-admin-jumps{display:none;}
+  .dz-admin-group,.dz-legacy-tools{
+    margin-top:22px;padding:18px;border:1px solid var(--line-strong);
+    border-radius:5px;background:#0C1B23;
+  }
+  .dz-admin-group .dz-coach-list{margin-top:13px;}
+  #admin-panel .dz-coach-list>li{padding:13px 14px;}
+  .dz-admin-group,.dz-legacy-tools,.dz-backup-section,.dz-inactive-panel{
+    scroll-margin-top:16px;min-width:0;
+  }
+  .table-card,.session-table-wrap{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;}
+  .table-card:focus-visible,.session-table-wrap:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+
+  @media(max-width:850px){
+    .wrap,.home-wrap{padding-inline:20px;}
+    .masthead-row{align-items:flex-start;}
+    .chart-row{grid-template-columns:minmax(0,1fr);}
+    .chart-card{min-width:0;}
+    .two-col{grid-template-columns:minmax(0,1fr);}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .tabbar{
+      display:flex;flex-wrap:nowrap;max-width:100%;overflow-x:auto;
+      -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+      scrollbar-width:thin;scroll-snap-type:x proximity;
+    }
+    .tabbtn{
+      flex:0 0 auto;min-height:46px;white-space:nowrap;
+      scroll-snap-align:start;
+    }
+    .table-card{max-width:100%;overflow-x:auto;}
+    #pitch-table{min-width:760px;width:100%;}
+    #pitchlog-table{min-width:1020px;width:100%;}
+  }
+
+  @media(max-width:640px){
+    html{scroll-padding-top:16px;}
+    body{padding-bottom:calc(32px + env(safe-area-inset-bottom,0px));}
+    .wrap,.home-wrap{padding-inline:16px;}
+
+    /* Single-column, readable account navigation. */
+    #cloud-bar .wrap{
+      flex-direction:column;align-items:stretch;gap:10px;
+      padding-block:10px;
+    }
+    .dz-site-tabs{display:flex;width:100%;gap:7px;align-items:stretch;}
+    #cloud-bar .dz-site-tab{
+      flex:1 1 0;min-width:0;min-height:46px;
+      padding:9px 7px;text-align:center;
+      font-size:15px;line-height:1.15;
+    }
+    #cloud-bar .dz-site-tab.active{
+      background:#16353D;color:#FFFFFF;
+      border-color:#296F79;box-shadow:inset 0 -3px var(--accent);
+    }
+    .dz-session-controls{
+      display:grid;grid-template-columns:minmax(0,1fr) auto;
+      align-items:center;gap:12px;width:100%;margin:0;
+    }
+    #cloud-identity{
+      min-width:0;overflow-wrap:anywhere;
+      font-size:11px;line-height:1.45;color:#CFE1E5;
+    }
+    #cloud-bar #cloud-signout{min-height:44px;padding:9px 13px;white-space:nowrap;}
+    body[data-dz-role="player_parent"] .dz-site-tabs{display:none;}
+
+    /* Brand and player header. */
+    .masthead{padding:18px 0 17px;}
+    .dz-branded-head,.dz-profile-identity{gap:12px;align-items:center;}
+    .dz-brand-logo{height:62px;max-width:74px;}
+    .dz-profile-identity .dz-brand-logo{height:60px;max-width:70px;}
+    .facility{font-size:10px;letter-spacing:.09em;line-height:1.4;margin-bottom:5px;}
+    .page-title{font-size:clamp(28px,7.5vw,37px);line-height:.99;overflow-wrap:anywhere;}
+    .masthead .player-name{font-size:clamp(30px,8vw,43px);line-height:.99;overflow-wrap:anywhere;}
+    .page-sub,.player-sub{font-size:12px;line-height:1.5;margin-top:6px;}
+    .masthead-row{display:flex;flex-direction:column;gap:13px;align-items:stretch;}
+    .dz-profile-identity{width:100%;}
+    .dz-head-copy{flex:1;min-width:0;}
+    .back-link{margin-bottom:7px;font-size:11px;}
+    .session-tag{
+      border-top:1px solid #2C4B54;padding-top:10px;
+      text-align:left;font-size:12px;line-height:1.45;
+    }
+    .dz-id-line{
+      display:grid;grid-template-columns:minmax(0,1fr) auto;
+      align-items:center;gap:7px;margin-top:9px;
+      font-size:12px;
+    }
+    #player-public-id{min-width:0;letter-spacing:.025em;}
+    .dz-id-line .cloud-button{
+      min-height:42px!important;padding:7px 9px!important;
+      font-size:13px;line-height:1.15;
+    }
+    #player-copy-status{grid-column:1/-1;}
+
+    /* Account sign-in and verification. */
+    .cloud-card{margin:18px 12px;padding:18px 16px;border-radius:6px;}
+    .cloud-card h2{font-size:25px;}
+    .cloud-form{gap:13px;}
+    .cloud-form label{display:block;min-width:0;line-height:1.5;}
+    .cloud-form input,.cloud-form select{
+      min-height:46px;width:100%;max-width:100%;
+      margin-top:5px;font-size:16px;
+    }
+    .cloud-actions{display:flex;flex-direction:column;align-items:stretch;gap:9px;}
+    .cloud-actions>.cloud-button,.cloud-actions>button{width:100%;min-height:46px;}
+    .cloud-button{min-height:44px;line-height:1.2;}
+    #cloud-auth-actions,#cloud-verification-actions{gap:9px;}
+
+    /* Directories: pitch names, usage and velocity have stable columns. */
+    #coach-upload-panel{
+      margin-top:16px!important;padding:16px!important;
+      border-radius:6px;
+    }
+    #coach-upload-panel .admin-title{font-size:22px;}
+    #cloud-add-player{width:100%;min-height:48px;}
+    .dz-directory-tabs{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;margin-top:20px;border:0;
+    }
+    .dz-directory-tab{
+      width:100%;min-height:48px;padding:9px 7px;
+      font-size:19px;line-height:1.2;
+      border:1px solid #35515A;border-bottom:3px solid #35515A;
+      border-radius:5px;
+    }
+    .dz-directory-tab.active{border-color:#25818B;border-bottom-color:#39D4DD;}
+    .dz-directory-count{display:inline-block;vertical-align:middle;}
+    .dz-directory-description{margin:12px 0 2px;}
+    .group{margin-top:23px;}
+    .group-title{font-size:18px;}
+    .roster{overflow:hidden;border-radius:5px;}
+    .player-row{align-items:flex-start;gap:10px;padding:14px 12px;}
+    .player-info{width:100%;min-width:0;flex:1 1 0;}
+    .roster .player-row .player-name{font-size:21px;line-height:1.2;}
+    .chevron{align-self:center;}
+    .dz-pitch-usage{
+      display:grid;grid-template-columns:minmax(0,1fr);
+      align-items:stretch;gap:5px;margin-top:9px;
+    }
+    .dz-usage-item{
+      display:grid;grid-template-columns:8px minmax(0,1fr) auto auto;
+      align-items:center;gap:6px;min-width:0;width:100%;
+      white-space:normal;padding:6px 8px;
+      border-radius:4px;background:rgba(255,255,255,.025);
+      font-size:11.5px;line-height:1.35;
+    }
+    .dz-usage-item strong{white-space:nowrap;font-size:11.5px;}
+    .dz-usage-dot{width:8px;height:8px;}
+    .dz-usage-velo{white-space:nowrap;font-size:11px;}
+    .home-footnote{margin-top:26px;}
+
+    /* Analytics and coaching notes. */
+    .kpis{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      border-top:1px solid var(--line-strong);
+    }
+    .kpi{
+      min-width:0;border-right:0;border-bottom:1px solid var(--line);
+      padding:13px 12px;
+    }
+    .kpi:nth-child(odd){border-right:1px solid var(--line);}
+    .kpi:last-child{
+      grid-column:1/-1;border-right:0;border-bottom:0;
+    }
+    .kpi-label{font-size:10px;letter-spacing:.055em;}
+    .kpi-value{font-size:29px;}
+    .dz-profile-actions{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:9px;margin-top:14px;
+    }
+    .dz-profile-actions .cloud-button{
+      min-width:0;width:100%;min-height:46px;
+      padding:10px 8px;font-size:14px;line-height:1.2;
+      overflow-wrap:anywhere;
+    }
+    #cloud-update-player,#cloud-delete-player{grid-column:1/-1;}
+    .tabbar{margin-top:22px;gap:0;}
+    .tabbtn{min-height:48px;padding:11px 14px;font-size:16px;}
+    .panel{padding-top:17px;}
+    .chart-card{min-width:0;padding:15px 13px 11px;}
+    .chart-title{font-size:17px;}
+    .chart-card svg{display:block;max-width:100%;height:auto;}
+    #chart-move,#chart-usage{max-width:100%;min-width:0;overflow:hidden;}
+    .velo-row{gap:10px;}
+    .velo-name{min-width:0;font-size:12px;}
+    .velo-nums{gap:10px;flex-shrink:0;}
+    .table-card{
+      width:100%;max-width:100%;
+      overflow-x:auto;border-radius:5px;
+    }
+    .dz-mobile-table-hint{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:10px;margin:12px 0 6px;
+      font-size:11px;line-height:1.5;
+      color:#8CC8D0;
+    }
+    .dz-mobile-table-hint span{font-size:18px;line-height:1;}
+    .grade-select,.type-select{min-height:35px;font-size:13px;}
+    .note-box textarea{padding-right:52px;font-size:16px;}
+    .note-remove{width:38px;height:38px;top:5px;right:5px;font-size:17px;}
+    .add-note-btn,.save-btn{min-height:44px;}
+    .save-row{flex-wrap:wrap;}
+    .save-btn{padding:10px 18px;}
+
+    /* Administrator: requests/roles first, other actions clearly separated. */
+    #view-admin #admin-panel{
+      margin:15px 0 40px;padding:0;border:0;background:none;
+    }
+    #admin-panel>h2{font-size:25px;margin:0 0 13px;}
+    .dz-admin-jumps{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;margin:0 0 17px;
+    }
+    .dz-admin-jump{
+      min-height:46px;padding:10px 8px;
+      border:1px solid #37656C;border-radius:5px;
+      color:#E2F8FA;background:#122C33;
+      font:700 14px 'Barlow Condensed','Oswald',sans-serif;
+      letter-spacing:.035em;text-transform:uppercase;
+      cursor:pointer;line-height:1.2;
+    }
+    .dz-admin-jump:active{background:#1D464F;}
+    .dz-admin-group,.dz-inactive-panel,.dz-backup-section,.dz-legacy-tools{
+      margin:15px 0;padding:15px 13px;
+      border:1px solid #35515A;border-radius:6px;
+      background:#0E1D25;min-width:0;
+    }
+    #view-admin .admin-title{font-size:23px;}
+    #view-admin .admin-section-head{
+      flex-direction:column;align-items:stretch;gap:11px;
+    }
+    #view-admin .admin-section-head .field-label{font-size:20px;}
+    #view-admin .admin-section-head>button{width:100%;min-height:44px;}
+    #admin-panel input,#admin-panel select{
+      max-width:100%;min-width:0;width:100%;
+      font-size:16px;
+    }
+    #cloud-invite-form{
+      display:flex;flex-direction:column;align-items:stretch;
+      gap:9px;width:100%;
+    }
+    #cloud-invite-email{max-width:100%;flex:auto;min-height:46px;}
+    .dz-role-select,.dz-linked-player,
+    .dz-role-controls .dz-linked-player{
+      min-width:0!important;max-width:100%!important;
+      width:100%!important;min-height:46px;
+    }
+    #admin-panel .dz-coach-list>li{
+      display:flex;flex-direction:column;align-items:stretch;
+      gap:9px;padding:13px;
+    }
+    .dz-coach-detail{flex:auto;width:100%;}
+    .dz-coach-email{font-size:13px;line-height:1.45;overflow-wrap:anywhere;}
+    .dz-coach-meta{font-size:11px;line-height:1.4;}
+    .dz-coach-actions{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;width:100%;
+    }
+    .dz-coach-actions>.cloud-button{width:100%;min-height:44px;}
+    .dz-role-controls{
+      display:grid;grid-template-columns:minmax(0,1fr);
+      align-items:stretch;gap:9px;flex:1 1 auto;
+      min-width:0;width:100%;margin-top:3px;
+    }
+    .dz-role-controls>.cloud-button{width:100%;min-height:44px;}
+    .dz-role-controls label{margin:0;}
+    #admin-panel input[type="file"]{
+      width:100%;max-width:100%;min-height:46px;
+      padding:10px;font-size:13px;
+    }
+    .dz-backup-section .cloud-actions,
+    .dz-legacy-tools .cloud-actions{display:flex;flex-direction:column;align-items:stretch;}
+    .dz-inactive-panel .dz-coach-actions{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .dz-sms-note{margin-top:17px;border-radius:4px;}
+
+    /* Edit and Trackman dialogs stay reachable on small screens. */
+    .dz-edit-overlay{
+      overflow-y:auto;align-items:flex-start;
+      padding:10px;overscroll-behavior:contain;
+    }
+    .dz-edit-dialog{
+      width:100%;max-width:none;max-height:calc(100dvh - 20px);
+      margin:auto 0;padding:18px 16px;overflow-y:auto;
+      overscroll-behavior:contain;border-radius:6px;
+    }
+    #session-import-overlay{
+      padding:0;overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+    }
+    #session-import-dialog{
+      margin:0;min-height:100dvh;max-width:none;width:100%;
+      border:0;border-top:4px solid var(--accent-deep);
+      padding:18px 14px calc(28px + env(safe-area-inset-bottom,0px));
+      border-radius:0;
+    }
+    #session-import-dialog .cloud-form{
+      display:grid;grid-template-columns:minmax(0,1fr);gap:11px;
+    }
+    #session-import-dialog input[type="file"]{
+      width:100%;max-width:100%;min-height:46px;
+      padding:10px;border:1px solid var(--line-strong);
+      border-radius:4px;font-size:13px;
+    }
+    #session-import-dialog .session-table-wrap{
+      max-width:100%;overflow-x:auto;border-radius:5px;
+    }
+    #session-import-dialog .session-table-wrap table{
+      width:max-content;min-width:1200px;
+    }
+    #session-import-dialog .session-cell{
+      min-width:74px;height:42px;font-size:16px;
+    }
+    #session-import-dialog .cloud-actions>.cloud-button{
+      width:100%;min-height:46px;
+    }
+  }
+
+  @media(max-width:380px){
+    .wrap,.home-wrap{padding-inline:12px;}
+    #cloud-bar .wrap{padding-inline:12px;}
+    .masthead .player-name{font-size:29px;}
+    .dz-brand-logo{max-width:60px;height:54px;}
+    .dz-profile-identity .dz-brand-logo{height:53px;}
+    .dz-id-line{grid-template-columns:1fr;}
+    #player-copy-status{grid-column:1;}
+    .dz-id-line .cloud-button{width:100%;}
+    .dz-directory-tab{font-size:17px;}
+    .dz-admin-jump{font-size:13px;}
+    .dz-profile-actions{grid-template-columns:1fr;}
+    #cloud-update-player,#cloud-delete-player{grid-column:1;}
+  }
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;}
+  }
+
 </style>
 </head>
 <body>
@@ -499,11 +842,7 @@
       <div class="roster" id="dz-external-roster"></div>
       <p id="dz-external-empty" class="cloud-help" style="display:none;">No external players yet. Choose External when adding a pitcher.</p>
     </div>
-    <p class="home-footnote">
-      Everything here lives in this one file — click a player to view their profile, click "All Players" to come
-      back. Stats on this roster are computed live from each player's own data, so they always match what's inside
-      their profile.
-    </p>
+    <p class="home-footnote">Select a pitcher to open their profile and coaching notes. Directory statistics reflect the pitching data saved for each player.</p>
   </div>
 </div>
 
@@ -688,7 +1027,8 @@
           <div id="chart-usage"></div>
         </div>
       </div>
-      <div class="table-card"><table id="pitch-table"></table></div>
+      <p class="dz-mobile-table-hint">Swipe sideways to see all pitch metrics <span aria-hidden="true">→</span></p>
+      <div class="table-card" tabindex="0" role="region" aria-label="Pitch metrics table, scroll horizontally"><table id="pitch-table"></table></div>
       <p class="footnote" id="overview-footnote"></p>
     </div>
 
@@ -709,7 +1049,8 @@
           </select>
         </label>
       </div>
-      <div class="table-card"><table id="pitchlog-table"></table></div>
+      <p class="dz-mobile-table-hint">Swipe sideways to view the complete pitch log <span aria-hidden="true">→</span></p>
+      <div class="table-card" tabindex="0" role="region" aria-label="Pitch log table, scroll horizontally"><table id="pitchlog-table"></table></div>
     </div>
 
     <!-- NOTES -->
@@ -1512,7 +1853,8 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
     <section id="session-review" style="display:none;">
       <h3 class="field-label">Review Pitch Summary · One Session</h3>
       <p class="cloud-help">Confirm each pitch count and average velocity, correct other fields as needed. Empty optional cells stay unknown. “Undefined” and “Other” are excluded. A new session is merged using pitch-count-weighted averages; previous notes and grades are retained. Do not upload the same session twice.</p>
-      <div class="session-table-wrap"><table><thead><tr><th>Pitch</th><th>#</th><th>Velo</th><th>Max</th><th>Spin</th><th>Max Spin</th><th>Ext</th><th>IVB</th><th>HB</th><th>Tilt</th><th>Strike %</th><th>Ext Strike %</th><th>Out %</th><th>VAA</th><th></th></tr></thead><tbody id="session-pitch-rows"></tbody></table></div>
+      <p class="dz-mobile-table-hint">Swipe sideways to review and edit all Trackman columns <span aria-hidden="true">→</span></p>
+      <div class="session-table-wrap" tabindex="0" role="region" aria-label="Trackman pitch review table, scroll horizontally"><table><thead><tr><th>Pitch</th><th>#</th><th>Velo</th><th>Max</th><th>Spin</th><th>Max Spin</th><th>Ext</th><th>IVB</th><th>HB</th><th>Tilt</th><th>Strike %</th><th>Ext Strike %</th><th>Out %</th><th>VAA</th><th></th></tr></thead><tbody id="session-pitch-rows"></tbody></table></div>
       <div class="cloud-actions"><button class="cloud-button secondary" type="button" id="session-add-pitch">+ Add pitch type</button><button class="cloud-button" type="button" id="session-save">Confirm &amp; Save to Shared Database</button></div>
       <details><summary>Extracted PDF text (reference only)</summary><pre id="session-pdf-text" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow-y:auto;"></pre></details>
     </section>
