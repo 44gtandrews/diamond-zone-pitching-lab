@@ -381,6 +381,248 @@
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
 
+
+  // Complete, admin-only Firestore application-data backup.
+  // Authentication passwords and Firebase settings are not part of Firestore.
+  function dzEncodeBackup(value){
+    if(value instanceof firebase.firestore.Timestamp){
+      return {__dzTimestamp:[value.seconds,value.nanoseconds]};
+    }
+    if(Array.isArray(value))return value.map(dzEncodeBackup);
+    if(value && typeof value==='object'){
+      const result={};
+      for(const [key,item] of Object.entries(value))result[key]=dzEncodeBackup(item);
+      return result;
+    }
+    return value;
+  }
+  function dzDecodeBackup(value){
+    if(Array.isArray(value))return value.map(dzDecodeBackup);
+    if(value && typeof value==='object'){
+      const keys=Object.keys(value);
+      if(keys.length===1 && keys[0]==='__dzTimestamp'){
+        const parts=value.__dzTimestamp;
+        if(!Array.isArray(parts)||parts.length!==2||!Number.isInteger(parts[0])||
+          !Number.isInteger(parts[1])||parts[1]<0||parts[1]>=1e9)throw Error('Invalid timestamp in backup.');
+        return new firebase.firestore.Timestamp(parts[0],parts[1]);
+      }
+      const result={};
+      for(const [key,item] of Object.entries(value)){
+        if(['__proto__','constructor','prototype'].includes(key))throw Error('Unsupported field name in backup.');
+        result[key]=dzDecodeBackup(item);
+      }
+      return result;
+    }
+    return value;
+  }
+  function dzBackupRow(doc){
+    return {id:doc.id,data:dzEncodeBackup(doc.data())};
+  }
+  function dzDownloadJson(filename,payload){
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+    anchor.href=url;anchor.download=filename;anchor.style.display='none';
+    document.body.appendChild(anchor);anchor.click();anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }
+  const dzBackupMessage=(text,error=false)=>notify($('cloud-full-status'),text,error);
+  $('cloud-full-backup').addEventListener('click',async()=>{
+    if(staff?.role!=='admin')return;
+    const button=$('cloud-full-backup');button.disabled=true;
+    dzBackupMessage('Reading player, coach and ID records...');
+    try{
+      const collections=['players','playerCodes','allowlist','coachRequests'];
+      const snaps=await Promise.all(collections.map(name=>db.collection(name).get()));
+      const payload={format:'diamond-zone-full-backup',schemaVersion:2,
+        projectId:firebase.app().options.projectId,
+        exportedAt:new Date().toISOString(),collections:{}};
+      collections.forEach((name,i)=>{
+        payload.collections[name]=snaps[i].docs.map(dzBackupRow);
+      });
+      payload.collections.playerEdits=[];
+      const players=snaps[0].docs;
+      // Reading one player's note sections at a time avoids bursty Firestore reads.
+      for(let i=0;i<players.length;i++){
+        const player=players[i];
+        const notes=await db.collection('playerEdits').doc(player.id).collection('sections').get();
+        notes.docs.forEach(doc=>payload.collections.playerEdits.push({
+          playerId:player.id,section:doc.id,data:dzEncodeBackup(doc.data())
+        }));
+        if((i+1)%10===0)dzBackupMessage('Collecting notes and grades: '+(i+1)+' / '+players.length+' players...');
+      }
+      const stamp=new Date().toISOString().slice(0,10);
+      dzDownloadJson('diamond-zone-full-backup-'+stamp+'.json',payload);
+      dzBackupMessage('Full backup downloaded: '+players.length+' players, '+
+        payload.collections.playerEdits.length+' coaching records, '+
+        payload.collections.playerCodes.length+' player IDs, '+
+        payload.collections.allowlist.length+' staff records and '+
+        payload.collections.coachRequests.length+' coach requests. Store the JSON securely.');
+    }catch(e){dzBackupMessage('Full backup failed: '+friendly(e),true);}
+    finally{button.disabled=false;}
+  });
+
+  function dzValidateBackup(parsed){
+    if(!parsed||parsed.format!=='diamond-zone-full-backup'||parsed.schemaVersion!==2||
+       !parsed.collections||typeof parsed.collections!=='object')throw Error('Select a Diamond Zone FULL backup (schema version 2).');
+    if(parsed.projectId!==firebase.app().options.projectId)
+      throw Error('Backup is from a different Firebase project. Restore cancelled.');
+    const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits'];
+    for(const key of arrays){
+      if(!Array.isArray(parsed.collections[key])||parsed.collections[key].length>5000)
+        throw Error('Invalid or oversized '+key+' backup collection.');
+    }
+    const decoded={};
+    for(const key of arrays){
+      const seen=new Set();
+      decoded[key]=parsed.collections[key].map(item=>{
+        if(!item || typeof item!=='object' || !item.data || typeof item.data!=='object')
+          throw Error('Invalid '+key+' entry.');
+        const id=key==='playerEdits'?String(item.playerId||'')+':'+String(item.section||''):String(item.id||'');
+        if(!id||id.includes('/')||seen.has(id))throw Error('Invalid or duplicate '+key+' ID: '+id);
+        seen.add(id);
+        return {...item,data:dzDecodeBackup(item.data)};
+      });
+    }
+    const backupPlayers=new Map();
+    for(const item of decoded.players){
+      if(item.id!==item.data.id)throw Error('Player document ID mismatch: '+item.id);
+      validPlayer(item.data);
+      if(item.data.publicId!=null && !/^[1-9][0-9]{5}$/.test(String(item.data.publicId)))
+        throw Error('Invalid six-digit ID for '+item.data.name);
+      backupPlayers.set(item.id,item.data);
+    }
+    const codes=new Map();
+    for(const item of decoded.playerCodes){
+      if(!/^[1-9][0-9]{5}$/.test(item.id)||typeof item.data.playerId!=='string')
+        throw Error('Invalid backup player-code reservation.');
+      codes.set(item.id,item.data.playerId);
+    }
+    for(const [id,player] of backupPlayers){
+      if(player.publicId && codes.get(String(player.publicId))!==id)
+        throw Error('Six-digit ID reservation mismatch for '+player.name);
+    }
+    for(const item of decoded.playerEdits){
+      if(!backupPlayers.has(item.playerId)||
+         !['notes','mechanics','strength','grades','type-overrides'].includes(item.section)||
+         typeof item.data.value!=='string'||item.data.value.length>50000||
+         typeof item.data.editedBy!=='string')
+        throw Error('Invalid player coaching section: '+item.playerId+' / '+item.section);
+    }
+    for(const item of decoded.allowlist){
+      if(!/^[^\\s/@]+@[^\\s/@]+\\.[^\\s/@]+$/.test(item.id)||
+        !['admin','coach'].includes(item.data.role)||typeof item.data.active!=='boolean')
+        throw Error('Invalid staff approval entry.');
+    }
+    for(const item of decoded.coachRequests){
+      if(typeof item.data.uid!=='string'||item.data.uid!==item.id||
+         typeof item.data.email!=='string'||
+         !['pending','approved','denied'].includes(item.data.status)||
+         !(item.data.requestedAt instanceof firebase.firestore.Timestamp))
+        throw Error('Invalid coach access-request entry.');
+    }
+    return {decoded,backupPlayers,codes};
+  }
+  async function dzRestoreBatch(records,createRef,transform,chunkSize=60){
+    for(let i=0;i<records.length;i+=chunkSize){
+      const batch=db.batch();
+      for(const item of records.slice(i,i+chunkSize)){
+        batch.set(createRef(item),transform(item));
+      }
+      await batch.commit();
+    }
+  }
+  $('cloud-full-restore').addEventListener('click',async()=>{
+    if(staff?.role!=='admin')return;
+    const file=$('cloud-full-restore-file').files[0];
+    if(!file){dzBackupMessage('Choose a full backup JSON file first.',true);return;}
+    if(file.size>50_000_000){dzBackupMessage('Backup file exceeds 50 MB.',true);return;}
+    const button=$('cloud-full-restore');button.disabled=true;
+    try{
+      const parsed=JSON.parse(await file.text());
+      const {decoded,backupPlayers,codes}=dzValidateBackup(parsed);
+      dzBackupMessage('Checking permanent player IDs and current database...');
+      const [playerSnaps,codeSnaps,requestSnaps]=await Promise.all([
+        db.collection('players').get(),
+        db.collection('playerCodes').get(),
+        db.collection('coachRequests').get()
+      ]);
+      const livePlayers=new Map(playerSnaps.docs.map(doc=>[doc.id,doc.data()]));
+      const liveCodes=new Map(codeSnaps.docs.map(doc=>[doc.id,doc.data().playerId]));
+      const liveRequests=new Set(requestSnaps.docs.map(doc=>doc.id));
+      for(const [id,player] of backupPlayers){
+        const current=livePlayers.get(id);
+        if(current && current.publicId && player.publicId &&
+           String(current.publicId)!==String(player.publicId))
+          throw Error('Player ID conflict for '+player.name+'. No records were restored.');
+        if(player.publicId && liveCodes.has(String(player.publicId)) &&
+           liveCodes.get(String(player.publicId))!==id)
+          throw Error('Six-digit ID collision for '+player.name+'. No records were restored.');
+      }
+      for(const [code,pid] of codes){
+        if(liveCodes.has(code)&&liveCodes.get(code)!==pid)
+          throw Error('Reserved ID '+code+' belongs to another player. No records were restored.');
+      }
+      const summary=decoded.players.length+' players, '+decoded.playerEdits.length+
+        ' coaching records, '+decoded.allowlist.length+' staff approvals, '+
+        decoded.coachRequests.length+' coach requests.';
+      const permission=window.prompt('EMERGENCY RESTORE from '+parsed.exportedAt+'\n'+summary+
+        '\n\nMatching existing records will be OVERWRITTEN, including coach notes and approvals. '+
+        'Existing records not in the backup will not be deleted. '+
+        'Admin permissions will NOT be restored or changed.\n\nType RESTORE to continue:');
+      if(permission!=='RESTORE'){dzBackupMessage('Restore cancelled; no changes made.');return;}
+
+      // Stage 1: restore profile documents without changing their permanent public IDs.
+      // Small batches keep reads in Firestore security-rule write limits.
+      dzBackupMessage('Restoring '+decoded.players.length+' player profiles...');
+      await dzRestoreBatch(decoded.players,
+        item=>db.collection('players').doc(item.id),
+        item=>item.data,20);
+
+      // Stage 2: create only missing reservations; never overwrite an existing code.
+      const missingCodes=decoded.playerCodes.filter(item=>
+        !liveCodes.has(item.id)&&backupPlayers.has(item.data.playerId));
+      if(missingCodes.length){
+        dzBackupMessage('Restoring '+missingCodes.length+' missing six-digit ID reservations...');
+        await dzRestoreBatch(missingCodes,
+          item=>db.collection('playerCodes').doc(item.id),
+          item=>({playerId:item.data.playerId}),5);
+      }
+
+      // Stage 3: restore coaching sections after their parent players exist.
+      dzBackupMessage('Restoring coaching notes, mechanical plans and pitch grades...');
+      await dzRestoreBatch(decoded.playerEdits,
+        item=>db.collection('playerEdits').doc(item.playerId).collection('sections').doc(item.section),
+        item=>item.data,8);
+
+      // Stage 4: restore coach access without touching ANY admin role or this account.
+      const safeCoaches=decoded.allowlist.filter(item=>
+        item.data.role==='coach'&&item.id!==emailKey(activeUser.email));
+      if(safeCoaches.length){
+        dzBackupMessage('Restoring '+safeCoaches.length+' coach access records...');
+        await dzRestoreBatch(safeCoaches,
+          item=>db.collection('allowlist').doc(item.id),
+          item=>item.data,40);
+      }
+
+      // Stage 5: don't overwrite newer administrator decisions on existing requests.
+      const missingRequests=decoded.coachRequests.filter(item=>!liveRequests.has(item.id));
+      if(missingRequests.length){
+        dzBackupMessage('Restoring '+missingRequests.length+' missing access requests...');
+        await dzRestoreBatch(missingRequests,
+          item=>db.collection('coachRequests').doc(item.id),
+          item=>item.data,30);
+      }
+      await loadPlayers();
+      await listCoaches();
+      dzBackupMessage('Restore completed. Recovered '+decoded.players.length+' player profiles and '+
+        decoded.playerEdits.length+' coaching records. Existing admin roles and accounts were preserved. '+
+        'Records absent from the backup were not deleted.');
+    }catch(e){
+      dzBackupMessage('RESTORE FAILED: '+friendly(e)+
+        '. A multi-batch restore may have completed earlier stages; inspect the data and re-run the same file if needed.',true);
+    }finally{button.disabled=false;}
+  });
+
   function coachCard(email, meta, actions) {
     const li=document.createElement('li');
     const detail=document.createElement('div');detail.className='dz-coach-detail';
