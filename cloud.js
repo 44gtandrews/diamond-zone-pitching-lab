@@ -237,7 +237,7 @@
     $('cloud-inactivate-player').style.display=window.DZ_IS_ADMIN?'':'none';
     $('cloud-delete-player').style.display=window.DZ_IS_ADMIN?'':'none';
     $('cloud-add-player').style.display=window.DZ_CAN_UPLOAD?'':'none';
-    $('coach-upload-panel').style.display=parent?'none':'';
+    $('coach-upload-panel').style.display=window.DZ_CAN_UPLOAD?'':'none';
     $('cloud-update-player').style.display=window.DZ_CAN_UPLOAD?'':'none';
     document.querySelectorAll('#view-player .back-link').forEach(a=>a.style.display=parent?'none':'');
     await loadPlayers();
