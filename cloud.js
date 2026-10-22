@@ -68,40 +68,56 @@
   }
 
   function sortGroups() {
-    const coachGroup=$('roster-coach').closest('.group');
-    const groupIds=new Set(ROSTER_GROUPS.map(g=>g.containerId));
-    for(const p of Object.values(PLAYERS)){
-      const id='roster-'+p.ageNum+'u';
-      if(p.ageNum===28||groupIds.has(id))continue;
-      const section=document.createElement('div');section.className='group';
-      const title=document.createElement('p');title.className='group-title';title.append(document.createTextNode(p.ageNum+'U '));
-      const count=document.createElement('span');count.className='group-count';title.append(count);
-      const roster=document.createElement('div');roster.className='roster';roster.id=id;section.append(title,roster);coachGroup.before(section);
-      ROSTER_GROUPS.splice(ROSTER_GROUPS.length-1,0,{containerId:id,ids:[]});groupIds.add(id);
+    // Existing players without an affiliation are Internal for backward compatibility.
+    const programPlayers=Object.values(PLAYERS).filter(p=>p.affiliation!=='external');
+    const lessonPlayers=Object.values(PLAYERS).filter(p=>p.affiliation==='external');
+    const byName=(a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'})||
+      a.id.localeCompare(b.id);
+    programPlayers.sort(byName);
+    lessonPlayers.sort(byName);
+    EXTERNAL_PLAYER_IDS.length=0;
+    EXTERNAL_PLAYER_IDS.push(...lessonPlayers.map(p=>p.id));
+    ROSTER_GROUPS.length=0;
+
+    const byAge=new Map();
+    for(const player of programPlayers){
+      const coach=player.ageNum===28 || /coach|adult/i.test(player.ageLabel||'');
+      const age=coach?'coach':String(player.ageNum)+'u';
+      if(!byAge.has(age))byAge.set(age,[]);
+      byAge.get(age).push(player.id);
     }
-    const seen=new Set();
-    for(const group of ROSTER_GROUPS) {
-      group.ids=group.ids.filter(id=>{
-        const p=PLAYERS[id];
-        if(!p || seen.has(id))return false;
-        const slug=/coach|adult/i.test(p.ageLabel)?'coach':p.ageNum+'u';
-        if(group.containerId!=='roster-'+slug)return false;
-        seen.add(id);return true;
-      });
+    const container=$('dz-internal-groups');
+    container.replaceChildren();
+    const ages=[...byAge.keys()].sort((a,b)=>{
+      if(a==='coach')return 1;
+      if(b==='coach')return -1;
+      return Number.parseInt(a,10)-Number.parseInt(b,10);
+    });
+    for(const key of ages){
+      const ids=byAge.get(key),section=document.createElement('section');
+      section.className='group';
+      const title=document.createElement('h2');
+      title.className='group-title';
+      const label=key==='coach'?'Coach / Adult':Number.parseInt(key,10)+'U';
+      title.append(document.createTextNode(label+' '));
+      const count=document.createElement('span');
+      count.className='group-count';count.textContent=ids.length+' pitcher'+(ids.length===1?'':'s');
+      title.append(count);
+      const roster=document.createElement('div');
+      roster.className='roster';roster.id='roster-'+key;
+      section.append(title,roster);
+      container.appendChild(section);
+      ROSTER_GROUPS.push({containerId:roster.id,ids});
     }
-    for(const p of Object.values(PLAYERS)) {
-      if(seen.has(p.id)) continue;
-      const slug=/coach|adult/i.test(p.ageLabel) ? 'coach' : p.ageNum+'u';
-      const group=ROSTER_GROUPS.find(g=>g.containerId==='roster-'+slug);
-      if(group) group.ids.push(p.id);
-    }
-    for(const group of ROSTER_GROUPS) {
-      const n=group.ids.length;
-      $(group.containerId).closest('.group').querySelector('.group-count').textContent=n+' pitcher'+(n===1?'':'s');
-    }
-    const count=Object.keys(PLAYERS).length;
-    document.querySelector('#view-home .page-sub').textContent=count+' pitchers tracked · sorted by age group';
-    $('cloud-empty').style.display=count?'none':'block';
+
+    $('dz-internal-count').textContent=String(programPlayers.length);
+    $('dz-external-count').textContent=String(lessonPlayers.length);
+    $('dz-internal-empty').style.display=programPlayers.length?'none':'block';
+    $('dz-external-empty').style.display=lessonPlayers.length?'none':'block';
+    $('cloud-empty').style.display=Object.keys(PLAYERS).length?'none':'block';
+    document.querySelector('#view-home .page-sub').textContent=
+      programPlayers.length+' internal · '+lessonPlayers.length+' external · '+
+      (programPlayers.length+lessonPlayers.length)+' total pitchers';
   }
   async function loadPlayers() {
     const snapshot=await db.collection('players').get();
@@ -298,6 +314,7 @@
     editingPlayer=player.id;
     $('cloud-edit-name').value=player.name;
     $('cloud-edit-age').value=/coach|adult/i.test(player.ageLabel)?'Coach':String(player.ageNum);
+    $('cloud-edit-affiliation').value=player.affiliation==='external'?'external':'internal';
     notify($('cloud-edit-status'),'');
     editOverlay.style.display='flex';
     $('cloud-edit-name').focus();
@@ -311,6 +328,10 @@
     const id=editingPlayer;
     const name=$('cloud-edit-name').value.trim().replace(/\s+/g,' ');
     const age=$('cloud-edit-age').value;
+    const affiliation=$('cloud-edit-affiliation').value;
+    if(!['internal','external'].includes(affiliation)){
+      notify($('cloud-edit-status'),'Select Internal or External.',true);return;
+    }
     if(!/^[A-Za-z][A-Za-z .'-]{1,99}$/.test(name)){
       notify($('cloud-edit-status'),'Enter a valid player name (2–100 letters, spaces or basic punctuation).',true);return;
     }
@@ -318,7 +339,7 @@
       notify($('cloud-edit-status'),'Select a valid age group.',true);return;
     }
     const changes={name,ageNum:age==='Coach'?28:Number(age),ageLabel:age==='Coach'?'Coach / Adult':age+'U',
-      updatedBy:activeUser.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+      affiliation,updatedBy:activeUser.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
     const btn=$('cloud-edit-save');btn.disabled=true;
     try{
       notify($('cloud-edit-status'),'Saving player profile...');
