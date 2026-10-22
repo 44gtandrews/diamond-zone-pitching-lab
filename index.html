@@ -84,6 +84,20 @@
   .dz-usage-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:12px;color:var(--ink-soft);}
   .dz-usage-item strong{color:var(--ink);font-weight:700;}
   .dz-usage-dot{width:8px;height:8px;display:inline-block;border-radius:100%;flex:none;}
+  .dz-usage-velo{color:#8CDCE2;font-size:11.5px;margin-left:1px;font-variant-numeric:tabular-nums;}
+  .dz-directory-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:26px;border-bottom:1px solid var(--line-strong);}
+  .dz-directory-tab{font:700 20px 'Barlow Condensed','Oswald',sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;
+    padding:10px 18px;color:var(--ink-soft);border:1px solid transparent;border-bottom:3px solid transparent;background:none;}
+  .dz-directory-tab:hover{color:#FFFFFF;background:#17333D;}
+  .dz-directory-tab.active{color:#FFFFFF;border-bottom-color:#008D97;background:#142B33;}
+  .dz-directory-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .dz-directory-count{font:700 11px Inter,sans-serif;border-radius:20px;padding:3px 7px;background:#25424A;color:#D7E9EC;margin-left:5px;}
+  .dz-directory-tab.active .dz-directory-count{background:#008D97;color:#FFFFFF;}
+  .dz-directory-description{margin-top:16px;margin-bottom:4px;}
+  #dz-directory-external .roster{margin-top:20px;}
+  #dz-directory-external .roster:empty{display:none;}
+  @media(max-width:480px){.dz-directory-tab{font-size:18px;padding:9px 13px}.dz-usage-item{gap:4px}.dz-pitch-usage{column-gap:11px}}
+
   .dz-profile-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
   .dz-edit-overlay{position:fixed;inset:0;background:rgba(0,5,9,.86);z-index:1200;display:flex;align-items:center;justify-content:center;padding:18px;}
   .dz-edit-dialog{background:#101F27;border:2px solid #008D97;width:100%;max-width:450px;padding:22px;border-radius:4px;}
@@ -452,25 +466,23 @@
   <div class="home-wrap">
     <section id="coach-upload-panel" style="margin-top:20px;padding:16px;border:1px solid var(--line-strong);background:var(--paper-raised);">
       <h2 class="admin-title">Pitcher Directory</h2>
-      <p class="cloud-help">Upload your original Trackman Power BI pitching-report PDF directly. The app reads the Release Slot, Movement and Location tables to populate a new player profile. Select the age group and review the numbers before saving.</p>
+      <p class="cloud-help">Upload a Trackman Power BI pitching-report PDF to create a profile. Choose Internal for Diamond Zone program players or External for lesson pitchers from other teams, then select the age group and review the data.</p>
       <button class="cloud-button" id="cloud-add-player" type="button">+ Add Player · Upload File</button>
     </section>
-    <p id="cloud-empty" class="cloud-help" style="display:none;">No players have been imported yet. An administrator should import the private roster JSON above.</p>
-    <div class="group">
-      <p class="group-title">13U <span class="group-count">7 pitchers</span></p>
-      <div class="roster" id="roster-13u"></div>
+    <p id="cloud-empty" class="cloud-help" style="display:none;">No players have been imported yet. Use + Add Player to upload your first pitcher.</p>
+    <div class="dz-directory-tabs" role="tablist" aria-label="Player affiliation">
+      <button id="dz-directory-internal-tab" class="dz-directory-tab active" type="button" role="tab" aria-selected="true" aria-controls="dz-directory-internal">Internal <span id="dz-internal-count" class="dz-directory-count">0</span></button>
+      <button id="dz-directory-external-tab" class="dz-directory-tab" type="button" role="tab" aria-selected="false" aria-controls="dz-directory-external">External <span id="dz-external-count" class="dz-directory-count">0</span></button>
     </div>
-    <div class="group">
-      <p class="group-title">14U <span class="group-count">3 pitchers</span></p>
-      <div class="roster" id="roster-14u"></div>
+    <div id="dz-directory-internal" role="tabpanel" aria-labelledby="dz-directory-internal-tab">
+      <p class="cloud-help dz-directory-description">Diamond Zone program pitchers, organized by age group.</p>
+      <div id="dz-internal-groups"></div>
+      <p id="dz-internal-empty" class="cloud-help" style="display:none;">No internal players yet.</p>
     </div>
-    <div class="group">
-      <p class="group-title">16U <span class="group-count">3 pitchers</span></p>
-      <div class="roster" id="roster-16u"></div>
-    </div>
-    <div class="group">
-      <p class="group-title">Coach / Adult <span class="group-count">1 pitcher</span></p>
-      <div class="roster" id="roster-coach"></div>
+    <div id="dz-directory-external" role="tabpanel" aria-labelledby="dz-directory-external-tab" style="display:none;">
+      <p class="cloud-help dz-directory-description">Lesson pitchers from other teams, listed alphabetically.</p>
+      <div class="roster" id="dz-external-roster"></div>
+      <p id="dz-external-empty" class="cloud-help" style="display:none;">No external players yet. Choose External when adding a pitcher.</p>
     </div>
     <p class="home-footnote">
       Everything here lives in this one file — click a player to view their profile, click "All Players" to come
@@ -543,9 +555,15 @@
 <div id="cloud-edit-overlay" class="dz-edit-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cloud-edit-title">
   <div class="dz-edit-dialog">
     <h2 class="admin-title" id="cloud-edit-title">Edit Pitcher Profile</h2>
-    <p class="cloud-help">Update this player's name or age group. Their six-digit ID, sessions, pitching data and coach notes will not change.</p>
+    <p class="cloud-help">Update their name, age group or program affiliation. Moving External to Internal (or vice versa) keeps their six-digit ID, sessions, pitching data and coach notes.</p>
     <form id="cloud-edit-form" class="cloud-form">
       <label>Player name<input id="cloud-edit-name" type="text" required minlength="2" maxlength="100" autocomplete="off"></label>
+      <label>Program affiliation
+        <select id="cloud-edit-affiliation" required>
+          <option value="internal">Internal · Diamond Zone program</option>
+          <option value="external">External · Lessons / other teams</option>
+        </select>
+      </label>
       <label>Age group
         <select id="cloud-edit-age" required>
           <option value="10">10U</option><option value="11">11U</option><option value="12">12U</option>
@@ -811,12 +829,26 @@ function getTypeSummary(player){
 // Player records are read from permission-protected Firestore after coach login.
 const PLAYERS = {};
 
-const ROSTER_GROUPS = [
-  {containerId:'roster-13u', ids:[]},
-  {containerId:'roster-14u', ids:[]},
-  {containerId:'roster-16u', ids:[]},
-  {containerId:'roster-coach', ids:[]},
-];
+// Generated from the Firestore roster on each load; legacy profiles default to Internal.
+const ROSTER_GROUPS = [];
+const EXTERNAL_PLAYER_IDS = [];
+const dzIsExternal = player => player?.affiliation==='external';
+let DZ_DIRECTORY_TAB='internal';
+window.DZ_SET_DIRECTORY_TAB=function(tab){
+  DZ_DIRECTORY_TAB=tab==='external'?'external':'internal';
+  const external=DZ_DIRECTORY_TAB==='external';
+  document.getElementById('dz-directory-internal').style.display=external?'none':'block';
+  document.getElementById('dz-directory-external').style.display=external?'block':'none';
+  for(const [name,isActive] of [['internal',!external],['external',external]]){
+    const button=document.getElementById('dz-directory-'+name+'-tab');
+    button.classList.toggle('active',isActive);
+    button.setAttribute('aria-selected',String(isActive));
+    button.tabIndex=isActive?0:-1;
+  }
+};
+document.getElementById('dz-directory-internal-tab').addEventListener('click',()=>window.DZ_SET_DIRECTORY_TAB('internal'));
+document.getElementById('dz-directory-external-tab').addEventListener('click',()=>window.DZ_SET_DIRECTORY_TAB('external'));
+
 
 /* ================= Home view ================= */
 async function ensureOverridesLoaded(player){
@@ -832,14 +864,22 @@ function dzEscapeText(text){
   return String(text??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 async function renderHome(){
-  for(const group of ROSTER_GROUPS){
+  for(const group of [...ROSTER_GROUPS,{containerId:'dz-external-roster',ids:EXTERNAL_PLAYER_IDS}]){
     const rows = await Promise.all(group.ids.map(async id=>{
       const player = PLAYERS[id];
       await ensureOverridesLoaded(player);
       const summary = getTypeSummary(player);
       const totalN=summary.reduce((sum,p)=>sum+Number(p.n||0),0);
+      const rawGroups=player.dataType==='raw'?groupByType(player):null;
       const usage=summary.slice().sort((a,b)=>(b.n||0)-(a.n||0))
-        .map(p=>`<span class="dz-usage-item"><span class="dz-usage-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)} <strong>${totalN?(100*p.n/totalN).toFixed(1):'0.0'}%</strong></span>`).join('');
+        .map(p=>{
+          const averageVelo=rawGroups
+            ? avg((rawGroups[p.key]||[]).map(pitch=>pitch.speed))
+            : p.velo;
+          const mph=(typeof averageVelo==='number'&&Number.isFinite(averageVelo))
+            ?averageVelo.toFixed(1)+' mph':'— mph';
+          return `<span class="dz-usage-item"><span class="dz-usage-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)} <strong>${totalN?(100*p.n/totalN).toFixed(1):'0.0'}%</strong><span class="dz-usage-velo">${mph}</span></span>`;
+        }).join('');
       return `<a class="player-row" data-player-id="${dzEscapeText(id)}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
         <div class="player-info">
           <p class="player-name">${dzEscapeText(player.name)}</p>
@@ -1295,6 +1335,7 @@ function showHome(){
   document.getElementById('view-player').style.display = 'none';
   document.getElementById('view-home').style.display = 'block';
   dzSetTopNav('home');
+  window.DZ_SET_DIRECTORY_TAB(DZ_DIRECTORY_TAB);
   renderHome();
   window.scrollTo(0,0);
 }
@@ -1321,6 +1362,8 @@ async function showPlayer(id){
   const player = PLAYERS[id];
   if(!player){ showHome(); return; }
   currentPlayerId = id;
+  // Returning from a profile opens the corresponding directory section.
+  DZ_DIRECTORY_TAB=dzIsExternal(player)?'external':'internal';
   document.getElementById('view-admin').style.display = 'none';
   document.getElementById('view-home').style.display = 'none';
   document.getElementById('view-player').style.display = 'block';
@@ -1368,6 +1411,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
     <p class="cloud-help" id="session-target"></p>
     <div class="cloud-form" id="session-new-fields" style="display:none;">
       <label>Player name<input id="session-player-name" maxlength="100" autocomplete="off" placeholder="First Last"></label>
+      <label>Program affiliation<select id="session-player-affiliation" required><option value="internal">Internal · Diamond Zone program</option><option value="external">External · Lessons / other teams</option></select></label>
       <label>Age group<select id="session-player-age"><option value="">Select group</option><option value="10">10U</option><option value="11">11U</option><option value="12">12U</option><option value="13">13U</option><option value="14">14U</option><option value="15">15U</option><option value="16">16U</option><option value="17">17U</option><option value="18">18U</option><option value="Coach">Coach / Adult</option></select></label>
     </div>
     <label class="field-label" for="session-file">Trackman session file (PDF, CSV, JSON; max 5 MB)</label>
