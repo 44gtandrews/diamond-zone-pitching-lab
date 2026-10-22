@@ -2339,9 +2339,11 @@ async function renderPitchTable(player, summary, totalN){
 
   const hasRelease=summary.some(p=>p.relHeight!=null||p.relSide!=null);
   const hasAxes=summary.some(p=>p.axis2d!=null||p.axis3d!=null);
+  const hasAdvancedExt=player.summaryOnly&&summary.some(p=>p.ext!=null);
+  const hasGyro=player.summaryOnly&&summary.some(p=>p.gyro!=null);
   const headCols = ['Pitch','#','Usage','Velo','Max','Spin','IVB','HB','VAA',
-    ...(hasRelease?['Rel H','Rel Side']:[]),
-    ...(hasAxes?['2D Axis','3D Axis']:[]),'Grade',...(window.DZ_EDIT_ENABLED?['Display']:[])];
+    ...(hasAdvancedExt?['Ext']:[]),...(hasRelease?['Rel H','Rel Side']:[]),
+    ...(hasAxes?['2D Axis','3D Axis']:[]),...(hasGyro?['Gyro']:[]),'Grade',...(window.DZ_EDIT_ENABLED?['Display']:[])];
   let html = `<thead><tr>${headCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
   summary.forEach(p=>{
     const share = player.summaryOnly||!totalN?'—':Math.round(p.n/totalN*100)+'%';
@@ -2358,8 +2360,10 @@ async function renderPitchTable(player, summary, totalN){
       <td style="${benchmarkCellStyle('ivb',p.key,p.ivb,player.ageNum)}">${p.ivb===null?'<span class="na">—</span>':fmt(p.ivb)}</td>
       <td style="${benchmarkCellStyle('hb',p.key,p.hb,player.ageNum)}">${p.hb===null?'<span class="na">—</span>':fmt(p.hb)}</td>
       <td>${p.vaa==null?'<span class="na">—</span>':fmt(p.vaa)}</td>
+      ${hasAdvancedExt?`<td>${fmt(p.ext,2)}</td>`:''}
       ${hasRelease?`<td>${fmt(p.relHeight,2)}</td><td>${fmt(p.relSide,2)}</td>`:''}
       ${hasAxes?`<td>${fmt(p.axis2d,0)}</td><td>${fmt(p.axis3d,0)}</td>`:''}
+      ${hasGyro?`<td>${fmt(p.gyro,0)}</td>`:''}
       <td><select class="grade-select" data-pitch-key="${p.key}" ${window.DZ_EDIT_ENABLED?'':'disabled'}>${gradeOptions}</select></td>
       ${window.DZ_EDIT_ENABLED?`<td><button type="button" class="dz-hide-pitch" data-key="${dzEscapeText(p.key)}" data-name="${dzEscapeText(p.name)}" aria-label="Remove ${dzEscapeText(p.name)} from report">Remove</button></td>`:''}
     </tr>`;
