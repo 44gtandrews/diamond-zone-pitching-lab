@@ -25,6 +25,8 @@
     --sp:#28B8CA;
     --sl:#E2C34F;
     --ct:#B38D65;
+    --kn:#B294E3;
+    --ot:#7B8E98;
     --un:#91A1A9;
   }
   *{box-sizing:border-box;}
@@ -1881,6 +1883,10 @@ const TYPE_INFO = [
   {key:'ch', name:'ChangeUp', color:'ch', seedSpeed:68.7, seedIvb:12.0, seedHb:9.0},
   {key:'sw', name:'Sweeper',  color:'sw', seedSpeed:63.9, seedIvb:3.5,  seedHb:-11.0},
   {key:'ot', name:'Other',    color:'un', seedSpeed:68.5, seedIvb:10.0, seedHb:4.0},
+  {key:'cb', name:'Curveball',color:'cb',seedSpeed:62.1,seedIvb:-4.0,seedHb:5.5},
+  {key:'sl', name:'Slider',color:'sl',seedSpeed:68.0,seedIvb:2.0,seedHb:-6.0},
+  {key:'sk', name:'Sinker',color:'sk',seedSpeed:75.0,seedIvb:12.0,seedHb:12.0},
+  {key:'kn', name:'Knuckleball',color:'kn',seedSpeed:50.0,seedIvb:6.0,seedHb:0.0},
 ];
 const TYPE_BY_KEY = Object.fromEntries(TYPE_INFO.map(t=>[t.key,t]));
 const DISCARD_KEYS = ['ot'];
@@ -1950,9 +1956,10 @@ function groupByType(player){
   return groups;
 }
 function getTypeSummary(player){
-  if(player.dataType==='aggregate') return player.pitches;
+  const hidden=player._hiddenPitchTypes||[];
+  if(player.dataType==='aggregate') return (player.pitches||[]).filter(p=>!hidden.includes(p.key));
   const groups = groupByType(player);
-  return TYPE_INFO.filter(t=>!DISCARD_KEYS.includes(t.key) && groups[t.key].length>0)
+  return TYPE_INFO.filter(t=>!DISCARD_KEYS.includes(t.key) && !hidden.includes(t.key) && groups[t.key].length>0)
     .map(t=>{
       const items = groups[t.key];
       const spinMed = median(items.map(p=>p.spin));
@@ -2089,12 +2096,15 @@ async function ensureGradesLoaded(player){
         }
       }
       player._gradesByPitch=grades;
+      player._hiddenPitchTypes=Array.isArray(raw?.__hiddenPitchTypes)
+        ?[...new Set(raw.__hiddenPitchTypes)].filter(k=>typeof k==='string'&&k.length<=4):[];
       player._gradesLoaded=true;
       player._gradesLoadFailed=false;
     }catch(error){
       // A read failure is not proof the player has never been graded.
       // Allow a subsequent navigation to retry instead of caching a false default.
       player._gradesByPitch={};
+      player._hiddenPitchTypes=[];
       player._gradesLoadFailed=true;
       console.warn('Unable to load saved scouting grades',error);
     }finally{
@@ -2251,29 +2261,39 @@ async function renderPitchTable(player, summary, totalN){
   await ensureGradesLoaded(player);
   const savedGrades=player._gradesByPitch||{};
 
-  const headCols = ['Pitch','#','Usage','Velo','Max','Spin','IVB','HB','VAA','Grade'];
+  const hasRelease=summary.some(p=>p.relHeight!=null||p.relSide!=null);
+  const hasAxes=summary.some(p=>p.axis2d!=null||p.axis3d!=null);
+  const headCols = ['Pitch','#','Usage','Velo','Max','Spin','IVB','HB','VAA',
+    ...(hasRelease?['Rel H','Rel Side']:[]),
+    ...(hasAxes?['2D Axis','3D Axis']:[]),'Grade',...(window.DZ_EDIT_ENABLED?['Display']:[])];
   let html = `<thead><tr>${headCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
   summary.forEach(p=>{
-    const share = Math.round(p.n/totalN*100)+'%';
+    const share = player.summaryOnly||!totalN?'—':Math.round(p.n/totalN*100)+'%';
     const savedGrade=GRADES.includes(savedGrades[p.key])?savedGrades[p.key]:null;
     const gradeOptions=`<option value="" ${savedGrade===null?'selected':''}>— Not graded —</option>`+
       GRADES.map(g=>`<option value="${g}" ${g===savedGrade?'selected':''}>${g}</option>`).join('');
     html += `<tr>
       <td class="pitch-cell"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${p.name}</td>
-      <td>${p.n}</td>
+      <td>${p.n??'—'}</td>
       <td>${share}</td>
       <td style="${benchmarkCellStyle('velo',p.key,p.velo,player.ageNum)}">${fmt(p.velo)}</td>
       <td class="dim" style="${benchmarkCellStyle('veloMax',p.key,p.veloMax,player.ageNum)}">${fmt(p.veloMax)}</td>
       <td>${p.spin===null?'<span class="na">—</span>':p.spin}</td>
       <td style="${benchmarkCellStyle('ivb',p.key,p.ivb,player.ageNum)}">${p.ivb===null?'<span class="na">—</span>':fmt(p.ivb)}</td>
       <td style="${benchmarkCellStyle('hb',p.key,p.hb,player.ageNum)}">${p.hb===null?'<span class="na">—</span>':fmt(p.hb)}</td>
-      <td>${p.vaa===null?'<span class="na">—</span>':fmt(p.vaa)}</td>
+      <td>${p.vaa==null?'<span class="na">—</span>':fmt(p.vaa)}</td>
+      ${hasRelease?`<td>${fmt(p.relHeight,2)}</td><td>${fmt(p.relSide,2)}</td>`:''}
+      ${hasAxes?`<td>${fmt(p.axis2d,0)}</td><td>${fmt(p.axis3d,0)}</td>`:''}
       <td><select class="grade-select" data-pitch-key="${p.key}" ${window.DZ_EDIT_ENABLED?'':'disabled'}>${gradeOptions}</select></td>
+      ${window.DZ_EDIT_ENABLED?`<td><button type="button" class="dz-hide-pitch" data-key="${dzEscapeText(p.key)}" data-name="${dzEscapeText(p.name)}" aria-label="Remove ${dzEscapeText(p.name)} from report">Remove</button></td>`:''}
     </tr>`;
   });
   html += '</tbody>';
   document.getElementById('pitch-table').innerHTML = html;
-
+  renderHiddenPitchControls(player);
+  document.querySelectorAll('#pitch-table .dz-hide-pitch').forEach(btn=>{
+    btn.addEventListener('click',()=>setPitchHidden(player,btn.dataset.key,true));
+  });
   document.querySelectorAll('.grade-select').forEach(sel=>{
     const paintGrade=()=>{
       const grade=Number(sel.value);
@@ -2296,7 +2316,10 @@ async function renderPitchTable(player, summary, totalN){
         const current=raw && typeof raw==='object' && !Array.isArray(raw)?raw:{};
         current[pitchKey]=grade;
         await window.storage.set(player.id+':grades',JSON.stringify(current),false);
-        player._gradesByPitch={...current};
+        player._gradesByPitch=Object.fromEntries(
+          Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&GRADES.includes(v))
+        );
+        player._hiddenPitchTypes=Array.isArray(current.__hiddenPitchTypes)?current.__hiddenPitchTypes:[];
         player._gradesLoaded=true;
         player._gradesLoadFailed=false;
         refreshHighestGradedPitchKpi(player);
@@ -2342,13 +2365,13 @@ function refreshHighestGradedPitchKpi(player){
 
 function renderOverview(player){
   const summary = getTypeSummary(player);
-  const totalN = summary.reduce((s,p)=>s+p.n,0);
+  const totalN = summary.reduce((s,p)=>s+(Number.isFinite(p.n)?p.n:0),0);
   const topGraded = highestGradedPitch(player,summary);
   const fb = summary.find(p=>p.key==='fb');
 
   const kpiData = [
-    {label:'Total Pitches', value:totalN},
-    {label:'Sessions', value:player.sessions},
+    {label:'Total Pitches', value:player.summaryOnly?'—':totalN},
+    {label:player.summaryOnly?'Reports Imported':'Sessions', value:player.sessions},
     {label:'Pitch Types', value:summary.length},
     {label:'Highest Graded Pitch', value:topGraded?topGraded.name:(player._gradesLoadFailed?'Grade unavailable':'Not graded'), small:topGraded?topGraded.grade+' Grade':''},
     {label: player.dataType==='raw' ? 'Fastball Med.' : 'Fastball Avg', value: fb?fmt(fb.velo):'—', small:'mph'},
@@ -2373,8 +2396,13 @@ function renderOverview(player){
   document.getElementById('move-toggle').style.display = player.dataType==='raw' ? 'flex' : 'none';
   renderMovementChart(player, summary);
 
-  document.getElementById('usage-caption').textContent = `Share of ${totalN} tracked pitches`;
-  (function(){
+  const usageAvailable=!player.summaryOnly&&totalN>0;
+  document.getElementById('usage-caption').textContent = usageAvailable
+    ?`Share of ${totalN} tracked pitches`
+    :'Usage unavailable — pitch counts are not included in this PDF';
+  if(!usageAvailable){
+    document.getElementById('chart-usage').innerHTML='<p class="dz-no-counts">This Trackman report provides pitch-type averages, not individual pitch counts. Usage percentages cannot be calculated.</p>';
+  }else (function(){
     const w=440,h=186,padL=90,padR=40,padT=6,padB=22;
     const rowH=(h-padT-padB)/summary.length;
     const scaleW = w-padL-padR;
@@ -2383,7 +2411,7 @@ function renderOverview(player){
     summary.forEach((p,i)=>{
       const y = padT + rowH*i + rowH*0.2;
       const bh = rowH*0.6;
-      const sharePrecise = p.n/totalN*100;
+      const sharePrecise = Number(p.n||0)/totalN*100;
       const share = Math.round(sharePrecise);
       svg += `<text x="${padL-10}" y="${y+bh/2+3.5}" font-size="10.5" fill="${cssColor('ink')}" text-anchor="end" font-family="Inter" font-weight="600">${p.name}</text>`;
       svg += `<rect x="${padL}" y="${y}" width="${barW(sharePrecise)}" height="${bh}" fill="${cssColor(p.key)}"/>`;
