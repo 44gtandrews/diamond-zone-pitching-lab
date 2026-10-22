@@ -499,7 +499,7 @@
       <h3 class="field-label" style="margin-top:24px;">Coach access management</h3>
       <form id="cloud-invite-form" class="cloud-actions">
         <input type="email" id="cloud-invite-email" required placeholder="coach@example.com" aria-label="Coach email">
-        <select class="type-select" id="cloud-invite-role" aria-label="Coach permissions"><option value="coach">Coach</option><option value="admin">Admin</option></select>
+        <input type="hidden" id="cloud-invite-role" value="coach">
         <button class="cloud-button" type="submit">Approve coach</button>
       </form>
       <p class="cloud-status" id="cloud-invite-status" role="status"></p>
