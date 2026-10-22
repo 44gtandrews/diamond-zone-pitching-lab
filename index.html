@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diamond Zone CT — Pitching Lab</title>
+<title>Diamond Zone CT — Pitching Portal</title>
+<link rel="icon" type="image/svg+xml" href="./dz-logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -14,8 +15,8 @@
     --paper-raised:#111D24;
     --line:#253740;
     --line-strong:#35505A;
-    --accent:#0EC2CF;
-    --accent-deep:#008F9B;
+    --accent:#008D97;
+    --accent-deep:#006F77;
     --fb:#F25760;
     --cb:#5299EC;
     --ch:#52BC89;
@@ -326,11 +327,27 @@
     .tabbtn{font-size:16px;}
     .chart-title{font-size:16px;}
   }
+
+  /* Official DZ logo and heading legibility; no changes to app layout or data. */
+  .dz-branded-head{display:flex;align-items:center;gap:22px;min-width:0}
+  .dz-head-copy{min-width:0}
+  .dz-brand-logo{display:block;height:92px;width:auto;max-width:112px;flex:none;object-fit:contain}
+  .dz-profile-identity{display:flex;align-items:center;gap:18px;flex:1;min-width:0}
+  .dz-profile-identity .dz-brand-logo{height:82px;width:auto}
+  #cloud-auth-screen .masthead .page-title,
+  .masthead .page-title,
+  .masthead .player-name{color:#FFFFFF !important;text-shadow:0 1px 2px rgba(0,0,0,.28)}
+  .masthead .facility{color:#26CBD4}
+  @media(max-width:560px){
+    .dz-brand-logo{height:63px;max-width:75px}
+    .dz-profile-identity .dz-brand-logo{height:58px}
+    .dz-branded-head,.dz-profile-identity{gap:10px;align-items:flex-start}
+  }
 </style>
 </head>
 <body>
 <section id="cloud-auth-screen" aria-live="polite">
-  <div class="masthead"><div class="home-wrap"><p class="facility">Diamond Zone CT · Pitching Lab</p><h1 class="page-title">Coaching Portal</h1><p class="page-sub">Private player profiles · secure shared coaching notes</p></div></div>
+  <div class="masthead"><div class="home-wrap dz-branded-head"><img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="106" height="92"><div class="dz-head-copy"><p class="facility">Diamond Zone CT · Pitching Lab</p><h1 class="page-title">Pitching Portal</h1><p class="page-sub">Private player profiles · secure shared coaching notes</p></div></div></div>
   <div class="cloud-card">
     <h2 id="cloud-auth-title">Connecting...</h2>
     <p id="cloud-auth-description">Checking coach access.</p>
@@ -357,10 +374,13 @@
 <!-- ============== HOME VIEW ============== -->
 <div id="view-home" style="display:none;">
   <div class="masthead">
-    <div class="home-wrap">
-      <p class="facility">Diamond Zone CT · Pitching Lab</p>
-      <h1 class="page-title">Player Directory</h1>
-      <p class="page-sub">14 pitchers tracked · sorted by age group</p>
+    <div class="home-wrap dz-branded-head">
+      <img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="106" height="92">
+      <div class="dz-head-copy">
+        <p class="facility">Diamond Zone CT · Pitching Lab</p>
+        <h1 class="page-title">Player Directory</h1>
+        <p class="page-sub">14 pitchers tracked · sorted by age group</p>
+      </div>
     </div>
   </div>
   <div class="home-wrap">
@@ -416,12 +436,15 @@
   <div class="masthead">
     <div class="wrap">
       <div class="masthead-row">
-        <div>
+        <div class="dz-profile-identity">
+          <img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="92" height="80">
+          <div class="dz-head-copy">
           <a href="#" class="back-link">← All Players</a>
           <p class="facility">Diamond Zone CT · Pitching Lab</p>
           <h1 class="player-name" id="player-name"></h1>
           <p class="player-sub" id="player-sub"></p>
           <div class="dz-id-line"><span id="player-public-id">Player ID pending</span><button type="button" id="player-copy-link" class="cloud-button secondary" style="min-height:36px;padding:6px 12px;" disabled>Copy profile link</button><span id="player-copy-status" role="status" style="font-size:12px;"></span></div>
+          </div>
         </div>
         <div class="session-tag">
           <div id="session-tag-main"></div>
