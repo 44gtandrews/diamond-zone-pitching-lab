@@ -1,3 +1,19 @@
+### Troubleshooting: "Missing or insufficient permissions" when adding a pitcher
+
+**If you can sign in and see the PDF review but clicking Save fails**, the Firebase Hosting app is running but the **deployed Firestore Rules** likely do not include the required `playerCodes` reservation permissions. The six-digit player IDs are written in the same atomic transaction as the player profile. Uploading or deploying website code by itself **does not update Firestore Rules**.
+
+In Google Cloud Shell, where this repository is already cloned:
+
+```bash
+cd ~/diamond-zone-pitching-lab
+git pull origin main
+bash deploy-to-firebase.sh
+```
+
+The deployment now includes **both** Hosting and Firestore Rules. Look for successful deploy messages for `firestore: rules` and `hosting`. Then refresh the app and retry the existing PDF review/save. For a rules-only deployment, run `firebase deploy --only firestore:rules --project diamond-zone-pitching-lab` after `git pull`. Do not weaken the rules or switch Firestore to public test mode.
+
+If the error persists after the rules deploy, verify Firebase → Firestore Database → Rules contains `match /playerCodes/{code}`, and Firebase → Firestore Database → Data has an `allowlist/<coach email in lowercase>` document with `active: true`. Contact the administrator if access is missing. Approved coaches should not be granted unrestricted Firestore access.
+
 ## Deploy the live website to Firebase Hosting (dzpitchingportal.app)
 
 The domain currently reaches **Firebase Hosting**, not GitHub Pages. A `Site Not Found` screen with the Firebase logo means the website files have not yet been deployed to the Hosting site (or the domain was connected to a different Hosting site).
@@ -17,7 +33,7 @@ The domain currently reaches **Firebase Hosting**, not GitHub Pages. A `Site Not
 4. Firebase Console → **Build → Hosting**: confirm `dzpitchingportal.app` is attached to the **same Hosting site** and status Connected, then visit `https://dzpitchingportal.app/`.
 5. Firebase Console → **Authentication → Settings → Authorized domains**: include `dzpitchingportal.app`, then test coach sign-in.
 
-The script copies **only** `index.html`, `firebase-config.js`, `trackman-pdf.js`, `importer.js`, and `cloud.js` into the generated `.firebase-build/` directory and deploys that directory. It does not deploy private roster JSON or repository files. Do not upload any private roster backups to GitHub. **Firestore rules are not published by a Hosting-only deployment**; publish them separately in Firebase Console when changed.
+The script copies **only** `index.html`, `firebase-config.js`, `trackman-pdf.js`, `importer.js`, and `cloud.js` into the generated `.firebase-build/` directory and deploys that directory. It does not deploy private roster JSON or repository files. Do not upload any private roster backups to GitHub. The latest deployment script publishes both Hosting and the version-controlled Firestore security rules. Verify these rules before publishing because the deployment overwrites the project's active Firestore rules.
 
 For subsequent manual deployments in the same Cloud Shell folder:
 
