@@ -234,13 +234,14 @@
   <div class="home-wrap">
     <section id="coach-upload-panel" style="margin-top:20px;padding:16px;border:1px solid var(--line-strong);background:var(--paper-raised);">
       <h2 class="admin-title">Pitcher Directory</h2>
-      <p class="cloud-help">Approved coaches can add players using a Trackman PDF, CSV, or JSON file. Review the extracted numbers before saving.</p>
+      <p class="cloud-help">Upload your original Trackman Power BI pitching-report PDF directly. The app reads the Release Slot, Movement and Location tables to populate a new player profile. Select the age group and review the numbers before saving.</p>
       <button class="cloud-button" id="cloud-add-player" type="button">+ Add Player · Upload File</button>
     </section>
     <section id="admin-panel" style="display:none;">
       <h2 class="admin-title">Admin · Roster &amp; Coach Access</h2>
       <p class="cloud-help">Administrators can bulk-import or back up the roster. All approved coaches can add a player or upload an additional session from a player profile. Saved notes and grades remain separate.</p>
-      <label class="field-label" for="cloud-roster-file">Import private roster JSON</label>
+      <label class="field-label" for="cloud-roster-file">Bulk import private roster JSON (not for Trackman PDFs)</label>
+      <p class="cloud-help">To create a player from a Trackman PDF, use <strong>+ Add Player · Upload File</strong> above. This admin-only field accepts the private roster backup JSON only.</p>
       <input type="file" accept=".json,application/json" id="cloud-roster-file">
       <div class="cloud-actions"><button class="cloud-button" id="cloud-import" type="button">Import players</button><button class="cloud-button secondary" id="cloud-backup" type="button">Export roster backup</button></div>
       <p class="cloud-status" role="status" id="cloud-import-status"></p>
