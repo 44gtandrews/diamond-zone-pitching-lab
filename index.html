@@ -773,6 +773,71 @@
     *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;}
   }
 
+
+  /* Age-relative scouting grades in each directory row. */
+  .dz-usage-grade{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:3px 8px;border-radius:4px;white-space:nowrap;
+    font:700 11px 'Inter',sans-serif;color:#F5FCFE;
+    font-variant-numeric:tabular-nums;line-height:1.35;
+    background:#1C3039;
+  }
+  .dz-usage-grade--unset{
+    background:transparent;color:#99AFB7;border:1px solid #38545C;
+    font-size:10.5px;
+  }
+  .dz-scouting-key{
+    padding:15px 17px;margin:16px 0 15px;
+    border:1px solid #32606A;border-left:3px solid var(--accent);
+    border-radius:5px;background:#0F232B;
+  }
+  .dz-scouting-key-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .dz-scouting-key h2{
+    font:800 19px 'Barlow Condensed','Oswald',sans-serif;
+    letter-spacing:.045em;text-transform:uppercase;
+    color:#F1FAFC;margin:0;
+  }
+  .dz-scouting-age-label{
+    color:#64D7DE;font:700 10px 'Inter',sans-serif;
+    letter-spacing:.085em;
+  }
+  .dz-scouting-key>p{
+    color:#BDD1D7;line-height:1.5;
+    margin:8px 0 11px;font-size:12px;
+  }
+  .dz-scouting-key>p strong{color:#FFFFFF;}
+  .dz-scouting-steps{
+    display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+    gap:6px;
+  }
+  .dz-scouting-step{
+    display:flex;align-items:center;flex-direction:column;
+    min-width:0;gap:5px;text-align:center;
+    font-size:10px;line-height:1.25;color:#BFD3D8;
+  }
+  .dz-scouting-number{
+    display:flex;align-items:center;justify-content:center;
+    width:100%;min-height:30px;max-width:60px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:4px;font:800 14px 'Barlow Condensed','Oswald',sans-serif;
+    color:#FFFFFF;font-variant-numeric:tabular-nums;
+  }
+  .dz-scouting-key .dz-scouting-footnote{
+    font-size:11px;margin:10px 0 0;color:#9FB7BF;
+  }
+  @media(max-width:640px){
+    .dz-scouting-key{padding:13px 11px;margin:13px 0;}
+    .dz-scouting-key h2{font-size:18px;}
+    .dz-scouting-steps{gap:3px;}
+    .dz-scouting-step{font-size:9px;overflow-wrap:anywhere;}
+    .dz-scouting-number{min-height:29px;}
+    .dz-usage-grade{padding:4px 7px;font-size:10.5px;}
+    .dz-usage-grade--unset{padding:3px 6px;font-size:10px;}
+  }
+  @media(max-width:360px){
+    .dz-scouting-steps{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 6px;}
+  }
+
 </style>
 </head>
 <body>
@@ -832,6 +897,23 @@
       <button id="dz-directory-internal-tab" class="dz-directory-tab active" type="button" role="tab" aria-selected="true" aria-controls="dz-directory-internal">Internal <span id="dz-internal-count" class="dz-directory-count">0</span></button>
       <button id="dz-directory-external-tab" class="dz-directory-tab" type="button" role="tab" aria-selected="false" aria-controls="dz-directory-external">External <span id="dz-external-count" class="dz-directory-count">0</span></button>
     </div>
+    <section class="dz-scouting-key" aria-labelledby="dz-scouting-key-title">
+      <div class="dz-scouting-key-heading">
+        <h2 id="dz-scouting-key-title">20–80 Scouting Scale</h2>
+        <span class="dz-scouting-age-label">AGE-BASED GRADES</span>
+      </div>
+      <p>Grades are assigned by a coach <strong>relative to pitchers in the same age group</strong>—not to professional players. A <strong>50 Grade</strong> means average for that age; higher is better. Pitches below remain ordered by usage, highest first.</p>
+      <div class="dz-scouting-steps" aria-label="Scouting grade definitions from 20 through 80">
+        <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(211,75%,33%)">20</span><span>Well below</span></div>
+        <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(211,59%,29%)">30</span><span>Below</span></div>
+        <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(211,43%,24%)">40</span><span>Slightly below</span></div>
+        <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:#1C3039">50</span><span>Average</span></div>
+        <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(352,43%,24%)">60</span><span>Above</span></div>
+        <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(352,59%,29%)">70</span><span>Plus</span></div>
+        <div class="dz-scouting-step"><span class="dz-scouting-number" style="background:hsl(352,75%,33%)">80</span><span>Elite</span></div>
+      </div>
+      <p class="dz-scouting-footnote">Grades are coach-assigned, not calculated automatically from velocity. “Not graded” means no scouting grade has been saved for that pitch.</p>
+    </section>
     <div id="dz-directory-internal" role="tabpanel" aria-labelledby="dz-directory-internal-tab">
       <p class="cloud-help dz-directory-description">Diamond Zone program pitchers, organized by age group.</p>
       <div id="dz-internal-groups"></div>
@@ -1258,6 +1340,37 @@ async function ensureOverridesLoaded(player){
   player._overridesLoaded = true;
 }
 
+async function ensureGradesLoaded(player){
+  if(player._gradesLoaded)return player._gradesByPitch;
+  if(player._gradesPromise)return player._gradesPromise;
+  player._gradesPromise=(async()=>{
+    try{
+      const res=await window.storage.get(player.id+':grades',false);
+      const raw=res?.value?JSON.parse(res.value):{};
+      const grades={};
+      if(raw && typeof raw==='object' && !Array.isArray(raw)){
+        for(const [key,value] of Object.entries(raw)){
+          const grade=Number(value);
+          if(value!==null && value!=='' && GRADES.includes(grade))grades[key]=grade;
+        }
+      }
+      player._gradesByPitch=grades;
+      player._gradesLoaded=true;
+      player._gradesLoadFailed=false;
+    }catch(error){
+      // A read failure is not proof the player has never been graded.
+      // Allow a subsequent navigation to retry instead of caching a false default.
+      player._gradesByPitch={};
+      player._gradesLoadFailed=true;
+      console.warn('Unable to load saved scouting grades',error);
+    }finally{
+      player._gradesPromise=null;
+    }
+    return player._gradesByPitch;
+  })();
+  return player._gradesPromise;
+}
+
 function dzEscapeText(text){
   return String(text??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -1265,10 +1378,10 @@ async function renderHome(){
   for(const group of [...ROSTER_GROUPS,{containerId:'dz-external-roster',ids:EXTERNAL_PLAYER_IDS}]){
     const rows = await Promise.all(group.ids.map(async id=>{
       const player = PLAYERS[id];
-      await ensureOverridesLoaded(player);
+      await Promise.all([ensureOverridesLoaded(player),ensureGradesLoaded(player)]);
       const summary = getTypeSummary(player);
-      const totalN=summary.reduce((sum,p)=>sum+Number(p.n||0),0);
       const rawGroups=player.dataType==='raw'?groupByType(player):null;
+      // Preserve usage-based ordering, but display only assigned scouting grades.
       const usage=summary.slice().sort((a,b)=>(b.n||0)-(a.n||0))
         .map(p=>{
           const averageVelo=rawGroups
@@ -1276,12 +1389,16 @@ async function renderHome(){
             : p.velo;
           const mph=(typeof averageVelo==='number'&&Number.isFinite(averageVelo))
             ?averageVelo.toFixed(1)+' mph':'— mph';
-          return `<span class="dz-usage-item"><span class="dz-usage-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)} <strong>${totalN?(100*p.n/totalN).toFixed(1):'0.0'}%</strong><span class="dz-usage-velo">${mph}</span></span>`;
+          const grade=player._gradesByPitch?.[p.key];
+          const assigned=GRADES.includes(grade);
+          const label=player._gradesLoadFailed?'Grade unavailable':assigned?grade+' Grade':'Not graded';
+          const gradeStyle=assigned?' style="background:'+gradeColor(grade)+'"':'';
+          return `<span class="dz-usage-item"><span class="dz-usage-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)} <strong class="dz-usage-grade${assigned?'':' dz-usage-grade--unset'}"${gradeStyle}>${label}</strong><span class="dz-usage-velo">${mph}</span></span>`;
         }).join('');
       return `<a class="player-row" data-player-id="${dzEscapeText(id)}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
         <div class="player-info">
           <p class="player-name">${dzEscapeText(player.name)}</p>
-          <div class="dz-pitch-usage" aria-label="Pitch usage percentages">${usage||'<span class="player-blurb">No pitches recorded</span>'}</div>
+          <div class="dz-pitch-usage" aria-label="Pitches ordered by usage, with age-based scouting grades and average velocity">${usage||'<span class="player-blurb">No pitches recorded</span>'}</div>
         </div>
         <span class="chevron">→</span>
       </a>`;
@@ -1390,18 +1507,16 @@ function buildFootnote(player, totalN){
 }
 
 async function renderPitchTable(player, summary, totalN){
-  let savedGrades = {};
-  try{
-    const res = await window.storage.get(player.id+':grades', false);
-    if(res && res.value) savedGrades = JSON.parse(res.value);
-  }catch(e){ /* none saved yet */ }
+  await ensureGradesLoaded(player);
+  const savedGrades=player._gradesByPitch||{};
 
   const headCols = ['Pitch','#','Usage','Velo','Max','Spin','IVB','HB','VAA','Grade'];
   let html = `<thead><tr>${headCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
   summary.forEach(p=>{
     const share = Math.round(p.n/totalN*100)+'%';
-    const savedGrade = savedGrades[p.key] || 50;
-    const gradeOptions = GRADES.map(g=>`<option value="${g}" ${g===savedGrade?'selected':''}>${g}</option>`).join('');
+    const savedGrade=GRADES.includes(savedGrades[p.key])?savedGrades[p.key]:null;
+    const gradeOptions=`<option value="" ${savedGrade===null?'selected':''}>— Not graded —</option>`+
+      GRADES.map(g=>`<option value="${g}" ${g===savedGrade?'selected':''}>${g}</option>`).join('');
     html += `<tr>
       <td class="pitch-cell"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${p.name}</td>
       <td>${p.n}</td>
@@ -1419,16 +1534,37 @@ async function renderPitchTable(player, summary, totalN){
   document.getElementById('pitch-table').innerHTML = html;
 
   document.querySelectorAll('.grade-select').forEach(sel=>{
-    sel.style.background = gradeColor(+sel.value);
-    sel.addEventListener('change', async ()=>{
+    const paintGrade=()=>{
+      const grade=Number(sel.value);
+      sel.style.background=sel.value!=='' && GRADES.includes(grade)?gradeColor(grade):'';
+    };
+    paintGrade();
+    sel.addEventListener('change',async()=>{
       if(!window.DZ_EDIT_ENABLED)return;
-      sel.style.background = gradeColor(+sel.value);
+      const grade=Number(sel.value);
+      if(sel.value==='' || !GRADES.includes(grade))return;
+      const pitchKey=sel.dataset.pitchKey;
+      const previous=player._gradesByPitch?.[pitchKey];
+      sel.disabled=true;
+      paintGrade();
       try{
-        const res = await window.storage.get(player.id+':grades', false).catch(()=>null);
-        const current = (res && res.value) ? JSON.parse(res.value) : {};
-        current[sel.dataset.pitchKey] = +sel.value;
-        await window.storage.set(player.id+':grades', JSON.stringify(current), false);
-      }catch(e){ window.DZ_SAVE_ERROR?.(e); }
+        // Read the latest grades before merging so an edit doesn't erase
+        // a different pitch grade just saved by another coach.
+        const res=await window.storage.get(player.id+':grades',false);
+        const raw=res?.value?JSON.parse(res.value):{};
+        const current=raw && typeof raw==='object' && !Array.isArray(raw)?raw:{};
+        current[pitchKey]=grade;
+        await window.storage.set(player.id+':grades',JSON.stringify(current),false);
+        player._gradesByPitch={...current};
+        player._gradesLoaded=true;
+        player._gradesLoadFailed=false;
+      }catch(error){
+        sel.value=GRADES.includes(previous)?String(previous):'';
+        paintGrade();
+        window.DZ_SAVE_ERROR?.(error);
+      }finally{
+        sel.disabled=!window.DZ_EDIT_ENABLED;
+      }
     });
   });
 }
