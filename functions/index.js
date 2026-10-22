@@ -18,7 +18,7 @@ const recipient = defineSecret("ADMIN_SMS_TO_NUMBER");
 
 exports.notifyCoachAccessRequestSms = onDocumentCreated({
   document: "coachRequests/{requestUid}",
-  region: "us-east1",
+  region: "us-central1",
   retry: false,
   secrets: [sid, token, sender, recipient]
 }, async event => {
