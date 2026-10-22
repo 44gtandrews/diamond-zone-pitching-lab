@@ -21,6 +21,13 @@ jobs:
       - name: Check out the latest Pitching Portal code
         uses: actions/checkout@v4
 
+      - name: Verify scripts are valid before publishing
+        shell: bash
+        run: |
+          for file in cloud.js importer.js trackman-pdf.js firebase-config.js; do
+            node --check "$file"
+          done
+
       - name: Stage only approved public app files
         run: bash prepare-firebase-hosting.sh
 
