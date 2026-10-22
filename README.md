@@ -89,3 +89,36 @@ GitHub serves the HTML/CSS/JS code; **Firebase** provides authentication and the
 These are profiles of youth athletes. Obtain any required parent/guardian and organizational permissions before uploading; limit access to coaches who actually need it. Choose strong passwords and consider adding stronger identity controls, audit history, section-level edit attribution, and retention/backups before handling more sensitive information. Firebase auth and Firestore rules **must** be configured first; the app intentionally does not expose offline cached private player data to anonymous visitors.
 
 The repository contains working client code and rules, **not** a live Firebase account or a published website. Until the owner performs these console steps, the public page displays **Cloud setup needed** rather than fake shared saves.
+
+## 7. Permanent 6-digit player IDs and shareable profile links
+
+The Pitching Lab now has a permanent **six-digit public player ID**, such as `123456`, for every pitcher. This is **not** the internal Firestore document ID; existing records keep their original keys, so previously saved notes, mechanics, grades, raw pitch logs, and session data stay attached to the same player.
+
+- Canonical URL on GitHub Pages: `https://44gtandrews.github.io/diamond-zone-pitching-lab/?player=123456`.
+- Canonical URL after a custom domain is configured: `https://dzpitchingportal.app/?player=123456`.
+- The **Player ID** label and **Copy profile link** button appear at the top of each player profile. Directory links use the same address. Pasting a profile URL into another browser opens the player **after that coach signs in**.
+- `?player=` is used instead of a bare `/player/123456` route because GitHub Pages does not natively rewrite direct requests for arbitrary player paths. Old `#original-player-key` links remain compatible.
+- A public ID is **not an authentication credential**. Firestore security rules still limit data access to verified approved staff.
+- Sharing links removes `source=chatgpt` and `utm_source=chatgpt.com` tracking parameters. These query parameters are not part of the Pitching Lab application.
+
+**Required deployment step:** After the six-digit ID feature is updated in GitHub, REPLACE and PUBLISH your Firebase Firestore Rules with the latest `firestore.rules`. The rules now allow atomic reservations in the `playerCodes` collection. Without updated rules, automatic IDs and new-player uploads may fail.
+
+**Existing pitchers:** The first administrator who signs into the updated app runs the one-time ID assignment automatically, when the updated Firestore rules are in place. If the rules were not yet published, publish them and reload the app signed in as administrator. Player records never change internal IDs.
+
+**New pitchers:** Each coach-uploaded player gets a random six-digit number reserved transactionally, so two uploads cannot claim the same number. An internal opaque key is created separately to avoid naming collisions. All six-digit numbers are stored as strings and are never reused.
+
+**Admin roster JSON imports:** Imports preserve existing six-digit IDs and notes. If the imported roster adds older-style player records without IDs, the app reserves IDs for those records automatically.
+
+## 8. Optional custom domain: dzpitchingportal.app
+
+**The domain has not been purchased or connected by this code change.** To use it:
+
+1. Purchase `dzpitchingportal.app` from a domain registrar, after confirming availability. Do not assume it is available.
+2. With GitHub Pages already publishing, open this repository's **Settings → Pages → Custom domain** and enter `dzpitchingportal.app`; save. GitHub can create its `CNAME` file for a branch deployment.
+3. At your domain registrar, point the apex/root (`@`) A records to GitHub Pages: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, and `185.199.111.153`. Alternatively use the provider's appropriate ALIAS/ANAME pointing to `44gtandrews.github.io`. Configure the site in GitHub before adding DNS records.
+4. Wait for DNS validation; turn on **Enforce HTTPS** in Pages when available.
+5. In **Firebase Authentication → Settings → Authorized domains**, add `dzpitchingportal.app` (domain only, without a path). Retain `44gtandrews.github.io` while testing GitHub Pages.
+6. Test an authenticated `/?player=123456` profile link on a different device.
+
+See official [GitHub Pages custom domain documentation](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
+
