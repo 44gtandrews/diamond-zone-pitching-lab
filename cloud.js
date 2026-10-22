@@ -509,7 +509,7 @@
         throw Error('Invalid player coaching section: '+item.playerId+' / '+item.section);
     }
     for(const item of decoded.allowlist){
-      if(!/^[^\\s/@]+@[^\\s/@]+\\.[^\\s/@]+$/.test(item.id)||
+      if(!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(item.id)||
         !['admin','coach'].includes(item.data.role)||typeof item.data.active!=='boolean')
         throw Error('Invalid staff approval entry.');
     }
@@ -541,18 +541,20 @@
       const parsed=JSON.parse(await file.text());
       const {decoded,backupPlayers,codes}=dzValidateBackup(parsed);
       dzBackupMessage('Checking permanent player IDs and current database...');
-      const [playerSnaps,codeSnaps,requestSnaps]=await Promise.all([
+      const [playerSnaps,codeSnaps,requestSnaps,staffSnaps]=await Promise.all([
         db.collection('players').get(),
         db.collection('playerCodes').get(),
-        db.collection('coachRequests').get()
+        db.collection('coachRequests').get(),
+        db.collection('allowlist').get()
       ]);
       const livePlayers=new Map(playerSnaps.docs.map(doc=>[doc.id,doc.data()]));
       const liveCodes=new Map(codeSnaps.docs.map(doc=>[doc.id,doc.data().playerId]));
       const liveRequests=new Set(requestSnaps.docs.map(doc=>doc.id));
+      const liveStaff=new Map(staffSnaps.docs.map(doc=>[doc.id,doc.data()]));
       for(const [id,player] of backupPlayers){
         const current=livePlayers.get(id);
-        if(current && current.publicId && player.publicId &&
-           String(current.publicId)!==String(player.publicId))
+        if(current && current.publicId &&
+           String(current.publicId)!==String(player.publicId||''))
           throw Error('Player ID conflict for '+player.name+'. No records were restored.');
         if(player.publicId && liveCodes.has(String(player.publicId)) &&
            liveCodes.get(String(player.publicId))!==id)
@@ -596,7 +598,8 @@
 
       // Stage 4: restore coach access without touching ANY admin role or this account.
       const safeCoaches=decoded.allowlist.filter(item=>
-        item.data.role==='coach'&&item.id!==emailKey(activeUser.email));
+        item.data.role==='coach'&&item.id!==emailKey(activeUser.email)&&
+        liveStaff.get(item.id)?.role!=='admin');
       if(safeCoaches.length){
         dzBackupMessage('Restoring '+safeCoaches.length+' coach access records...');
         await dzRestoreBatch(safeCoaches,
