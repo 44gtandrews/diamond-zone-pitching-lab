@@ -1,3 +1,61 @@
+# Four-role account access and individual Player/Parent profiles (October 22, 2026)
+
+## Access model
+
+| Role | Can access | Can upload Trackman | Can edit notes / grades / pitch types | Admin permissions |
+|---|---|---|---|---|
+| **Admin** (`admin`) | All players, archives, accounts and backups | Yes | Yes | Full access |
+| **Pitching Coach** (`pitching_coach`) | All active players | Yes, create pitchers and upload sessions | Yes | No |
+| **Coach** (`coach`) | All active players | No | No — read only | No |
+| **Player / Parent** (`player_parent`) | **One assigned active player only** | No | No — read only | No |
+
+The account's role and, for Player/Parent, the **exact linked Firestore player document ID** live in the existing `allowlist/{lowercase-email}` record. The linked player is chosen by an administrator, not by the parent. There is currently **one linked player per Player/Parent account**. A family needing access to siblings would require an explicit future multi-player permission design; never grant them full-roster Coach permission to work around that restriction.
+
+Accounts with `active:false` are blocked. The person creating a Firebase Authentication login must verify their email; login alone never grants access.
+
+**Existing accounts:** The prior `coach` role now means **read only**, in line with the new role definitions. If an existing coach should continue uploading Trackman data or changing notes, an administrator must assign them **Pitching Coach** using the account permissions controls.
+
+## Administrator controls
+
+Go to **Admin Dashboard → Account Permissions**:
+- Existing accounts display their email, role, active/disabled state, **role dropdown**, **linked-player dropdown** (only for Player/Parent), **Save role**, and **Disable / Reinstate**.
+- Pending coach signups also offer a role and specific player selection before approval. Directly invited staff can be assigned the right role up front.
+- Changing someone else to **Admin** requires typing `ADMIN` into a confirmation. Demoting an admin requires typing `DEMOTE`; disabling another active admin also requires confirmation. You cannot demote or disable **your own signed-in administrator account** from this UI, and Firestore rules enforce the self-protection.
+- Use an emergency Admin account only for a trusted person with full access. Every admin can manage accounts, delete players and restore private data.
+- Staff whose roles are changed should **refresh/sign in again** for their browser UI to reflect the new permissions. Firestore reads and writes are evaluated against the current allowlist record on every request, so the database rules take effect independently of a browser refresh.
+
+## Parent confidentiality and read-only user interface
+
+The browser only retrieves `players/{assignedPlayerId}` for a Player/Parent account. It does not query the entire `players` collection or `playerCodes` and does not display the Player Directory or Admin Dashboard. Profile URLs pointing to other players are ignored; the assigned player is shown instead.
+
+Firestore Security Rules v2 additionally enforce:
+- `players/{id}`: only Admin/Pitching Coach/Coach may **list** the roster. A Parent may **get** exactly their assigned active player.
+- `playerEdits/{id}/sections/{section}`: a Parent can **get** notes/grades only for their linked active player; they cannot list or modify other records.
+- Writes to `players`, pitch sessions, notes, grades and pitch overrides are reserved for Admin or Pitching Coach. Account changes, profile identity changes, archives, deletion and backups are Admin-only.
+- Coach and Parent pages render note textareas as read-only and disable grade and pitch-type editing controls. Upload controls are hidden. **The database rules, not the hidden buttons, are the actual security boundary.**
+- Inactive / deleted player profiles are not available for Parent viewing until reactivated (or restored).
+
+## MANDATORY one-time security-rules deployment
+
+The GitHub Actions workflow only automatically deploys **Hosting files**. It does **not** publish changes to Firestore rules. Do **not** approve a Player/Parent or make role changes under the old permissive rules: legacy rules allowed any approved account to read the entire roster.
+
+After the role management code is committed, publish the new repository `firestore.rules` using the Firebase CLI on the Mac already authenticated for project `diamond-zone-pitching-lab`:
+
+```bash
+cd ~/diamond-zone-pitching-lab
+git pull origin main
+npx --yes firebase-tools@latest deploy --only firestore:rules --project diamond-zone-pitching-lab
+```
+
+As an alternative, copy the exact `firestore.rules` from the repository into **Firebase Console → Firestore Database → Rules**, review them, and publish.
+
+The website checks a specially allowed `get` of `rolePolicy/v2` (no document needed) before enabling new role assignments or parent login. The previous rules reject this probe, so account role changes fail closed until the new rules have been published. This is a rollout safety check **not** a substitute for deployed security rules.
+
+## Emergency JSON backups
+
+The full private JSON backup includes all `allowlist` entries, including each account role and its linked `playerId`. Emergency restore preserves non-admin permissions but never creates or overwrites admin roles. Restoring access roles also requires the Role Policy v2 security rules to be live. Keep snapshots encrypted and private.
+
+
 # Player status, deletion and last-name sorting (October 2026)
 
 ## Directory sorting by surname
