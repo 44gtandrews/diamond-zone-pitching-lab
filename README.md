@@ -1,3 +1,32 @@
+# Trackman dual-PDF import and pitch-type visibility — October 22, 2026
+
+This release adds safe PDF recognition for both Diamond Zone Trackman/Power BI reports while keeping the original player profile navigation, notes, mechanics, strength, scouting grades, movement graph and Trackman upload permissions.
+
+## Import formats
+- **Classic three-table pitching report** (e.g. PJ Colon): reads actual pitch counts, average/max velocity, spin, extension, IVB/HB, tilt and strike/VAA fields where available. Supports regular single-session updates using count-weighted merging, preserving duplicate-SHA checks. A new baseline PDF showing multiple selected source sessions is labeled accurately using `importHistory.sourceSessionCount`; updates with multiple sessions selected remain blocked.
+- **Pitch-type averages and release-position report** (e.g. Mason Alderman): reads actual velocity, spin, IVB/HB, extension, release height, release side, 2D/3D spin axis and gyro by column position, preserving true blanks and correctly identifying Cutter, Knuckleball and Other. Missing counts, usage, max velocity and exact session count stay `null`/unavailable. No inferred values are saved. The player document uses `summaryOnly:true`, and its existing `sessions` property counts report imports rather than claiming actual session count.
+- For an existing averages-only profile, a newly imported averages report **replaces the previous snapshot** with a confirmation; the old pitch summaries are archived in the new import-history entry as `replacedSnapshot`. Duplicate file hashes are rejected.
+- Counts-based and averages-only formats cannot be mixed in the same existing player profile because combining their statistics would be invalid. Create a separate summary profile or supply a true single-session report.
+- On the upload review screen, all fields are editable except unavailable pitch counts; a coach may remove unwanted pitch types **before saving**, up to eight types per profile as allowed by current Firestore rules.
+
+## Remove and restore pitch types
+- Admins and pitching coaches can click **Remove** beside a pitch type in the profile table, including Knuckleball, and later use **Restore** below the table.
+- These are non-destructive visibility controls for the directory, charts and pitch tables; raw data and saved scouting grades are retained.
+- Visibility lives in the existing, secure `playerEdits/{id}/sections/grades` document as `__hiddenPitchTypes` and merges with existing saved numerical grades. It is included in existing backups.
+- No change was made to `cloud.js`, `firestore.rules`, authorization, backup logic or the original profile heading font. Existing records do not require migration.
+
+## Test coverage before deployment
+- JavaScript parsing for all updated scripts and the inline app script.
+- Synthetic position-accurate PDFs representing both uploaded examples, including blank columns and release axes.
+- Mock upload and Firestore transaction flow for new classic and averages-only profiles.
+- Mock snapshot replacement (archive prior), plus refusal to merge counted and counts-free sources.
+- Persistent hide/restore test with grade preservation.
+- Summary-only profile rendering: missing counts and usage display as unavailable, with release and spin-axis columns.
+
+## Limitations
+- The second PDF format provides pitch-type averages, **not individual pitches**. It cannot produce per-pitch logs or defensible usage percentages. Release-side and height are not a measured anatomical arm angle.
+- An actual production Firebase upload has not been performed as part of the release tests; avoid writing test players into the live database.
+
 # Approved Clubhouse interface release — October 22, 2026
 
 The live Pitching Portal now uses the approved Clubhouse / Performance Lab presentation on the Player Directory, navigation, Admin Dashboard and player-profile chrome. The original player-profile **format** stays intact: movement plot behavior, velocity chart, pitch usage chart, pitch table with editable grades, notes, mechanical changes, strength and mobility, pitch log and upload button are still the same sections in the same order. In particular, the player's name retains its original italic Barlow Condensed athletic font, weight and style.
