@@ -848,6 +848,18 @@ window.DZ_SET_DIRECTORY_TAB=function(tab){
 };
 document.getElementById('dz-directory-internal-tab').addEventListener('click',()=>window.DZ_SET_DIRECTORY_TAB('internal'));
 document.getElementById('dz-directory-external-tab').addEventListener('click',()=>window.DZ_SET_DIRECTORY_TAB('external'));
+for(const [name,element] of [
+  ['internal',document.getElementById('dz-directory-internal-tab')],
+  ['external',document.getElementById('dz-directory-external-tab')]
+]){
+  element.addEventListener('keydown',event=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    event.preventDefault();
+    const next=(event.key==='ArrowLeft'||event.key==='Home')?'internal':'external';
+    window.DZ_SET_DIRECTORY_TAB(next);
+    document.getElementById('dz-directory-'+next+'-tab').focus();
+  });
+}
 
 
 /* ================= Home view ================= */
