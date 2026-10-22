@@ -80,6 +80,20 @@
   .player-info{min-width:0;}
   .player-row .player-name{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0;}
   .player-blurb{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+  .dz-pitch-usage{display:flex;flex-wrap:wrap;gap:5px 13px;align-items:center;margin-top:6px;}
+  .dz-usage-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:12px;color:var(--ink-soft);}
+  .dz-usage-item strong{color:var(--ink);font-weight:700;}
+  .dz-usage-dot{width:8px;height:8px;display:inline-block;border-radius:100%;flex:none;}
+  .dz-profile-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  .dz-edit-overlay{position:fixed;inset:0;background:rgba(0,5,9,.86);z-index:1200;display:flex;align-items:center;justify-content:center;padding:18px;}
+  .dz-edit-dialog{background:#101F27;border:2px solid #008D97;width:100%;max-width:450px;padding:22px;border-radius:4px;}
+  .dz-edit-dialog .cloud-form select,.dz-edit-dialog .cloud-form input{background:#0C171D;color:#FFFFFF;border:1px solid var(--line-strong);}
+  .dz-backup-section{margin:22px 0 26px;padding:18px;border:1px solid #31545D;background:#0C1B23;}
+  .dz-backup-section .cloud-actions{align-items:center;}
+  .dz-backup-section input[type="file"]{background:#101F27;border:1px solid var(--line-strong);padding:9px;max-width:100%;color:#FFFFFF;}
+  .dz-backup-section .admin-title{font-size:22px;margin-bottom:7px;}
+  .dz-backup-warning{color:#E2BBC2!important;}
+
   .chevron{font-family:'Oswald',sans-serif;font-size:20px;color:var(--line-strong);flex-shrink:0;}
   .roster a.player-row:hover .chevron{color:var(--accent);}
   .home-footnote{font-size:11.5px;color:var(--ink-soft);margin-top:36px;line-height:1.6;padding-top:16px;border-top:1px solid var(--line-strong);}
@@ -482,6 +496,17 @@
   <div class="home-wrap">
     <section id="admin-panel">
       <h2 class="admin-title">Coach Access &amp; Roster Management</h2>
+      <div class="dz-backup-section">
+        <h3 class="admin-title">Emergency data backup and restore</h3>
+        <p class="cloud-help">Download a private JSON snapshot of all players, linked six-digit IDs, coaching notes, grades, coach approvals and requests. Keep backups in a secure location.</p>
+        <div class="cloud-actions"><button class="cloud-button" id="cloud-full-backup" type="button">Download full backup JSON</button></div>
+        <label class="field-label" for="cloud-full-restore-file" style="display:block;margin-top:18px;">Restore a full backup</label>
+        <p class="cloud-help dz-backup-warning">Restoration can overwrite existing records. Review the file and type RESTORE before proceeding. Existing records absent from the file are not deleted.</p>
+        <input id="cloud-full-restore-file" type="file" accept=".json,application/json">
+        <div class="cloud-actions"><button class="cloud-button secondary" id="cloud-full-restore" type="button">Restore full backup</button></div>
+        <p class="cloud-status" role="status" id="cloud-full-status"></p>
+      </div>
+      <h3 class="admin-title">Legacy roster-only tools</h3>
       <p class="cloud-help">Administrators can bulk-import or back up the roster. All approved coaches can add a player or upload an additional session from a player profile. Saved notes and grades remain separate.</p>
       <label class="field-label" for="cloud-roster-file">Bulk import private roster JSON (not for Trackman PDFs)</label>
       <p class="cloud-help">To create a player from a Trackman PDF, use <strong>+ Add Player · Upload File</strong> above. This admin-only field accepts the private roster backup JSON only.</p>
@@ -514,6 +539,29 @@
   </div>
 </div>
 
+<!-- Administrator-only player identity editor. Name and age are changed in-place; IDs stay stable. -->
+<div id="cloud-edit-overlay" class="dz-edit-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cloud-edit-title">
+  <div class="dz-edit-dialog">
+    <h2 class="admin-title" id="cloud-edit-title">Edit Pitcher Profile</h2>
+    <p class="cloud-help">Update this player's name or age group. Their six-digit ID, sessions, pitching data and coach notes will not change.</p>
+    <form id="cloud-edit-form" class="cloud-form">
+      <label>Player name<input id="cloud-edit-name" type="text" required minlength="2" maxlength="100" autocomplete="off"></label>
+      <label>Age group
+        <select id="cloud-edit-age" required>
+          <option value="10">10U</option><option value="11">11U</option><option value="12">12U</option>
+          <option value="13">13U</option><option value="14">14U</option><option value="15">15U</option>
+          <option value="16">16U</option><option value="17">17U</option><option value="18">18U</option>
+          <option value="Coach">Coach / Adult</option>
+        </select>
+      </label>
+      <div class="cloud-actions">
+        <button class="cloud-button" id="cloud-edit-save" type="submit">Save profile changes</button>
+        <button class="cloud-button secondary" id="cloud-edit-cancel" type="button">Cancel</button>
+      </div>
+    </form>
+    <p class="cloud-status" role="status" id="cloud-edit-status"></p>
+  </div>
+</div>
 <!-- ============== PLAYER VIEW ============== -->
 <div id="view-player" style="display:none;">
   <div class="masthead">
@@ -539,7 +587,10 @@
 
   <div class="wrap">
     <div class="kpis" id="kpis"></div>
-    <div style="margin-top:16px;"><button class="cloud-button" type="button" id="cloud-update-player">+ Upload New Session · Trackman File</button></div>
+    <div class="dz-profile-actions">
+      <button class="cloud-button" type="button" id="cloud-update-player">+ Upload New Session · Trackman File</button>
+      <button class="cloud-button secondary" type="button" id="cloud-edit-profile" style="display:none;">Edit Profile</button>
+    </div>
 
     <div class="tabbar">
       <button class="tabbtn active" data-tab="overview">Overview</button>
@@ -777,23 +828,22 @@ async function ensureOverridesLoaded(player){
   player._overridesLoaded = true;
 }
 
+function dzEscapeText(text){
+  return String(text??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 async function renderHome(){
   for(const group of ROSTER_GROUPS){
     const rows = await Promise.all(group.ids.map(async id=>{
       const player = PLAYERS[id];
       await ensureOverridesLoaded(player);
       const summary = getTypeSummary(player);
-      const totalN = summary.reduce((s,p)=>s+p.n,0);
-      const primary = summary.reduce((a,b)=> b.n>a.n?b:a, summary[0]);
-      const fb = summary.find(p=>p.key==='fb');
-      const veloLabel = player.dataType==='raw' ? 'FB med.' : 'FB avg';
-      const blurb = `${totalN} pitches · ${player.sessions} session${player.sessions===1?'':'s'} · `+
-        `Primary: ${primary.name} (${Math.round(primary.n/totalN*100)}%)` +
-        (fb ? ` · ${veloLabel} ${fmt(fb.velo)} mph` : '');
-      return `<a class="player-row" data-player-id="${id}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
+      const totalN=summary.reduce((sum,p)=>sum+Number(p.n||0),0);
+      const usage=summary.slice().sort((a,b)=>(b.n||0)-(a.n||0))
+        .map(p=>`<span class="dz-usage-item"><span class="dz-usage-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)} <strong>${totalN?(100*p.n/totalN).toFixed(1):'0.0'}%</strong></span>`).join('');
+      return `<a class="player-row" data-player-id="${dzEscapeText(id)}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
         <div class="player-info">
-          <p class="player-name">${player.name}</p>
-          <p class="player-blurb">${blurb}</p>
+          <p class="player-name">${dzEscapeText(player.name)}</p>
+          <div class="dz-pitch-usage" aria-label="Pitch usage percentages">${usage||'<span class="player-blurb">No pitches recorded</span>'}</div>
         </div>
         <span class="chevron">→</span>
       </a>`;
