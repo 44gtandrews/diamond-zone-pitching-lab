@@ -40,6 +40,11 @@
   .home-wrap{max-width:900px;margin:0 auto;padding:0 28px;}
   a{color:inherit;}
 
+  /* Public player identifiers and share controls */
+  .dz-id-line{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:14px;color:var(--paper)}
+  #player-public-id{font-family:ui-monospace,Consolas,monospace;letter-spacing:.08em;font-weight:700}
+  @media(max-width:480px){.dz-id-line{align-items:flex-start;flex-direction:column;gap:7px}}
+
   /* Masthead */
   .masthead{background:var(--ink);color:var(--paper);padding:22px 0 20px 0;border-bottom:4px solid var(--accent);}
   .masthead-row{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px;}
@@ -289,6 +294,7 @@
           <p class="facility">Diamond Zone CT · Pitching Lab</p>
           <h1 class="player-name" id="player-name"></h1>
           <p class="player-sub" id="player-sub"></p>
+          <div class="dz-id-line"><span id="player-public-id">Player ID pending</span><button type="button" id="player-copy-link" class="cloud-button secondary" style="min-height:36px;padding:6px 12px;" disabled>Copy profile link</button><span id="player-copy-status" role="status" style="font-size:12px;"></span></div>
         </div>
         <div class="session-tag">
           <div id="session-tag-main"></div>
@@ -549,7 +555,7 @@ async function renderHome(){
       const blurb = `${totalN} pitches · ${player.sessions} session${player.sessions===1?'':'s'} · `+
         `Primary: ${primary.name} (${Math.round(primary.n/totalN*100)}%)` +
         (fb ? ` · ${veloLabel} ${fmt(fb.velo)} mph` : '');
-      return `<a class="player-row" href="#${id}">
+      return `<a class="player-row" data-player-id="${id}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
         <div class="player-info">
           <p class="player-name">${player.name}</p>
           <p class="player-blurb">${blurb}</p>
@@ -912,6 +918,62 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
 
 /* ================= Navigation ================= */
 let currentPlayerId = null;
+const DZ_SIX_DIGITS = /^[1-9][0-9]{5}$/;
+function dzCleanUrl() {
+  const u = new URL(location.href);
+  // These are link-source tracking parameters, never part of the player's ID.
+  u.searchParams.delete('source');
+  u.searchParams.delete('utm_source');
+  return u;
+}
+function dzProfileUrl(p) {
+  const u=dzCleanUrl();
+  u.hash='';
+  u.search='';
+  if(p?.publicId && DZ_SIX_DIGITS.test(String(p.publicId))) u.searchParams.set('player',String(p.publicId));
+  return u.href;
+}
+window.DZ_LINK_FOR=dzProfileUrl;
+function dzPlayerFromUrl() {
+  const code=new URLSearchParams(location.search).get('player');
+  if(code && DZ_SIX_DIGITS.test(code)) {
+    const match=Object.values(PLAYERS).find(p=>String(p.publicId)===code);
+    if(match) return match.id;
+  }
+  const legacy=decodeURIComponent(location.hash.slice(1));
+  return PLAYERS[legacy]?legacy:null;
+}
+window.DZ_OPEN_CURRENT_URL=async()=>{
+  if(!window.DZ_AUTHORIZED)return;
+  const id=dzPlayerFromUrl();
+  if(id)await showPlayer(id);else showHome();
+};
+window.DZ_OPEN_PLAYER=async id=>{
+  const p=PLAYERS[id];
+  if(!p)return;
+  if(p.publicId && DZ_SIX_DIGITS.test(String(p.publicId))){
+    history.pushState({},'',dzProfileUrl(p));
+  }else{
+    const u=dzCleanUrl();u.searchParams.delete('player');u.hash=encodeURIComponent(id);
+    history.pushState({},'',u.href);
+  }
+  await showPlayer(id);
+};
+window.DZ_GO_HOME=()=>{
+  const u=dzCleanUrl();u.hash='';u.searchParams.delete('player');
+  history.pushState({},'',u.href);
+  showHome();
+};
+document.querySelector('#view-home').addEventListener('click',e=>{
+  const row=e.target.closest('a.player-row[data-player-id]');
+  if(!row || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button!==0)return;
+  e.preventDefault();
+  window.DZ_OPEN_PLAYER(row.dataset.playerId);
+});
+document.querySelectorAll('.back-link').forEach(a=>a.addEventListener('click',e=>{
+  e.preventDefault();window.DZ_GO_HOME();
+}));
+window.addEventListener('popstate',()=>window.DZ_OPEN_CURRENT_URL());
 
 function showHome(){
   currentPlayerId = null;
@@ -920,6 +982,24 @@ function showHome(){
   renderHome();
   window.scrollTo(0,0);
 }
+
+document.getElementById('player-copy-link').addEventListener('click',async()=>{
+  const p=PLAYERS[currentPlayerId];if(!p?.publicId)return;
+  const url=dzProfileUrl(p),status=document.getElementById('player-copy-status');
+  try {
+    await navigator.clipboard.writeText(url);
+    status.textContent='Link copied';
+  } catch (_) {
+    const box=document.createElement('textarea');box.value=url;
+    box.style.position='fixed';box.style.opacity='0';document.body.appendChild(box);
+    box.select();
+    let ok=false;
+    try{ok=document.execCommand('copy');}catch(_){}
+    box.remove();
+    status.textContent=ok?'Link copied':'Copy link from address bar';
+    if(!ok)window.prompt('Copy this profile URL:',url);
+  }
+});
 
 async function showPlayer(id){
   const player = PLAYERS[id];
@@ -930,6 +1010,10 @@ async function showPlayer(id){
 
   document.getElementById('player-name').textContent = player.name;
   document.getElementById('player-sub').textContent = 'Pitcher · ' + player.ageLabel;
+  const hasCode = DZ_SIX_DIGITS.test(String(player.publicId||''));
+  document.getElementById('player-public-id').textContent=hasCode?'Player ID: '+player.publicId:'Player ID pending administrator assignment';
+  document.getElementById('player-copy-link').disabled=!hasCode;
+  document.getElementById('player-copy-status').textContent='';
   document.getElementById('session-tag-main').innerHTML =
     `<span class="live-dot"></span><strong>${player.sessions} session${player.sessions===1?'':'s'}</strong> selected`;
 
@@ -952,11 +1036,9 @@ async function showPlayer(id){
   window.scrollTo(0,0);
 }
 
-window.addEventListener('hashchange', ()=>{
-  if(!window.DZ_AUTHORIZED) return;
-  const id = decodeURIComponent(location.hash.slice(1));
-  if(PLAYERS[id]) showPlayer(id); else showHome();
-});
+window.addEventListener('hashchange',()=>window.DZ_OPEN_CURRENT_URL());
+// Remove link-tracking parameters without changing the player's destination.
+if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().href);
 </script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
