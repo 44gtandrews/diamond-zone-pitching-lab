@@ -11,10 +11,20 @@
   let accessVersion=0;
   window.DZ_AUTHORIZED = false;
   window.DZ_IS_ADMIN = false;
+  window.DZ_ROLE = null;
+  window.DZ_PARENT_PLAYER_ID = null;
+  window.DZ_EDIT_ENABLED = false;
+  window.DZ_CAN_UPLOAD = false;
+  const ROLE_LABELS={admin:'Administrator',pitching_coach:'Pitching Coach',coach:'Coach · Read Only',player_parent:'Player / Parent'};
+  const ALLOWED_ROLES=Object.keys(ROLE_LABELS);
 
   function showAuth(title, description, mode='login', message='') {
     window.DZ_AUTHORIZED=false;
     window.DZ_IS_ADMIN=false;
+    window.DZ_ROLE=null;
+    window.DZ_PARENT_PLAYER_ID=null;
+    window.DZ_EDIT_ENABLED=false;
+    window.DZ_CAN_UPLOAD=false;
     authScreen.style.display='block';
     $('cloud-bar').style.display='none';
     $('view-home').style.display='none';
@@ -55,13 +65,13 @@
         return doc.exists ? {value:doc.data().value}:null;
       },
       async set(key,value) {
-        if(!window.DZ_AUTHORIZED) throw Error('Sign in required');
+        if(!window.DZ_AUTHORIZED || !window.DZ_EDIT_ENABLED) throw Error('Pitching Coach or Administrator required');
         if(typeof value!=='string') throw Error('Invalid value');
         await section(key).set({value,editedBy:activeUser.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
         return {key,value};
       },
       async delete(key) {
-        if(!window.DZ_AUTHORIZED) throw Error('Sign in required');
+        if(!window.DZ_AUTHORIZED || !window.DZ_IS_ADMIN) throw Error('Administrator required');
         await section(key).delete();return {key,deleted:true};
       }
     };
@@ -133,8 +143,24 @@
       (programPlayers.length+lessonPlayers.length)+' total pitchers';
   }
   async function loadPlayers() {
-    const snapshot=await db.collection('players').get();
     for(const k of Object.keys(PLAYERS)) delete PLAYERS[k];
+    if(window.DZ_ROLE==='player_parent'){
+      const id=window.DZ_PARENT_PLAYER_ID;
+      if(!id)throw Error('Your account has no assigned player. Contact the administrator.');
+      const own=await db.collection('players').doc(id).get();
+      if(!own.exists || own.data().inactive===true)
+        throw Error('Your assigned player profile is not available. Contact the administrator.');
+      const p=own.data();
+      if(p.id!==id)throw Error('Player profile ID mismatch.');
+      if(p.dataType==='raw'){
+        p.typeOverrides=p.typeOverrides||{};
+        p.logSortBy=p.logSortBy||'no';
+        p.rawPitches.forEach(pitch=>{if(!pitch.autoType)pitch.autoType=classify(pitch);});
+      }
+      PLAYERS[id]=p;
+      return;
+    }
+    const snapshot=await db.collection('players').get();
     snapshot.forEach(doc=>{
       const p=doc.data();
       if(!p || p.id!==doc.id || !p.name || !(Array.isArray(p.pitches)||Array.isArray(p.rawPitches))) return;
@@ -186,16 +212,34 @@
     return count;
   };
   async function showAllowed() {
+    if(!ALLOWED_ROLES.includes(staff?.role))throw Error('Unsupported account role. Contact the administrator.');
+    const parent=staff.role==='player_parent';
+    if(parent){
+      if(typeof staff.playerId!=='string'||!staff.playerId)
+        throw Error('No player has been linked to this account. Contact the administrator.');
+      // Old Firestore rules permitted every approved account to list all players.
+      // Fail closed for parents until Role Policy v2 is actually published.
+      await db.collection('rolePolicy').doc('v2').get();
+    }
+    window.DZ_ROLE=staff.role;
+    window.DZ_PARENT_PLAYER_ID=parent?staff.playerId:null;
+    window.DZ_IS_ADMIN=staff.role==='admin';
+    window.DZ_EDIT_ENABLED=window.DZ_IS_ADMIN||staff.role==='pitching_coach';
+    window.DZ_CAN_UPLOAD=window.DZ_EDIT_ENABLED;
     window.DZ_AUTHORIZED=true;
-    window.DZ_IS_ADMIN=staff?.role==='admin';
     installStorage();
     authScreen.style.display='none';
     $('cloud-bar').style.display='block';
-    $('cloud-identity').textContent=activeUser.email+' · '+(staff.role==='admin'?'Administrator':'Coach');
+    $('cloud-identity').textContent=activeUser.email+' · '+ROLE_LABELS[staff.role];
     $('cloud-admin-nav').style.display=window.DZ_IS_ADMIN?'':'none';
+    $('cloud-directory-nav').style.display=parent?'none':'';
     $('cloud-edit-profile').style.display=window.DZ_IS_ADMIN?'':'none';
     $('cloud-inactivate-player').style.display=window.DZ_IS_ADMIN?'':'none';
     $('cloud-delete-player').style.display=window.DZ_IS_ADMIN?'':'none';
+    $('cloud-add-player').style.display=window.DZ_CAN_UPLOAD?'':'none';
+    $('coach-upload-panel').style.display=parent?'none':'';
+    $('cloud-update-player').style.display=window.DZ_CAN_UPLOAD?'':'none';
+    document.querySelectorAll('#view-player .back-link').forEach(a=>a.style.display=parent?'none':'');
     await loadPlayers();
     if(staff.role==='admin' && Object.values(PLAYERS).some(p=>!hasPublicId(p))){
       try {
@@ -279,7 +323,12 @@
       staff=doc.data();
       await showAllowed();
     }catch(e) {
-      if(version===accessVersion) showAuth('Cloud connection error','Check the Firebase setup and Firestore rules.','verify',friendly(e));
+      if(version===accessVersion){
+        const parent=staff?.role==='player_parent';
+        showAuth(parent?'Profile access unavailable':'Cloud connection error',
+          parent?'This account can access only its linked player after the updated security rules are published. Contact the administrator if access is still pending.':
+          'Check the Firebase setup and Firestore rules.','verify',friendly(e));
+      }
     }
   }
 
