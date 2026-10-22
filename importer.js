@@ -40,7 +40,7 @@ function render(){
  fields.forEach(f=>{const c=document.createElement('td'),input=document.createElement('input');input.className='session-cell';input.type=f==='tilt'?'text':'number';input.step=['n','spin','spinMax','strike','strikeExt','out'].includes(f)?'1':'0.01';input.value=r[f]??'';input.placeholder='—';input.setAttribute('aria-label',r.name+' '+f);input.oninput=()=>{r[f]=f==='tilt'?input.value.trim()||null:num(input.value,['n','spin','spinMax','strike','strikeExt','out'].includes(f));};c.append(input);tr.append(c);});
  const c=document.createElement('td'),b=document.createElement('button');b.type='button';b.textContent='Remove';b.onclick=()=>{rows.splice(i,1);render();};c.append(b);tr.append(c);body.append(tr);});
 }
-function open(m,pid){if(!window.DZ_AUTHORIZED)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
+function open(m,pid){if(!window.DZ_AUTHORIZED)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
 function close(){$('session-import-overlay').style.display='none';document.body.style.overflow='';}
 function weighted(a,b,f){const v=[a,b].filter(x=>x[f]!=null);return v.length?v.reduce((s,x)=>s+x[f]*x.n,0)/v.reduce((s,x)=>s+x.n,0):null;}
 function merge(existing,incoming){const map=new Map(existing.map(r=>[r.key,{...r}]));for(const b of incoming){const a=map.get(b.key);if(!a){map.set(b.key,b);continue;}const c={...a,n:a.n+b.n};['velo','ext','ivb','hb','vaa'].forEach(f=>c[f]=num(weighted(a,b,f)));['spin','strike','strikeExt','out'].forEach(f=>c[f]=num(weighted(a,b,f),true));['veloMax','spinMax'].forEach(f=>c[f]=a[f]==null?b[f]:b[f]==null?a[f]:Math.max(a[f],b[f]));c.tilt=a.ivb!=null&&b.ivb==null?a.tilt:b.ivb!=null&&a.ivb==null?b.tilt:a.n>=b.n?a.tilt:b.tilt;map.set(b.key,c);}return [...map.values()].sort((a,b)=>b.n-a.n);}
@@ -61,7 +61,9 @@ $('session-save').onclick=async()=>{
  if(!rows.length)throw Error('Add at least one pitch type.');
  const seen=new Set();for(const r of rows){if(seen.has(r.key))throw Error('Duplicate pitch type');seen.add(r.key);if(!Number.isInteger(r.n)||r.n<1)throw Error(r.name+': pitch count must be a positive integer');if(r.velo==null||r.velo<20||r.velo>120)throw Error(r.name+': average velocity must be 20–120 mph');if(r.veloMax!=null&&r.veloMax<r.velo)throw Error(r.name+': max velocity is below average');for(const f of ['strike','strikeExt','out'])if(r[f]!=null&&(r[f]<0||r[f]>100))throw Error(r.name+': invalid '+f);}
  const playerName=$('session-player-name').value.trim(),age=$('session-player-age').value;
+ const affiliation=$('session-player-affiliation').value;
  if(mode==='new'&&(!/^[A-Za-z][A-Za-z .'-]{1,99}$/.test(playerName)||!age))throw Error('Enter player name and age group.');
+ if(mode==='new'&&!['internal','external'].includes(affiliation))throw Error('Choose Internal or External.');
  // New players use opaque internal document keys. Their separate six-digit ID is the permanent share link.
  const pid=mode==='new'?'p-'+crypto.randomUUID().replace(/-/g,''):id;
  const ref=db.collection('players').doc(pid),now=firebase.firestore.FieldValue.serverTimestamp(),incoming=rows.map(r=>({...r,name:names[r.key]})).sort((a,b)=>b.n-a.n);
@@ -78,7 +80,7 @@ $('session-save').onclick=async()=>{
        if(playerSnap.exists)throw Error('Player record already exists. Please retry.');
        if(codeSnap.exists)return false; // reserve a different six-digit number
        tx.set(codeRef,{playerId:pid});
-       tx.set(ref,{id:pid,publicId,name:playerName,ageLabel:age==='Coach'?'Coach / Adult':age+'U',ageNum:age==='Coach'?28:Number(age),sessions:1,dataType:'aggregate',discardedUndefined:0,pitches:incoming,createdBy:user.email,updatedBy:user.email,updatedAt:now,importHistory:[audit]});
+       tx.set(ref,{id:pid,publicId,name:playerName,ageLabel:age==='Coach'?'Coach / Adult':age+'U',ageNum:age==='Coach'?28:Number(age),affiliation,sessions:1,dataType:'aggregate',discardedUndefined:0,pitches:incoming,createdBy:user.email,updatedBy:user.email,updatedAt:now,importHistory:[audit]});
        return true;
      });
    }
