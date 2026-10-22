@@ -372,6 +372,12 @@
     .dz-branded-head,.dz-profile-identity{gap:10px;align-items:flex-start}
   }
 
+  .dz-inactive-panel{margin:18px 0 25px;padding:18px;border:1px solid #31545D;background:#0C1B23;}
+  .dz-inactive-panel .admin-section-head .admin-title{margin:0;display:flex;align-items:center;gap:10px;}
+  .dz-inactive-panel .dz-coach-list{margin-top:15px;}
+  .dz-inactive-panel .dz-inactive-meta{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .dz-danger-button{border-color:#B85F67!important;color:#F9CBD0!important;}
+  .dz-danger-button:hover{background:#54272E!important;color:white!important;}
   /* Administrator-only top-level tab and coach-request queue. */
   #cloud-bar .wrap{gap:14px;}
   .dz-site-tabs{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
@@ -508,6 +514,15 @@
   <div class="home-wrap">
     <section id="admin-panel">
       <h2 class="admin-title">Coach Access &amp; Roster Management</h2>
+      <section class="dz-inactive-panel" aria-labelledby="cloud-inactive-heading">
+        <div class="admin-section-head">
+          <h3 id="cloud-inactive-heading" class="admin-title">Inactive Players <span id="cloud-inactive-count" class="dz-count">0</span></h3>
+          <button class="cloud-button secondary" id="cloud-refresh-inactive" type="button">Refresh list</button>
+        </div>
+        <p class="cloud-help">Inactive profiles are removed from the Internal and External directories and kept here with their pitching data, coaching notes and existing six-digit IDs. Reactivate them anytime.</p>
+        <ul class="dz-coach-list" id="cloud-inactive-list" aria-labelledby="cloud-inactive-heading"></ul>
+        <p class="cloud-status" id="cloud-inactive-status" role="status"></p>
+      </section>
       <div class="dz-backup-section">
         <h3 class="admin-title">Emergency data backup and restore</h3>
         <p class="cloud-help">Download a private JSON snapshot of all players, linked six-digit IDs, coaching notes, grades, coach approvals and requests. Keep backups in a secure location.</p>
@@ -608,6 +623,8 @@
     <div class="dz-profile-actions">
       <button class="cloud-button" type="button" id="cloud-update-player">+ Upload New Session · Trackman File</button>
       <button class="cloud-button secondary" type="button" id="cloud-edit-profile" style="display:none;">Edit Profile</button>
+      <button class="cloud-button secondary" type="button" id="cloud-inactivate-player" style="display:none;">Inactivate Player</button>
+      <button class="cloud-button secondary dz-danger-button" type="button" id="cloud-delete-player" style="display:none;">Delete Player</button>
     </div>
 
     <div class="tabbar">
