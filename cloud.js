@@ -430,7 +430,7 @@
   $('cloud-invite-form').addEventListener('submit',async e=>{
     e.preventDefault();if(staff?.role!=='admin')return;
     const email=emailKey($('cloud-invite-email').value),role='coach';
-    if(!/^[^\\s/@]+@[^\\s/@]+\\.[^\\s/@]+$/.test(email)){
+    if(!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email)){
       notify($('cloud-invite-status'),'Enter a valid email.',true);return;
     }
     try{
