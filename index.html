@@ -5,26 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diamond Zone CT — Pitching Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#1C1B18;
-    --ink-soft:#514E47;
-    --paper:#F4F1E8;
-    --paper-raised:#FDFCF8;
-    --line:#DBD5C4;
-    --line-strong:#C6BEA6;
-    --accent:#B9812A;
-    --accent-deep:#7E5518;
-    --fb:#B33A3A;
-    --cb:#2E6198;
-    --ch:#4C7A45;
-    --sk:#CC7A1E;
-    --sw:#8C7A1E;
-    --sp:#1E8A8A;
-    --sl:#D1B000;
-    --ct:#7A5233;
-    --un:#8C8778;
+    --ink:#F1F6F7;
+    --ink-soft:#A6B9C0;
+    --paper:#081116;
+    --paper-raised:#111D24;
+    --line:#253740;
+    --line-strong:#35505A;
+    --accent:#0EC2CF;
+    --accent-deep:#008F9B;
+    --fb:#F25760;
+    --cb:#5299EC;
+    --ch:#52BC89;
+    --sk:#F29A4B;
+    --sw:#BCAD56;
+    --sp:#28B8CA;
+    --sl:#E2C34F;
+    --ct:#B38D65;
+    --un:#91A1A9;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -199,6 +199,133 @@
   #session-import-dialog .cloud-form input,#session-import-dialog .cloud-form select{width:100%;min-width:0;}
   @media(max-width:560px){#session-import-overlay{padding:0}#session-import-dialog{margin:0;min-height:100%;padding:14px}#session-import-dialog .cloud-form{grid-template-columns:1fr;}}
   @media(max-width:480px){.wrap,.home-wrap{padding-inline:16px;}.cloud-card{margin:18px 12px;padding:17px}.player-row{padding:13px 11px}.kpi{padding:13px 12px}.tabbtn{padding:10px 11px;}}
+
+  /* ===============================================================
+     DIAMOND ZONE CT THEME · teal / black / athletic condensed type
+     Visual-only layer — preserves app structure, data and behaviors.
+     =============================================================== */
+  body{
+    background:radial-gradient(ellipse at 75% 3%,rgba(7,125,136,.10),transparent 42%),var(--paper);
+    color:var(--ink);
+  }
+  .masthead{
+    background:linear-gradient(118deg,#04090C 0%,#0D1A20 70%,#102B32 100%);
+    border-bottom:3px solid var(--accent-deep);
+  }
+  .facility{color:var(--accent);font-weight:700;letter-spacing:.19em;}
+  .page-title,.masthead .player-name{
+    font-family:'Barlow Condensed','Oswald',sans-serif;
+    font-style:italic;font-weight:900;text-transform:uppercase;
+    letter-spacing:.015em;
+  }
+  .page-title{font-size:46px;}
+  .masthead .player-name{font-size:54px;}
+  .back-link,.page-sub,.player-sub,.session-tag{color:#BACBD0;}
+  .back-link:hover{color:var(--accent);}
+  .session-tag strong{color:#F3FCFD;}
+  .live-dot{background:var(--accent);box-shadow:0 0 0 3px rgba(14,194,207,.18);}
+  .group-title,.chart-title,.field-label,.cloud-card h2,.admin-title{
+    font-family:'Barlow Condensed','Oswald',sans-serif;
+    text-transform:uppercase;letter-spacing:.075em;font-weight:800;
+  }
+  .group-title{color:var(--accent);font-size:20px;border-bottom-color:#2F5962;}
+  .chart-title{color:var(--ink);font-size:17px;letter-spacing:.07em;}
+  .cloud-card h2,.admin-title{font-size:27px;letter-spacing:.035em;}
+  .roster,.kpis,.table-card,.chart-card,#coach-upload-panel,#admin-panel,.cloud-card{
+    background:var(--paper-raised);
+    border-color:var(--line-strong);
+  }
+  .player-row{border-bottom-color:var(--line);}
+  .roster a.player-row:hover{background:#193039;}
+  .player-row .player-name{
+    color:var(--ink);font-family:'Barlow Condensed','Oswald',sans-serif;
+    font-style:normal;font-size:21px;font-weight:700;letter-spacing:.01em;
+  }
+  .roster a.player-row:hover .player-name,.roster a.player-row:hover .chevron{color:var(--accent);}
+  .player-blurb,.group-count,.kpi-label,.chart-caption,.legend-item,.velo-max,.footnote,.home-footnote{
+    color:var(--ink-soft);
+  }
+  .chevron{color:#648891;}
+  .kpi{border-right-color:var(--line);}
+  .kpi-value,.velo-avg{
+    font-family:'Barlow Condensed','Oswald',sans-serif;font-weight:800;
+    color:#F8FCFD;letter-spacing:.005em;
+  }
+  .kpi-value{font-size:34px;}
+  .kpi-value small,.velo-avg small{font-family:'Inter',sans-serif;font-weight:500;color:var(--ink-soft);}
+  .tabbar{border-bottom-color:var(--line-strong);}
+  .tabbtn{
+    font-family:'Barlow Condensed','Oswald',sans-serif;font-size:18px;
+    font-weight:700;text-transform:uppercase;letter-spacing:.045em;
+    color:#9FB4BB;
+  }
+  .tabbtn:hover,.tabbtn.active{color:var(--accent);}
+  .tabbtn.active{border-bottom-color:var(--accent);}
+  .chart-row{border-color:var(--line-strong);background:var(--line-strong);}
+  .velo-row,tbody td{border-bottom-color:var(--line);}
+  thead th{
+    font-family:'Barlow Condensed','Oswald',sans-serif;
+    font-size:14px;font-weight:700;color:#C1D0D5;letter-spacing:.06em;
+  }
+  .pitch-cell{color:var(--ink);}
+  .na{color:#78919A;}
+  .dim{color:var(--ink-soft);}
+  .grade-select,.type-select{
+    background:var(--paper-raised);color:var(--ink);
+    border-color:var(--line-strong);
+  }
+  .toggle-btn{background:var(--paper-raised);color:var(--ink-soft);}
+  .toggle-btn.active{background:var(--accent-deep);color:#FFFFFF;}
+  .dot-tooltip{background:#020709;color:#F4FDFF;border:1px solid #2B6570;}
+  textarea,
+  .cloud-form input,.cloud-form select,
+  #admin-panel input,
+  #session-import-dialog .session-cell,
+  #session-import-dialog input,
+  #session-import-dialog select{
+    background:#0C171D;color:var(--ink);border-color:var(--line-strong);
+  }
+  textarea::placeholder,input::placeholder{color:#8199A2;}
+  textarea:focus,.cloud-form input:focus,.cloud-form select:focus,.session-cell:focus{
+    outline:2px solid var(--accent);outline-offset:1px;
+  }
+  .add-note-btn{color:#BFD0D5;border-color:#43646D;}
+  .add-note-btn:hover{color:var(--accent);border-color:var(--accent);}
+  .note-remove{color:#B8CBD0;background:#182A32;border-color:var(--line-strong);}
+  .note-remove:hover{background:#2C4B54;color:#FFFFFF;}
+  .save-btn,.cloud-button{
+    font-family:'Barlow Condensed','Oswald',sans-serif;
+    font-size:17px;font-weight:800;text-transform:uppercase;letter-spacing:.045em;
+    background:var(--accent);color:#041115;
+    border-radius:3px;transition:background .12s ease,color .12s ease;
+  }
+  .save-btn:hover,.cloud-button:not(:disabled):hover{background:#40DEEA;color:#041115;}
+  .cloud-button.secondary{
+    background:#182A32;color:#DBF0F3;border:1px solid #46636D;
+  }
+  .cloud-button.secondary:not(:disabled):hover{background:#25434D;color:#FFFFFF;}
+  .cloud-button:disabled{opacity:.52;}
+  .save-status,.cloud-status{color:#63DEE7;}
+  .cloud-error{color:#FF9696;}
+  #cloud-bar{background:#071014;border-bottom:1px solid #26515A;color:#EAF7FA;}
+  #cloud-bar button{background:#162930;border-color:#355761;color:#EAF7FA;}
+  #cloud-bar button:hover{background:#27434D;}
+  #session-import-overlay{background:rgba(0,5,7,.86);}
+  #session-import-dialog{background:#0E1A20;border-color:var(--accent-deep);}
+  #session-import-dialog .session-table-wrap{background:var(--paper-raised);}
+  #session-import-dialog td,#session-import-dialog th{border-color:var(--line);}
+  ::selection{background:#076F7C;color:white;}
+  @media(max-width:820px){
+    .masthead .player-name{font-size:42px;}
+    .page-title{font-size:40px;}
+    .kpi-value{font-size:29px;}
+  }
+  @media(max-width:480px){
+    .masthead .player-name{font-size:38px;}
+    .page-title{font-size:37px;}
+    .tabbtn{font-size:16px;}
+    .chart-title{font-size:16px;}
+  }
 </style>
 </head>
 <body>
@@ -465,9 +592,11 @@ function parseFtIn(str){
 }
 function divergingColor(t){
   const absT = Math.min(1, Math.abs(t));
-  const lightness = 92 - absT*30;
-  const saturation = absT*68;
-  const hue = t >= 0 ? 355 : 213;
+  if (absT < 0.01) return '#1C3039';
+  // Keep the original red-above / blue-below meaning, tuned for white text on dark cards.
+  const lightness = 20 + absT*13;
+  const saturation = 28 + absT*47;
+  const hue = t >= 0 ? 352 : 211;
   return `hsl(${hue},${saturation.toFixed(0)}%,${lightness.toFixed(0)}%)`;
 }
 function benchmarkCellStyle(metric, pitchKey, value, ageNum){
