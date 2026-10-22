@@ -191,6 +191,15 @@
       const doc=await db.collection('allowlist').doc(emailKey(user.email)).get();
       if(version!==accessVersion) return;
       if(!doc.exists||doc.data().active!==true){
+        if(doc.exists && doc.data().active===false){
+          const previous=await db.collection('coachRequests').doc(user.uid).get();
+          if(version!==accessVersion)return;
+          const declined=previous.exists && previous.data().status==='denied';
+          showAuth(declined?'Access request denied':'Coach account disabled',
+            declined?'Access was declined by the administrator. Contact Diamond Zone to inquire.':
+            'This account has been disabled. Contact the administrator to inquire.','verify');
+          return;
+        }
         // An authenticated, email-verified coach may create ONE pending request.
         // Firestore denies all roster reads until a separate admin approval.
         const requestRef=db.collection('coachRequests').doc(user.uid);
@@ -219,7 +228,7 @@
         }else if(state==='approved'){
           showAuth('Approval processing','Your request has been approved. Sign in again shortly; contact the administrator if your roster access is not enabled.','verify');
         }else{
-          showAuth('Access request pending','Your verified account has been submitted to Diamond Zone for review. You cannot access player data until the administrator approves it.','verify');
+          showAuth('Access request pending','Your verified account has been submitted to Diamond Zone for review. You cannot access player data until the administrator approves it. Select the continue button after approval.','verify');
         }
         return;
       }
