@@ -1,3 +1,17 @@
+# Mobile layout polish (October 22, 2026)
+
+The Pitching Portal now has a dedicated responsive layout for phone-sized browsers (especially approximately 320–640 px wide), without changing desktop features or Firestore records.
+
+- **Sign-in and navigation:** single-column sign-in form, thumb-sized buttons, legible account identity and sign-out. Admins get full-width Directory / Admin navigation tabs. Player/Parent navigation shows only the assigned profile, without an empty directory tab.
+- **Player directories:** Internal and External tabs fit side by side, with names, pitch usage percentages and average velocities in aligned, readable pitch rows.
+- **Player profiles:** responsive logo/headings, two-column stat tiles with a full-width fifth metric, stacked actions, a horizontally swipeable profile tab strip, vertical charts, and contained horizontally scrollable pitch tables.
+- **Coaching controls:** notes and mechanical/strength forms expand to the available width; text inputs and edit actions have phone-friendly touch targets.
+- **Trackman uploads:** full-screen phone dialog, single-column player fields and action buttons, and a horizontally scrollable pitch-review grid with a swipe hint.
+- **Admin Dashboard:** access requests and account roles are displayed first, followed by inactive players, complete JSON backups and legacy roster utilities. Mobile-only section shortcuts help navigate long admin screens without changing URL routing. Account permission cards, role selectors and action buttons stack so none run off-screen.
+- **Accessibility:** scroll regions have labels and keyboard focus, tap targets are enlarged, reduced-motion users do not receive forced transitions, and safe-area padding accommodates mobile devices.
+
+These are **presentation and navigation changes only**. The current Hosting-only GitHub Actions workflow automatically deploys them on a push to `main`. No additional Firestore security-rules deployment is needed for this *mobile formatting* update (but the previously requested four-role security-rule deployment is still separately mandatory if it has not been completed).
+
 # Four-role account access and individual Player/Parent profiles (October 22, 2026)
 
 ## Access model
