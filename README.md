@@ -1,3 +1,27 @@
+# Automatic deployment and Diamond Zone branding (October 2026)
+
+**GitHub → Firebase Hosting automatic publishing is configured in the repository.** The production workflow is `.github/workflows/deploy-firebase.yml`. Pushing updates to `main` (including changes explicitly committed from ChatGPT) triggers a GitHub Actions job that:
+1. checks JavaScript syntax;
+2. stages **only** the approved public files via `prepare-firebase-hosting.sh` (including `dz-logo.svg`);
+3. publishes them to Firebase Hosting's **live** channel, serving `dzpitchingportal.app`.
+
+**One-time authorization still required.** GitHub Actions cannot deploy until the repository has an encrypted credential named `FIREBASE_SERVICE_ACCOUNT_DIAMOND_ZONE_PITCHING_LAB`. The official Firebase CLI can provision that secret:
+
+```bash
+cd ~/diamond-zone-pitching-lab
+git pull origin main
+firebase init hosting:github
+```
+
+In the interactive prompts, choose the existing Firebase project `diamond-zone-pitching-lab` and GitHub repository `44gtandrews/diamond-zone-pitching-lab`. Approve the GitHub permissions prompt. If asked to set up a build script, select **No** (the committed workflow handles staging). If asked whether to create a separate automatic live deployment on PR merge, select **No** (the committed workflow already deploys on every push to `main`). The CLI may create *local* sample workflow files, which do not have to be committed or pushed because the production workflow is already present in GitHub.
+
+After setup, check **GitHub → Settings → Secrets and variables → Actions** for `FIREBASE_SERVICE_ACCOUNT_DIAMOND_ZONE_PITCHING_LAB`. If the CLI created a different secret name, update the secret reference in the workflow accordingly (do not reveal the secret). Visit **GitHub → Actions → Deploy Pitching Portal to Firebase Hosting → Run workflow** to trigger the initial deployment, then confirm the run is green. Subsequent pushes to `main` deploy automatically without Cloud Shell commands. Official setup guide: https://firebase.google.com/docs/hosting/github-integration
+
+**Scope:** This workflow deploys **Hosting files only**, not Firestore security rules. When `firestore.rules` changes, review and deploy those rules separately through Firebase Console or the `bash deploy-to-firebase.sh` fallback. This separation avoids unintentionally changing database access controls on every design iteration.
+
+**Branding:** The provided Diamond Zone DZ teal logo has been converted to a lightweight SVG (`dz-logo.svg`) for the login header, directory header, player profiles, and favicon. The original logo color `#008D97` is the primary accent. The sign-in page title is now `Pitching Portal` in white.
+
+
 ### Troubleshooting: "Missing or insufficient permissions" when adding a pitcher
 
 **If you can sign in and see the PDF review but clicking Save fails**, the Firebase Hosting app is running but the **deployed Firestore Rules** likely do not include the required `playerCodes` reservation permissions. The six-digit player IDs are written in the same atomic transaction as the player profile. Uploading or deploying website code by itself **does not update Firestore Rules**.
