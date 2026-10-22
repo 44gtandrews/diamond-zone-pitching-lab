@@ -6,41 +6,71 @@ service cloud.firestore {
         && request.auth.token.email_verified == true
         && request.auth.token.email is string;
     }
+    function approvalPath() {
+      return /databases/$(database)/documents/allowlist/$(request.auth.token.email);
+    }
     function approved() {
-      return verified()
-        && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email))
-        && get(/databases/$(database)/documents/allowlist/$(request.auth.token.email)).data.active == true;
+      return verified() && exists(approvalPath())
+        && get(approvalPath()).data.active == true;
+    }
+    function role() {
+      return get(approvalPath()).data.role;
     }
     function isAdmin() {
-      return approved()
-        && get(/databases/$(database)/documents/allowlist/$(request.auth.token.email)).data.role == 'admin';
+      return approved() && role() == 'admin';
+    }
+    function isPitchingCoach() {
+      return approved() && role() == 'pitching_coach';
+    }
+    function canWritePitching() {
+      return isAdmin() || isPitchingCoach();
+    }
+    function canViewAll() {
+      return approved() && role() in ['admin', 'pitching_coach', 'coach'];
+    }
+    function assignedParent(playerId) {
+      return approved() && role() == 'player_parent'
+        && get(approvalPath()).data.get('playerId', '') == playerId;
+    }
+    function validStaff(data) {
+      return data.keys().hasAll(['role', 'active'])
+        && data.role in ['admin', 'pitching_coach', 'coach', 'player_parent']
+        && data.active is bool
+        && (
+          (data.role == 'player_parent'
+            && data.keys().hasAll(['playerId'])
+            && data.playerId is string
+            && exists(/databases/$(database)/documents/players/$(data.playerId)))
+          ||
+          (data.role != 'player_parent' && !data.keys().hasAny(['playerId']))
+        );
+    }
+
+    // Frontend rollout gate: a successful get (even if the doc is missing)
+    // confirms that Role Policy v2 rules have been published. No listing or writing.
+    match /rolePolicy/{policy} {
+      allow get: if verified() && policy == 'v2';
+      allow list, create, update, delete: if false;
     }
     match /allowlist/{email} {
-      // Only verified accounts can read their own approval entry.
-      allow get: if (verified() && request.auth.token.email == email) || isAdmin();
+      allow get: if isAdmin() || (verified() && request.auth.token.email == email);
       allow list: if isAdmin();
-      allow create: if isAdmin()
-        && request.resource.data.keys().hasAll(['role', 'active'])
-        && request.resource.data.role in ['coach', 'admin']
-        && request.resource.data.active is bool;
+      allow create: if isAdmin() && validStaff(request.resource.data);
       allow update: if isAdmin()
-        && request.resource.data.keys().hasAll(['role', 'active'])
-        && request.resource.data.role in ['coach', 'admin']
-        && request.resource.data.active is bool
+        && validStaff(request.resource.data)
+        // An administrator cannot deactivate or demote their own account.
         && (email != request.auth.token.email ||
             (request.resource.data.role == 'admin' && request.resource.data.active == true));
       allow delete: if isAdmin() && email != request.auth.token.email;
     }
-    // Verified new coaches may file exactly one self-owned access request.
-    // They cannot read other applications or grant themselves permissions.
     match /coachRequests/{userId} {
       allow get: if isAdmin() || (verified() && request.auth.uid == userId);
       allow list: if isAdmin();
-      // Administrators may recreate deleted applications during a full emergency restore.
+      // Admin-only emergency restore of historic coach applications.
       allow create: if (isAdmin()
         && request.resource.data.uid == userId
         && request.resource.data.email is string
-        && request.resource.data.status in ['pending','approved','denied']
+        && request.resource.data.status in ['pending', 'approved', 'denied']
         && request.resource.data.requestedAt is timestamp)
         || (verified()
         && request.auth.uid == userId
@@ -62,8 +92,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     match /players/{playerId} {
-      allow read: if approved();
-      allow create: if isAdmin() || (approved()
+      // Player/Parent may get ONLY their linked active profile, never list the roster.
+      allow get: if canViewAll()
+        || (assignedParent(playerId) && resource.data.get('inactive', false) != true);
+      allow list: if canViewAll();
+      allow create: if isAdmin() || (isPitchingCoach()
         && request.resource.data.id == playerId
         && request.resource.data.publicId is string
         && request.resource.data.publicId.matches('^[1-9][0-9]{5}$')
@@ -76,7 +109,8 @@ service cloud.firestore {
         && request.resource.data.pitches is list
         && request.resource.data.pitches.size() > 0
         && request.resource.data.pitches.size() <= 8);
-      allow update: if isAdmin() || (approved()
+      allow update: if isAdmin() || (isPitchingCoach()
+        && resource.data.get('inactive', false) != true
         && resource.data.dataType == 'aggregate'
         && request.resource.data.dataType == 'aggregate'
         && request.resource.data.id == resource.data.id
@@ -87,13 +121,13 @@ service cloud.firestore {
         && request.resource.data.pitches is list
         && request.resource.data.pitches.size() > 0
         && request.resource.data.pitches.size() <= 8
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pitches','sessions','updatedBy','updatedAt','importHistory']));
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          ['pitches', 'sessions', 'updatedBy', 'updatedAt', 'importHistory']));
       allow delete: if isAdmin();
     }
-    // Collision-safe six-digit player IDs: players and reservations are written atomically.
     match /playerCodes/{code} {
-      allow get, list: if approved();
-      allow create: if approved()
+      allow get, list: if canViewAll();
+      allow create: if canWritePitching()
         && code.matches('^[1-9][0-9]{5}$')
         && request.resource.data.keys().hasOnly(['playerId'])
         && request.resource.data.playerId is string
@@ -101,19 +135,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     match /playerEdits/{playerId}/sections/{section} {
-      allow get, list: if approved();
-      allow create, update: if (isAdmin() || approved())
+      allow get: if canViewAll() || (assignedParent(playerId)
+        && exists(/databases/$(database)/documents/players/$(playerId))
+        && get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
+      allow list: if canViewAll();
+      allow create, update: if canWritePitching()
         && exists(/databases/$(database)/documents/players/$(playerId))
         && section in ['notes', 'mechanics', 'strength', 'grades', 'type-overrides']
         && request.resource.data.keys().hasOnly(['value', 'updatedAt', 'editedBy'])
         && request.resource.data.keys().hasAll(['value', 'updatedAt', 'editedBy'])
         && request.resource.data.value is string
         && request.resource.data.value.size() <= 50000
-        && (isAdmin() ||
-            request.resource.data.editedBy == request.auth.token.email);
+        && (isAdmin() || request.resource.data.editedBy == request.auth.token.email);
       allow delete: if isAdmin();
     }
-    // Deny every unmentioned database path.
     match /{document=**} { allow read, write: if false; }
   }
 }
