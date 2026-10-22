@@ -2295,7 +2295,7 @@ async function setPitchHidden(player,key,hide){
     await window.storage.set(player.id+':grades',JSON.stringify(current),false);
     player._hiddenPitchTypes=current.__hiddenPitchTypes;
     player._gradesByPitch=Object.fromEntries(
-      Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&GRADES.includes(v))
+      Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&v!==null&&v!==''&&GRADES.includes(Number(v))).map(([k,v])=>[k,Number(v)])
     );
     player._gradesLoaded=true;player._gradesLoadFailed=false;
     if(currentPlayerId===player.id){
@@ -2397,7 +2397,7 @@ async function renderPitchTable(player, summary, totalN){
         current[pitchKey]=grade;
         await window.storage.set(player.id+':grades',JSON.stringify(current),false);
         player._gradesByPitch=Object.fromEntries(
-          Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&GRADES.includes(v))
+          Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&v!==null&&v!==''&&GRADES.includes(Number(v))).map(([k,v])=>[k,Number(v)])
         );
         player._hiddenPitchTypes=Array.isArray(current.__hiddenPitchTypes)?current.__hiddenPitchTypes:[];
         player._gradesLoaded=true;
