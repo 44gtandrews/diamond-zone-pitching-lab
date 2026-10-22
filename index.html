@@ -865,39 +865,69 @@
 </section>
 <div id="cloud-bar" style="display:none;">
   <div class="wrap">
+    <div class="dz-nav-brand">
+      <img src="./dz-logo.svg" width="48" height="48" alt="Diamond Zone logo">
+      <div><strong>Diamond Zone</strong><small>Pitching Portal</small></div>
+    </div>
     <nav class="dz-site-tabs" aria-label="Pitching Portal sections">
-      <button type="button" id="cloud-directory-nav" class="dz-site-tab active">Player Directory</button>
-      <button type="button" id="cloud-admin-nav" class="dz-site-tab" style="display:none;">Admin Dashboard <span id="cloud-pending-badge" class="dz-pending-badge" style="display:none;"></span></button>
+      <button type="button" id="cloud-directory-nav" class="dz-site-tab active">Directory</button>
+      <button type="button" id="cloud-admin-nav" class="dz-site-tab" style="display:none;">Admin <span id="cloud-pending-badge" class="dz-pending-badge" style="display:none;"></span></button>
     </nav>
     <div class="dz-session-controls"><span id="cloud-identity"></span><button type="button" id="cloud-signout">Sign out</button></div>
   </div>
 </div>
 
 
+
 <!-- ============== HOME VIEW ============== -->
 <div id="view-home" style="display:none;">
   <div class="masthead">
-    <div class="home-wrap dz-branded-head">
-      <img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="106" height="92">
+    <div class="home-wrap dz-home-hero">
       <div class="dz-head-copy">
-        <p class="facility">Diamond Zone CT · Pitching Lab</p>
+        <p class="facility">Player management</p>
         <h1 class="page-title">Player Directory</h1>
-        <p class="page-sub">14 pitchers tracked · sorted by age group</p>
+        <p class="page-sub">Diamond Zone program and lesson pitchers, with scouting grades and velocities.</p>
+      </div>
+      <div class="dz-home-actions">
+        <a class="dz-scale-link" href="#dz-scouting-key-title">20–80 scale <span aria-hidden="true">↗</span></a>
+        <section id="coach-upload-panel">
+          <button class="cloud-button" id="cloud-add-player" type="button">+ Add Player</button>
+        </section>
       </div>
     </div>
   </div>
-  <div class="home-wrap">
-    <section id="coach-upload-panel" style="margin-top:20px;padding:16px;border:1px solid var(--line-strong);background:var(--paper-raised);">
-      <h2 class="admin-title">Pitcher Directory</h2>
-      <p class="cloud-help">Upload a Trackman Power BI pitching-report PDF to create a profile. Choose Internal for Diamond Zone program players or External for lesson pitchers from other teams, then select the age group and review the data.</p>
-      <button class="cloud-button" id="cloud-add-player" type="button">+ Add Player · Upload File</button>
-    </section>
-    <p id="cloud-empty" class="cloud-help" style="display:none;">No players have been imported yet. Use + Add Player to upload your first pitcher.</p>
-    <div class="dz-directory-tabs" role="tablist" aria-label="Player affiliation">
-      <button id="dz-directory-internal-tab" class="dz-directory-tab active" type="button" role="tab" aria-selected="true" aria-controls="dz-directory-internal">Internal <span id="dz-internal-count" class="dz-directory-count">0</span></button>
-      <button id="dz-directory-external-tab" class="dz-directory-tab" type="button" role="tab" aria-selected="false" aria-controls="dz-directory-external">External <span id="dz-external-count" class="dz-directory-count">0</span></button>
+  <div class="home-wrap dz-home-shell">
+    <div class="dz-home-toolbar">
+      <div class="dz-directory-tabs" role="tablist" aria-label="Player affiliation">
+        <button id="dz-directory-internal-tab" class="dz-directory-tab active" type="button" role="tab" aria-selected="true" aria-controls="dz-directory-internal">Internal <span id="dz-internal-count" class="dz-directory-count">0</span></button>
+        <button id="dz-directory-external-tab" class="dz-directory-tab" type="button" role="tab" aria-selected="false" aria-controls="dz-directory-external">External <span id="dz-external-count" class="dz-directory-count">0</span></button>
+      </div>
+      <label class="dz-directory-search" for="dz-player-search">
+        <span aria-hidden="true" class="dz-search-icon">⌕</span>
+        <span class="dz-visually-hidden">Search pitchers</span>
+        <input type="search" id="dz-player-search" placeholder="Find a pitcher..." autocomplete="off">
+      </label>
     </div>
-    <section class="dz-scouting-key" aria-labelledby="dz-scouting-key-title">
+    <div class="dz-home-layout">
+      <main class="dz-home-roster">
+        <div class="dz-directory-tools">
+          <div id="dz-age-filters" class="dz-age-filters" role="group" aria-label="Filter by age group"></div>
+          <span class="dz-directory-order">Pitches ranked by usage · Grades relative to age</span>
+        </div>
+        <p id="cloud-empty" class="cloud-help" style="display:none;">No players have been imported yet. Add a player from a Trackman session to get started.</p>
+        <div id="dz-directory-internal" role="tabpanel" aria-labelledby="dz-directory-internal-tab">
+          <div id="dz-internal-groups"></div>
+          <p id="dz-internal-empty" class="cloud-help" style="display:none;">No internal players yet.</p>
+        </div>
+        <div id="dz-directory-external" role="tabpanel" aria-labelledby="dz-directory-external-tab" style="display:none;">
+          <div class="roster" id="dz-external-roster"></div>
+          <p id="dz-external-empty" class="cloud-help" style="display:none;">No external players yet.</p>
+        </div>
+        <p id="dz-search-empty" class="cloud-help dz-search-empty" style="display:none;">No pitchers match your search or age filter.</p>
+        <p class="home-footnote">Scouting grades are saved by coaches, relative to each pitcher's age group. Select a pitcher to open the full profile.</p>
+      </main>
+      <aside class="dz-home-aside">
+        <section class="dz-scouting-key" aria-labelledby="dz-scouting-key-title">
       <div class="dz-scouting-key-heading">
         <h2 id="dz-scouting-key-title">20–80 Scouting Scale</h2>
         <span class="dz-scouting-age-label">AGE-BASED GRADES</span>
@@ -914,31 +944,18 @@
       </div>
       <p class="dz-scouting-footnote">Grades are coach-assigned, not calculated automatically from velocity. “Not graded” means no scouting grade has been saved for that pitch.</p>
     </section>
-    <div id="dz-directory-internal" role="tabpanel" aria-labelledby="dz-directory-internal-tab">
-      <p class="cloud-help dz-directory-description">Diamond Zone program pitchers, organized by age group.</p>
-      <div id="dz-internal-groups"></div>
-      <p id="dz-internal-empty" class="cloud-help" style="display:none;">No internal players yet.</p>
+      </aside>
     </div>
-    <div id="dz-directory-external" role="tabpanel" aria-labelledby="dz-directory-external-tab" style="display:none;">
-      <p class="cloud-help dz-directory-description">Lesson pitchers from other teams, listed alphabetically.</p>
-      <div class="roster" id="dz-external-roster"></div>
-      <p id="dz-external-empty" class="cloud-help" style="display:none;">No external players yet. Choose External when adding a pitcher.</p>
-    </div>
-    <p class="home-footnote">Select a pitcher to open their profile and coaching notes. Directory statistics reflect the pitching data saved for each player.</p>
   </div>
 </div>
-
 
 <!-- ============== ADMIN-ONLY VIEW ============== -->
 <div id="view-admin" style="display:none;">
   <div class="masthead">
-    <div class="home-wrap dz-branded-head">
-      <img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="106" height="92">
-      <div class="dz-head-copy">
-        <p class="facility">Diamond Zone CT · Pitching Lab</p>
-        <h1 class="page-title">Admin Dashboard</h1>
-        <p class="page-sub">Access requests, coach permissions and roster management</p>
-      </div>
+    <div class="home-wrap dz-admin-hero">
+      <p class="facility">Operations</p>
+      <h1 class="page-title">Admin Dashboard</h1>
+      <p class="page-sub">Manage account access, player archives and secure data backups.</p>
     </div>
   </div>
   <div class="home-wrap">
@@ -1307,6 +1324,8 @@ window.DZ_SET_DIRECTORY_TAB=function(tab){
   const external=DZ_DIRECTORY_TAB==='external';
   document.getElementById('dz-directory-internal').style.display=external?'none':'block';
   document.getElementById('dz-directory-external').style.display=external?'block':'none';
+  document.getElementById('dz-age-filters').style.display=external?'none':'flex';
+  dzApplyDirectoryFilters();
   for(const [name,isActive] of [['internal',!external],['external',external]]){
     const button=document.getElementById('dz-directory-'+name+'-tab');
     button.classList.toggle('active',isActive);
@@ -1331,6 +1350,63 @@ for(const [name,element] of [
 
 
 /* ================= Home view ================= */
+
+let DZ_SELECTED_AGE='all';
+function dzBuildAgeFilters(){
+  const holder=document.getElementById('dz-age-filters');
+  if(!holder)return;
+  const keys=ROSTER_GROUPS.map(group=>group.containerId.replace(/^roster-/,''));
+  if(DZ_SELECTED_AGE!=='all' && !keys.includes(DZ_SELECTED_AGE))DZ_SELECTED_AGE='all';
+  const targets=[['all','All ages'],...keys.map(key=>[key,key==='coach'?'Coach':key.toUpperCase()])];
+  holder.replaceChildren();
+  for(const [key,label] of targets){
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='dz-age-btn'+(key===DZ_SELECTED_AGE?' active':'');
+    button.textContent=label;
+    button.setAttribute('aria-pressed',String(key===DZ_SELECTED_AGE));
+    button.addEventListener('click',()=>{
+      DZ_SELECTED_AGE=key;
+      for(const btn of holder.querySelectorAll('button')){
+        const active=btn===button;
+        btn.classList.toggle('active',active);
+        btn.setAttribute('aria-pressed',String(active));
+      }
+      dzApplyDirectoryFilters();
+    });
+    holder.appendChild(button);
+  }
+}
+function dzApplyDirectoryFilters(){
+  const input=document.getElementById('dz-player-search');
+  if(!input)return;
+  const query=input.value.toLowerCase().trim();
+  let visibleTotal=0;
+  const external=DZ_DIRECTORY_TAB==='external';
+  for(const section of document.querySelectorAll('#dz-internal-groups .group')){
+    const sectionAge=section.querySelector('.roster')?.id.replace(/^roster-/,'')||'';
+    let sectionVisible=0;
+    for(const row of section.querySelectorAll('.player-row')){
+      const matches=row.dataset.search?.includes(query) &&
+        (DZ_SELECTED_AGE==='all'||DZ_SELECTED_AGE===sectionAge);
+      row.style.display=matches?'':'none';
+      if(matches)sectionVisible++;
+    }
+    section.style.display=sectionVisible?'':'none';
+    if(!external)visibleTotal+=sectionVisible;
+  }
+  for(const row of document.querySelectorAll('#dz-external-roster .player-row')){
+    const matches=row.dataset.search?.includes(query);
+    row.style.display=matches?'':'none';
+    if(external && matches)visibleTotal++;
+  }
+  const anyPlayers=external?EXTERNAL_PLAYER_IDS.length:
+    ROSTER_GROUPS.some(group=>group.ids.length);
+  document.getElementById('dz-search-empty').style.display=
+    anyPlayers && visibleTotal===0?'block':'none';
+}
+document.getElementById('dz-player-search').addEventListener('input',dzApplyDirectoryFilters);
+
 async function ensureOverridesLoaded(player){
   if(player.dataType!=='raw' || player._overridesLoaded) return;
   try{
@@ -1393,18 +1469,25 @@ async function renderHome(){
           const assigned=GRADES.includes(grade);
           const label=player._gradesLoadFailed?'Grade unavailable':assigned?grade+' Grade':'Not graded';
           const gradeStyle=assigned?' style="background:'+gradeColor(grade)+'"':'';
-          return `<span class="dz-usage-item"><span class="dz-usage-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)} <strong class="dz-usage-grade${assigned?'':' dz-usage-grade--unset'}"${gradeStyle}>${label}</strong><span class="dz-usage-velo">${mph}</span></span>`;
+          return `<span class="dz-usage-item" style="--dz-pitch-color:${cssColor(p.key)}" title="${dzEscapeText(p.name)} — ${dzEscapeText(label)} — ${mph}"><span class="dz-usage-dot" style="background:${cssColor(p.key)}"></span><span class="dz-pitch-name">${dzEscapeText(p.name)}</span> <strong class="dz-usage-grade${assigned?'':' dz-usage-grade--unset'}"${gradeStyle}>${label}</strong><span class="dz-usage-velo">${mph}</span></span>`;
         }).join('');
-      return `<a class="player-row" data-player-id="${dzEscapeText(id)}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
-        <div class="player-info">
-          <p class="player-name">${dzEscapeText(player.name)}</p>
-          <div class="dz-pitch-usage" aria-label="Pitches ordered by usage, with age-based scouting grades and average velocity">${usage||'<span class="player-blurb">No pitches recorded</span>'}</div>
+      const searchKey=dzEscapeText((player.name+' '+(player.ageLabel||'')).toLowerCase());
+      const ageKey=player.ageNum===28?'coach':String(player.ageNum)+'u';
+      const publicCode=player.publicId?'#'+dzEscapeText(player.publicId):'ID pending';
+      const affiliation=player.affiliation==='external'?'Lesson':'Program';
+      return `<a class="player-row" data-player-id="${dzEscapeText(id)}" data-search="${searchKey}" data-age="${ageKey}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
+        <div class="dz-roster-person">
+          <span class="player-name">${dzEscapeText(player.name)}</span>
+          <span class="dz-roster-meta">${publicCode} · ${dzEscapeText(player.ageLabel||'')} · ${affiliation}</span>
         </div>
-        <span class="chevron">→</span>
+        <div class="dz-pitch-usage" aria-label="Pitches ordered by usage, with age-based scouting grades and average velocity">${usage||'<span class="player-blurb">No pitches recorded</span>'}</div>
+        <span class="chevron" aria-hidden="true">›</span>
       </a>`;
     }));
     document.getElementById(group.containerId).innerHTML = rows.join('');
   }
+  dzBuildAgeFilters();
+  dzApplyDirectoryFilters();
 }
 
 /* ================= Reusable scatter chart ================= */
