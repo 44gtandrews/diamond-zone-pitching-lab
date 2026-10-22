@@ -67,14 +67,27 @@
     };
   }
 
+  // Last token is the surname; ignore common generational suffixes (Jr., III, etc.).
+  // Hyphenated surnames remain a single last-name token.
+  function surname(name) {
+    const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+    while(parts.length>1 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(parts[parts.length-1].replace(/,$/,''))){
+      parts.pop();
+    }
+    return parts.length?parts[parts.length-1]:'';
+  }
+  function byLastName(a,b) {
+    return surname(a.name).localeCompare(surname(b.name),undefined,{sensitivity:'base'})||
+      String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})||
+      String(a.id||'').localeCompare(String(b.id||''));
+  }
   function sortGroups() {
-    // Existing players without an affiliation are Internal for backward compatibility.
-    const programPlayers=Object.values(PLAYERS).filter(p=>p.affiliation!=='external');
-    const lessonPlayers=Object.values(PLAYERS).filter(p=>p.affiliation==='external');
-    const byName=(a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'})||
-      a.id.localeCompare(b.id);
-    programPlayers.sort(byName);
-    lessonPlayers.sort(byName);
+    // Existing players without an affiliation are Internal. Inactive players are archived.
+    const active=Object.values(PLAYERS).filter(p=>p.inactive!==true);
+    const programPlayers=active.filter(p=>p.affiliation!=='external');
+    const lessonPlayers=active.filter(p=>p.affiliation==='external');
+    programPlayers.sort(byLastName);
+    lessonPlayers.sort(byLastName);
     EXTERNAL_PLAYER_IDS.length=0;
     EXTERNAL_PLAYER_IDS.push(...lessonPlayers.map(p=>p.id));
     ROSTER_GROUPS.length=0;
@@ -114,7 +127,7 @@
     $('dz-external-count').textContent=String(lessonPlayers.length);
     $('dz-internal-empty').style.display=programPlayers.length?'none':'block';
     $('dz-external-empty').style.display=lessonPlayers.length?'none':'block';
-    $('cloud-empty').style.display=Object.keys(PLAYERS).length?'none':'block';
+    $('cloud-empty').style.display=active.length?'none':'block';
     document.querySelector('#view-home .page-sub').textContent=
       programPlayers.length+' internal · '+lessonPlayers.length+' external · '+
       (programPlayers.length+lessonPlayers.length)+' total pitchers';
@@ -181,6 +194,8 @@
     $('cloud-identity').textContent=activeUser.email+' · '+(staff.role==='admin'?'Administrator':'Coach');
     $('cloud-admin-nav').style.display=window.DZ_IS_ADMIN?'':'none';
     $('cloud-edit-profile').style.display=window.DZ_IS_ADMIN?'':'none';
+    $('cloud-inactivate-player').style.display=window.DZ_IS_ADMIN?'':'none';
+    $('cloud-delete-player').style.display=window.DZ_IS_ADMIN?'':'none';
     await loadPlayers();
     if(staff.role==='admin' && Object.values(PLAYERS).some(p=>!hasPublicId(p))){
       try {
@@ -193,9 +208,15 @@
     }
     await window.DZ_OPEN_CURRENT_URL();
     window.DZ_IMPORTER_INIT({firestore:db,currentUser:activeUser});
-    if(staff.role==='admin') await listCoaches();
+    if(staff.role==='admin') {
+      await listCoaches();
+      renderInactivePlayers();
+    }
   }
-  window.DZ_RELOAD_ROSTER=async()=>{await loadPlayers();};
+  window.DZ_RELOAD_ROSTER=async()=>{
+    await loadPlayers();
+    if(window.DZ_IS_ADMIN)renderInactivePlayers();
+  };
   window.DZ_CURRENT_PLAYER=()=>currentPlayerId;
   async function checkAccess(user) {
     const version=++accessVersion;
@@ -356,6 +377,134 @@
     }catch(error){
       notify($('cloud-edit-status'),'Profile update failed: '+friendly(error),true);
     }finally{btn.disabled=false;}
+  });
+
+  // Administrators manage inactive pitchers without changing the player's IDs,
+  // Trackman sessions or related coaching sections.
+  function renderInactivePlayers() {
+    if(!window.DZ_IS_ADMIN)return;
+    const list=$('cloud-inactive-list');
+    list.replaceChildren();
+    const inactive=Object.values(PLAYERS).filter(p=>p.inactive===true).sort(byLastName);
+    $('cloud-inactive-count').textContent=String(inactive.length);
+    for(const player of inactive){
+      const item=document.createElement('li');
+      const summary=document.createElement('div');
+      summary.className='dz-coach-detail';
+      const name=document.createElement('div');name.className='dz-coach-email';
+      name.textContent=player.name;
+      const details=document.createElement('div');details.className='dz-inactive-meta';
+      details.textContent=(player.affiliation==='external'?'External':'Internal')+
+        ' · '+player.ageLabel+
+        (player.publicId?' · ID '+player.publicId:'');
+      summary.append(name,details);
+      const actions=document.createElement('div');actions.className='dz-coach-actions';
+      const restore=document.createElement('button');restore.type='button';
+      restore.className='cloud-button';restore.textContent='Reactivate';
+      restore.addEventListener('click',async()=>{
+        restore.disabled=true;
+        try{
+          await setPlayerInactive(player.id,false);
+          notify($('cloud-inactive-status'),player.name+' reactivated.');
+        }catch(e){
+          notify($('cloud-inactive-status'),'Reactivation failed: '+friendly(e),true);
+          restore.disabled=false;
+        }
+      });
+      const remove=document.createElement('button');remove.type='button';
+      remove.className='cloud-button secondary dz-danger-button';remove.textContent='Delete';
+      remove.addEventListener('click',async()=>{
+        remove.disabled=true;
+        try{await permanentlyDeletePlayer(player.id);}
+        catch(e){
+          notify($('cloud-inactive-status'),'Deletion failed: '+friendly(e),true);
+          remove.disabled=false;
+        }
+      });
+      actions.append(restore,remove);
+      item.append(summary,actions);
+      list.appendChild(item);
+    }
+    if(inactive.length===0){
+      const message=document.createElement('li');
+      message.className='dz-empty-requests';
+      message.textContent='No inactive players. Inactivate a player from their profile to archive them here.';
+      list.appendChild(message);
+    }
+  }
+  window.DZ_REFRESH_INACTIVE=renderInactivePlayers;
+  $('cloud-refresh-inactive').addEventListener('click',async()=>{
+    if(!window.DZ_IS_ADMIN)return;
+    try{
+      await loadPlayers();
+      renderInactivePlayers();
+      notify($('cloud-inactive-status'),'Inactive players refreshed.');
+    }catch(e){notify($('cloud-inactive-status'),friendly(e),true);}
+  });
+
+  async function setPlayerInactive(id,shouldInactivate){
+    if(staff?.role!=='admin')throw Error('Administrator access required.');
+    const ref=db.collection('players').doc(id);
+    await db.runTransaction(async tx=>{
+      const doc=await tx.get(ref);
+      if(!doc.exists)throw Error('This player no longer exists.');
+      tx.update(ref,{
+        inactive:shouldInactivate,
+        statusChangedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        statusChangedBy:activeUser.email
+      });
+    });
+    await loadPlayers();
+    renderInactivePlayers();
+    if(shouldInactivate)window.DZ_GO_HOME();
+  }
+  $('cloud-inactivate-player').addEventListener('click',async()=>{
+    if(staff?.role!=='admin')return;
+    const id=window.DZ_CURRENT_PLAYER(),player=PLAYERS[id];
+    if(!player || player.inactive===true)return;
+    if(!window.confirm('Inactivate '+player.name+'?\n\nThe profile will be removed from coach directories and stored in Admin Dashboard → Inactive Players. All statistics and coaching notes will be preserved.'))return;
+    const button=$('cloud-inactivate-player');button.disabled=true;
+    try{
+      await setPlayerInactive(id,true);
+      notify($('cloud-inactive-status'),player.name+' archived. You can reactivate this profile anytime.');
+    }catch(e){window.alert('Unable to inactivate player: '+friendly(e));}
+    finally{button.disabled=false;}
+  });
+
+  async function permanentlyDeletePlayer(id){
+    if(staff?.role!=='admin')throw Error('Administrator access required.');
+    // Always read fresh metadata rather than deleting based on the in-memory list.
+    const ref=db.collection('players').doc(id),record=await ref.get();
+    if(!record.exists)throw Error('This player no longer exists.');
+    const player=record.data();
+    const accepted=window.prompt(
+      'PERMANENTLY DELETE '+player.name+'?\n\nThis permanently erases their pitching records, notes, grades, and profile. It cannot be undone without a backup.\n\nConsider downloading a full JSON backup from Admin first.\n\nType DELETE to confirm:'
+    );
+    if(accepted!=='DELETE')return false;
+    // An atomic batch prevents a partially deleted profile. We intentionally
+    // retain the anonymous /playerCodes/{code} reservation as a permanent
+    // tombstone, so an old share link cannot be assigned to a different athlete.
+    const sections=await db.collection('playerEdits').doc(id).collection('sections').get();
+    if(sections.size>400)throw Error('Unusually large coaching history. Contact an administrator to safely remove it.');
+    const batch=db.batch();
+    sections.forEach(doc=>batch.delete(doc.ref));
+    batch.delete(ref);
+    await batch.commit();
+    delete PLAYERS[id];
+    await loadPlayers();
+    renderInactivePlayers();
+    window.DZ_GO_HOME();
+    notify($('cloud-inactive-status'),player.name+' permanently deleted. Their six-digit ID will never be recycled.');
+    return true;
+  }
+  $('cloud-delete-player').addEventListener('click',async()=>{
+    if(staff?.role!=='admin')return;
+    const id=window.DZ_CURRENT_PLAYER();
+    if(!id || !PLAYERS[id])return;
+    const button=$('cloud-delete-player');button.disabled=true;
+    try{await permanentlyDeletePlayer(id);}
+    catch(e){window.alert('Unable to delete player: '+friendly(e));}
+    finally{button.disabled=false;}
   });
 
   function validPlayer(p) {
