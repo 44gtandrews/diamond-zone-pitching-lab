@@ -25,6 +25,7 @@
     window.DZ_PARENT_PLAYER_ID=null;
     window.DZ_EDIT_ENABLED=false;
     window.DZ_CAN_UPLOAD=false;
+    document.body.removeAttribute('data-dz-role');
     authScreen.style.display='block';
     $('cloud-bar').style.display='none';
     $('view-home').style.display='none';
@@ -227,6 +228,7 @@
     window.DZ_EDIT_ENABLED=window.DZ_IS_ADMIN||staff.role==='pitching_coach';
     window.DZ_CAN_UPLOAD=window.DZ_EDIT_ENABLED;
     window.DZ_AUTHORIZED=true;
+    document.body.dataset.dzRole=staff.role;
     installStorage();
     authScreen.style.display='none';
     $('cloud-bar').style.display='block';
