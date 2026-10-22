@@ -490,10 +490,11 @@
     sections.forEach(doc=>batch.delete(doc.ref));
     batch.delete(ref);
     await batch.commit();
+    const wasOpenProfile=window.DZ_CURRENT_PLAYER()===id;
     delete PLAYERS[id];
     await loadPlayers();
     renderInactivePlayers();
-    window.DZ_GO_HOME();
+    if(wasOpenProfile)window.DZ_GO_HOME();
     notify($('cloud-inactive-status'),player.name+' permanently deleted. Their six-digit ID will never be recycled.');
     return true;
   }
