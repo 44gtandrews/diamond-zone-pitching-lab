@@ -543,10 +543,14 @@
     // An atomic batch prevents a partially deleted profile. We intentionally
     // retain the anonymous /playerCodes/{code} reservation as a permanent
     // tombstone, so an old share link cannot be assigned to a different athlete.
-    const sections=await db.collection('playerEdits').doc(id).collection('sections').get();
-    if(sections.size>400)throw Error('Unusually large coaching history. Contact an administrator to safely remove it.');
+    const [sections,sessions]=await Promise.all([
+      db.collection('playerEdits').doc(id).collection('sections').get(),
+      ref.collection('sessions').get()
+    ]);
+    if(sections.size+sessions.size>450)throw Error('Large player/session history: contact an administrator to safely remove it in multiple batches.');
     const batch=db.batch();
     sections.forEach(doc=>batch.delete(doc.ref));
+    sessions.forEach(doc=>batch.delete(doc.ref));
     batch.delete(ref);
     await batch.commit();
     const wasOpenProfile=window.DZ_CURRENT_PLAYER()===id;
@@ -663,13 +667,14 @@
     try{
       const collections=['players','playerCodes','allowlist','coachRequests'];
       const snaps=await Promise.all(collections.map(name=>db.collection(name).get()));
-      const payload={format:'diamond-zone-full-backup',schemaVersion:2,
+      const payload={format:'diamond-zone-full-backup',schemaVersion:3,
         projectId:firebase.app().options.projectId,
         exportedAt:new Date().toISOString(),collections:{}};
       collections.forEach((name,i)=>{
         payload.collections[name]=snaps[i].docs.map(dzBackupRow);
       });
       payload.collections.playerEdits=[];
+      payload.collections.playerSessions=[];
       const players=snaps[0].docs;
       // Reading one player's note sections at a time avoids bursty Firestore reads.
       for(let i=0;i<players.length;i++){
@@ -678,12 +683,17 @@
         notes.docs.forEach(doc=>payload.collections.playerEdits.push({
           playerId:player.id,section:doc.id,data:dzEncodeBackup(doc.data())
         }));
+        const sessions=await db.collection('players').doc(player.id).collection('sessions').get();
+        sessions.docs.forEach(doc=>payload.collections.playerSessions.push({
+          playerId:player.id,id:doc.id,data:dzEncodeBackup(doc.data())
+        }));
         if((i+1)%10===0)dzBackupMessage('Collecting notes and grades: '+(i+1)+' / '+players.length+' players...');
       }
       const stamp=new Date().toISOString().slice(0,10);
       dzDownloadJson('diamond-zone-full-backup-'+stamp+'.json',payload);
       dzBackupMessage('Full backup downloaded: '+players.length+' players, '+
         payload.collections.playerEdits.length+' coaching records, '+
+        payload.collections.playerSessions.length+' preserved sessions, '+
         payload.collections.playerCodes.length+' player IDs, '+
         payload.collections.allowlist.length+' staff records and '+
         payload.collections.coachRequests.length+' coach requests. Store the JSON securely.');
@@ -692,11 +702,13 @@
   });
 
   function dzValidateBackup(parsed){
-    if(!parsed||parsed.format!=='diamond-zone-full-backup'||parsed.schemaVersion!==2||
+    if(!parsed||parsed.format!=='diamond-zone-full-backup'||![2,3].includes(parsed.schemaVersion)||
        !parsed.collections||typeof parsed.collections!=='object')throw Error('Select a Diamond Zone FULL backup (schema version 2).');
     if(parsed.projectId!==firebase.app().options.projectId)
       throw Error('Backup is from a different Firebase project. Restore cancelled.');
-    const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits'];
+    const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits','playerSessions'];
+    if(parsed.schemaVersion===2&&!('playerSessions' in parsed.collections))
+      parsed.collections.playerSessions=[];
     for(const key of arrays){
       if(!Array.isArray(parsed.collections[key])||parsed.collections[key].length>5000)
         throw Error('Invalid or oversized '+key+' backup collection.');
@@ -707,7 +719,8 @@
       decoded[key]=parsed.collections[key].map(item=>{
         if(!item || typeof item!=='object' || !item.data || typeof item.data!=='object')
           throw Error('Invalid '+key+' entry.');
-        const id=key==='playerEdits'?String(item.playerId||'')+':'+String(item.section||''):String(item.id||'');
+        const id=key==='playerEdits'?String(item.playerId||'')+':'+String(item.section||''):
+          key==='playerSessions'?String(item.playerId||'')+':'+String(item.id||''):String(item.id||'');
         if(!id||id.includes('/')||seen.has(id))throw Error('Invalid or duplicate '+key+' ID: '+id);
         seen.add(id);
         return {...item,data:dzDecodeBackup(item.data)};
@@ -730,6 +743,15 @@
     for(const [id,player] of backupPlayers){
       if(player.publicId && codes.get(String(player.publicId))!==id)
         throw Error('Six-digit ID reservation mismatch for '+player.name);
+    }
+    for(const item of decoded.playerSessions){
+      if(!backupPlayers.has(item.playerId)||typeof item.id!=='string'||
+         !/^[a-zA-Z0-9-]{1,80}$/.test(item.id)||
+         item.data.id!==item.id||
+         !['single','baseline','historical'].includes(item.data.kind)||
+         !Array.isArray(item.data.pitches)||item.data.pitches.length>8||
+         !Array.isArray(item.data.pitchData)||item.data.pitchData.length>600)
+        throw Error('Invalid player session backup: '+item.playerId+' / '+item.id);
     }
     for(const item of decoded.playerEdits){
       if(!backupPlayers.has(item.playerId)||
@@ -799,7 +821,8 @@
           throw Error('Reserved ID '+code+' belongs to another player. No records were restored.');
       }
       const summary=decoded.players.length+' players, '+decoded.playerEdits.length+
-        ' coaching records, '+decoded.allowlist.length+' staff approvals, '+
+        ' coaching records, '+decoded.playerSessions.length+' sessions, '+
+        decoded.allowlist.length+' staff approvals, '+
         decoded.coachRequests.length+' coach requests.';
       const permission=window.prompt('EMERGENCY RESTORE from '+parsed.exportedAt+'\n'+summary+
         '\n\nMatching existing records will be OVERWRITTEN, including coach notes and approvals. '+
@@ -814,7 +837,15 @@
         item=>db.collection('players').doc(item.id),
         item=>item.data,20);
 
-      // Stage 2: create only missing reservations; never overwrite an existing code.
+      // Stage 2: restore the exact immutable session history under its parent.
+      // This also restores the historical fall baseline if present in the backup.
+      if(decoded.playerSessions.length){
+        dzBackupMessage('Restoring '+decoded.playerSessions.length+' player sessions...');
+        await dzRestoreBatch(decoded.playerSessions,
+          item=>db.collection('players').doc(item.playerId).collection('sessions').doc(item.id),
+          item=>item.data,15);
+      }
+      // Stage 3: create only missing reservations; never overwrite an existing code.
       const missingCodes=decoded.playerCodes.filter(item=>
         !liveCodes.has(item.id)&&backupPlayers.has(item.data.playerId));
       if(missingCodes.length){
@@ -852,8 +883,8 @@
       }
       await loadPlayers();
       await listCoaches();
-      dzBackupMessage('Restore completed. Recovered '+decoded.players.length+' player profiles and '+
-        decoded.playerEdits.length+' coaching records. Existing admin roles and accounts were preserved. '+
+      dzBackupMessage('Restore completed. Recovered '+decoded.players.length+' player profiles, '+
+        decoded.playerSessions.length+' sessions and '+decoded.playerEdits.length+' coaching records. Existing admin roles and accounts were preserved. '+
         'Records absent from the backup were not deleted.');
     }catch(e){
       dzBackupMessage('RESTORE FAILED: '+friendly(e)+
