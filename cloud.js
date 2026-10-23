@@ -19,6 +19,7 @@
   const ALLOWED_ROLES=Object.keys(ROLE_LABELS);
 
   function showAuth(title, description, mode='login', message='') {
+    window.DZ_SET_PORTAL_LOADING?.(false);
     window.DZ_AUTHORIZED=false;
     window.DZ_IS_ADMIN=false;
     window.DZ_ROLE=null;
@@ -230,6 +231,7 @@
     window.DZ_AUTHORIZED=true;
     document.body.dataset.dzRole=staff.role;
     installStorage();
+    window.DZ_SET_PORTAL_LOADING?.(true);
     authScreen.style.display='none';
     $('cloud-bar').style.display='block';
     $('cloud-identity').textContent=activeUser.email+' · '+ROLE_LABELS[staff.role];
@@ -242,6 +244,7 @@
     $('coach-upload-panel').style.display=window.DZ_CAN_UPLOAD?'':'none';
     $('cloud-update-player').style.display=window.DZ_CAN_UPLOAD?'':'none';
     document.querySelectorAll('#view-player .back-link').forEach(a=>a.style.display=parent?'none':'');
+    try {
     await loadPlayers();
     if(staff.role==='admin' && Object.values(PLAYERS).some(p=>!hasPublicId(p))){
       try {
@@ -253,6 +256,9 @@
       }
     }
     await window.DZ_OPEN_CURRENT_URL();
+    } finally {
+      window.DZ_SET_PORTAL_LOADING?.(false);
+    }
     window.DZ_IMPORTER_INIT({firestore:db,currentUser:activeUser});
     if(staff.role==='admin') {
       await listCoaches();
