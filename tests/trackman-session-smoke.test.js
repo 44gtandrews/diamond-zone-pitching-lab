@@ -76,7 +76,7 @@ for(const [key,average,maximum] of [
   assert.equal(p.veloMax,maximum,key+' maximum');
 }
 assert.equal(result.individualPitches[0].ext,null,'absent extension remains missing');
-assert.equal(result.individualPitches[1].ext,6+2/12,'feet-and-inches conversion precision');
+assert.equal(result.individualPitches[1].ext,6.167,'feet-and-inches conversion precision');
 const dropped=pages.map(p=>({...p,items:p.items.slice()}));
 dropped[2].items=dropped[2].items.filter(it=>it.s!=='#38');
 assert.throws(()=>parser.parsePages(dropped,pixel),/Missing pitch row/);
