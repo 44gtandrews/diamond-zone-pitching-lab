@@ -1511,6 +1511,71 @@
   @media(max-width:640px){.dz-hidden-pitches{padding:14px 2px;gap:10px;}
     .dz-hide-pitch,.dz-restore-pitch{min-height:42px;}}
 
+
+  /* Clubhouse loading states — indeterminate, never fabricated percentage. */
+  .dz-loading-screen{
+    min-height: min(56vh,540px);
+    display:flex;align-items:center;justify-content:center;
+    padding:42px 18px;
+    background:radial-gradient(ellipse at 50% 0%,rgba(0,154,166,.1),transparent 65%);
+  }
+  .dz-loading-center{
+    width:min(340px,100%);display:flex;flex-direction:column;
+    align-items:center;text-align:center;gap:10px;
+  }
+  .dz-loading-spinner{
+    display:inline-block;flex:0 0 31px;
+    width:31px;height:31px;border:3px solid #27464E;
+    border-top-color:#43CFD8;border-right-color:#43CFD8;
+    border-radius:50%;animation:dz-loading-spin .82s linear infinite;
+  }
+  .dz-loading-title,.dz-loading-roster strong{
+    color:#F0FAFC;font:800 16px/1.4 Inter,system-ui,sans-serif;
+    letter-spacing:-.02em;
+  }
+  .dz-loading-description,.dz-loading-roster p{
+    color:#99B7BE;font:500 12px/1.55 Inter,system-ui,sans-serif;
+    margin:0;
+  }
+  .dz-loading-bar{
+    margin-top:10px;width:100%;height:3px;
+    background:#29444D;border-radius:3px;position:relative;
+    overflow:hidden;
+  }
+  .dz-loading-bar>span{
+    position:absolute;inset:0 auto 0 0;
+    width:37%;background:linear-gradient(90deg,#168B99,#60D6D9);
+    border-radius:3px;animation:dz-loading-pulse 1.7s ease-in-out infinite;
+  }
+  .dz-loading-roster{
+    display:flex;align-items:center;gap:19px;
+    padding:26px 22px;margin:4px 0 16px;min-height:130px;
+    background:#101F26;border:1px solid #2B4650;border-radius:3px;
+  }
+  .dz-loading-roster .dz-loading-copy{flex:1;min-width:0;}
+  .dz-loading-roster .dz-loading-copy p{margin-top:5px;}
+  .dz-loading-roster .dz-loading-bar{max-width:250px;}
+  .dz-roster-error{
+    padding:19px 20px;border:1px solid #9B6262;
+    background:#281A20;color:#F9E8E8;border-radius:3px;
+  }
+  .dz-roster-error strong{font:750 14px Inter,system-ui,sans-serif;}
+  .dz-roster-error p{font:500 12px Inter,system-ui,sans-serif;margin:8px 0 13px;}
+  @keyframes dz-loading-spin{to{transform:rotate(360deg);}}
+  @keyframes dz-loading-pulse{
+    0%{left:-38%;}
+    55%,100%{left:103%;}
+  }
+  @media(max-width:640px){
+    .dz-loading-screen{min-height:46vh;}
+    .dz-loading-roster{min-height:115px;padding:22px 16px;gap:13px;}
+    .dz-loading-roster .dz-loading-spinner{width:26px;height:26px;flex-basis:26px;}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .dz-loading-spinner{animation:none;border-color:#36BAC4;}
+    .dz-loading-bar>span{animation:none;left:0;width:100%;}
+  }
+
 </style>
 </head>
 <body>
@@ -1550,7 +1615,15 @@
   </div>
 </div>
 
-
+<!-- Displayed during the initial authenticated Firestore player fetch. -->
+<section id="dz-portal-loading" class="dz-loading-screen" role="status" aria-live="polite" aria-label="Loading pitching portal" style="display:none;">
+  <div class="dz-loading-center">
+    <span class="dz-loading-spinner" aria-hidden="true"></span>
+    <div class="dz-loading-title">Loading Pitching Portal</div>
+    <p class="dz-loading-description">Retrieving player profiles securely...</p>
+    <div class="dz-loading-bar" aria-hidden="true"><span></span></div>
+  </div>
+</section>
 
 <!-- ============== HOME VIEW ============== -->
 <div id="view-home" style="display:none;">
@@ -1587,6 +1660,15 @@
           <div id="dz-age-filters" class="dz-age-filters" role="group" aria-label="Filter by age group"></div>
           <span class="dz-directory-order">Pitches ranked by usage · Grades relative to age</span>
         </div>
+        <section id="dz-roster-loading" class="dz-loading-roster" role="status" aria-live="polite" aria-label="Loading player directory" style="display:none;">
+          <span class="dz-loading-spinner" aria-hidden="true"></span>
+          <div class="dz-loading-copy">
+            <strong>Loading player directory</strong>
+            <p>Preparing player profiles and scouting grades...</p>
+            <div class="dz-loading-bar" aria-hidden="true"><span></span></div>
+          </div>
+        </section>
+        <div id="dz-roster-results">
         <p id="cloud-empty" class="cloud-help" style="display:none;">No players have been imported yet. Add a player from a Trackman session to get started.</p>
         <div id="dz-directory-internal" role="tabpanel" aria-labelledby="dz-directory-internal-tab">
           <div id="dz-internal-groups"></div>
@@ -1597,6 +1679,12 @@
           <p id="dz-external-empty" class="cloud-help" style="display:none;">No external players yet.</p>
         </div>
         <p id="dz-search-empty" class="cloud-help dz-search-empty" style="display:none;">No pitchers match your search or age filter.</p>
+        </div>
+        <section id="dz-roster-error" class="dz-roster-error" role="alert" style="display:none;">
+          <strong>Could not load the player directory</strong>
+          <p>Check your connection and try again.</p>
+          <button class="cloud-button secondary" id="dz-retry-directory" type="button">Retry loading</button>
+        </section>
         <p class="home-footnote">Scouting grades are saved by coaches, relative to each pitcher's age group. Select a pitcher to open the full profile.</p>
       </main>
       <aside class="dz-home-aside">
@@ -2031,6 +2119,25 @@ for(const [name,element] of [
 /* ================= Home view ================= */
 
 let DZ_SELECTED_AGE='all';
+// Loading is separate from zero-results state. The roster must never claim
+// no matches while async grade/override reads are still in progress.
+let DZ_DIRECTORY_LOADING=false;
+let DZ_DIRECTORY_LOAD_FAILED=false;
+let DZ_DIRECTORY_RENDER_VERSION=0;
+window.DZ_SET_PORTAL_LOADING=function(loading){
+  const screen=document.getElementById('dz-portal-loading');
+  if(screen)screen.style.display=loading?'flex':'none';
+};
+function dzSetDirectoryLoading(loading){
+  DZ_DIRECTORY_LOADING=Boolean(loading);
+  if(loading)DZ_DIRECTORY_LOAD_FAILED=false;
+  document.getElementById('dz-roster-loading').style.display=loading?'flex':'none';
+  document.getElementById('dz-roster-results').style.display=loading?'none':'';
+  document.getElementById('dz-roster-error').style.display='none';
+  if(loading)document.getElementById('dz-search-empty').style.display='none';
+}
+document.getElementById('dz-retry-directory').addEventListener('click',()=>renderHome());
+
 function dzBuildAgeFilters(){
   const holder=document.getElementById('dz-age-filters');
   if(!holder)return;
@@ -2059,6 +2166,10 @@ function dzBuildAgeFilters(){
 function dzApplyDirectoryFilters(){
   const input=document.getElementById('dz-player-search');
   if(!input)return;
+  if(DZ_DIRECTORY_LOADING||DZ_DIRECTORY_LOAD_FAILED){
+    document.getElementById('dz-search-empty').style.display='none';
+    return;
+  }
   const query=input.value.toLowerCase().trim();
   let visibleTotal=0;
   const external=DZ_DIRECTORY_TAB==='external';
@@ -2133,6 +2244,10 @@ function dzEscapeText(text){
   return String(text??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 async function renderHome(){
+  const version=++DZ_DIRECTORY_RENDER_VERSION;
+  dzSetDirectoryLoading(true);
+  try{
+  const rendered=[];
   for(const group of [...ROSTER_GROUPS,{containerId:'dz-external-roster',ids:EXTERNAL_PLAYER_IDS}]){
     const rows = await Promise.all(group.ids.map(async id=>{
       const player = PLAYERS[id];
@@ -2165,11 +2280,23 @@ async function renderHome(){
         <span class="chevron" aria-hidden="true">›</span>
       </a>`;
     }));
-    document.getElementById(group.containerId).innerHTML =
-      '<div class="dz-roster-columns" aria-hidden="true"><span>Pitcher</span><span>Pitch arsenal <small>· ranked by usage</small></span><span></span></div>'+rows.join('');
+    rendered.push([group.containerId,
+      '<div class="dz-roster-columns" aria-hidden="true"><span>Pitcher</span><span>Pitch arsenal <small>· ranked by usage</small></span><span></span></div>'+rows.join('')]);
   }
+  if(version!==DZ_DIRECTORY_RENDER_VERSION)return;
+  for(const [id,html] of rendered)document.getElementById(id).innerHTML=html;
   dzBuildAgeFilters();
+  dzSetDirectoryLoading(false);
   dzApplyDirectoryFilters();
+  }catch(error){
+    if(version!==DZ_DIRECTORY_RENDER_VERSION)return;
+    console.error('Failed loading player directory',error);
+    DZ_DIRECTORY_LOAD_FAILED=true;
+    dzSetDirectoryLoading(false);
+    document.getElementById('dz-roster-results').style.display='none';
+    document.getElementById('dz-roster-error').style.display='block';
+    document.getElementById('dz-search-empty').style.display='none';
+  }
 }
 
 /* ================= Reusable scatter chart ================= */
@@ -2791,8 +2918,9 @@ function showHome(){
   document.getElementById('view-player').style.display = 'none';
   document.getElementById('view-home').style.display = 'block';
   dzSetTopNav('home');
+  dzSetDirectoryLoading(true);
   window.DZ_SET_DIRECTORY_TAB(DZ_DIRECTORY_TAB);
-  renderHome();
+  void renderHome();
   window.scrollTo(0,0);
 }
 
