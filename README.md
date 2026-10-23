@@ -1,3 +1,17 @@
+# Clubhouse directory loading indicators — October 23, 2026
+
+The authenticated portal now shows two matching teal loading states so users never confuse pending data with an empty player roster:
+
+- **Initial Firestore fetch:** a centered spinner and indeterminate progress animation appear after account authorization and while the shared player roster is retrieved. This screen is dismissed after navigation starts, including on failed authentication or data loading. The bar does not invent percent-complete values.
+- **Directory grade loading:** when the directory begins rendering, an inline status card shows “Loading player directory — Preparing player profiles and scouting grades...”. The roster and all empty-search messages remain hidden until all asynchronous per-player grade and pitch-type override reads have finished.
+- Directory rows are built offscreen and applied together to eliminate partial population and false “No pitchers match your search or age filter” flashes. Search and age-filter settings remain intact and apply once rendering completes.
+- Directory error handling offers **Retry loading** instead of falsely claiming no matches. A render-generation guard prevents stale overlapping requests from overwriting newer results.
+- The spinner, animated bar, and reduced-motion static alternatives follow the approved charcoal-and-teal Clubhouse visual theme, including mobile screens.
+
+Only `index.html` and `cloud.js` change in this update. Importers, player data models, scouting grades, charts, coaching notes, Firestore rules, domain and hosting configuration remain unchanged.
+
+**Checks:** inline/external JavaScript syntax, balanced HTML/CSS and preserved original DOM identifiers; mocked asynchronous grade-fetch test confirming spinner → populated roster; real search-no-match only after loading; simulated network failure confirming retry/alert presentation.
+
 # Individual-pitch Trackman session PDFs — October 22, 2026
 
 **Third report format supported:** native Trackman pitching-practice reports headed "Pitches in session" with numbered, individually measured pitch rows across multiple PDF pages (example: `TempPlayerSessionReport.pdf`, 38 pitches, July 31, 2026).
