@@ -118,6 +118,19 @@ $('session-save').onclick=async()=>{
  const ref=db.collection('players').doc(pid),now=firebase.firestore.FieldValue.serverTimestamp(),incoming=rows.map(r=>({...r,name:names[r.key]})).sort((a,b)=>b.n-a.n);
  const sessionKey='session-'+(sessionFingerprint||fileHash).slice(0,40);
  const sessionRef=ref.collection('sessions').doc(sessionKey);
+ // Per-metric valid sample counts prevent missing Trackman readings from
+ // diluting newer window averages. Historic legacy aggregates lack these counts.
+ if(reportFormat==='individual-session'){
+   for(const p of incoming){
+     const measurements=individualPitches.filter(row=>row.key===p.key);
+     p.validCounts={};
+     for(const field of ['velo','spin','ivb','hb','ext','relHeight','relSide','spinEff']){
+       p.validCounts[field]=measurements.filter(row=>typeof row[field]==='number'&&Number.isFinite(row[field])).length;
+       if(p.validCounts[field]===0 && p[field]!=null)
+         p.validCounts[field]=p.n; // manually reviewed replacement value
+     }
+   }
+ }
  const sessionRecord={
    id:sessionKey,kind:sessionKind,date:savedDate,importedAt:new Date().toISOString(),
    label:sessionKind==='historical'?'Historical multi-session / undated summary':null,
@@ -138,7 +151,9 @@ $('session-save').onclick=async()=>{
      throw Error('Session has more than 600 individual pitches; split the export to keep the player record safe.');
    audit.sessionDate=sessionDate;
    audit.sessionFingerprint=sessionFingerprint;
-   audit.pitchData=individualPitches.map(p=>({...p}));
+   // Raw measurements now belong only to the immutable session document,
+   // not the bounded /players import-history array (Firestore 1 MiB limit).
+   audit.pitchDataStoredInSession=true;
  }
  if(reportFormat==='pitch-type-summary'&&mode==='update'){
    if(!window.confirm('Replace this player\'s prior pitch-type averages with this report? The previous averages will remain in the import history, and scouting grades/notes will be preserved. Pitch counts and usage are not available in this report.'))return;
