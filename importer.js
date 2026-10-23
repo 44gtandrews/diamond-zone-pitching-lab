@@ -27,6 +27,7 @@ async function pdf(file){
  individualPitches=data.reportFormat==='individual-session'&&Array.isArray(data.individualPitches)
    ?data.individualPitches.map(p=>({...p})):[];
  sessionDate=data.reportFormat==='individual-session'?data.sessionDate||null:null;
+ if(sessionDate)$('session-date').value=sessionDate;
  pdfText=data.text||'';
  if(mode==='new' && data.playerName && !$('session-player-name').value.trim()){
   $('session-player-name').value=data.playerName;
@@ -54,7 +55,7 @@ function render(){
  input.oninput=()=>{r[f]=f==='tilt'?input.value.trim()||null:num(input.value,['n','spin','spinMax','strike','strikeExt','out'].includes(f));};c.append(input);tr.append(c);});
  const c=document.createElement('td'),b=document.createElement('button');b.type='button';b.textContent='Remove';b.onclick=()=>{rows.splice(i,1);render();};c.append(b);tr.append(c);body.append(tr);});
 }
-function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
+function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;$('session-date').value='';$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
 function close(){$('session-import-overlay').style.display='none';document.body.style.overflow='';}
 function weighted(a,b,f){const v=[a,b].filter(x=>x[f]!=null);return v.length?v.reduce((s,x)=>s+x[f]*x.n,0)/v.reduce((s,x)=>s+x.n,0):null;}
 function merge(existing,incoming){const map=new Map(existing.map(r=>[r.key,{...r}]));for(const b of incoming){const a=map.get(b.key);if(!a){map.set(b.key,b);continue;}const c={...a,n:a.n+b.n};['velo','ext','ivb','hb','vaa','relHeight','relSide','spinEff'].forEach(f=>c[f]=num(weighted(a,b,f)));['spin','strike','strikeExt','out'].forEach(f=>c[f]=num(weighted(a,b,f),true));['veloMax','spinMax'].forEach(f=>c[f]=a[f]==null?b[f]:b[f]==null?a[f]:Math.max(a[f],b[f]));c.tilt=a.ivb!=null&&b.ivb==null?a.tilt:b.ivb!=null&&a.ivb==null?b.tilt:a.n>=b.n?a.tilt:b.tilt;map.set(b.key,c);}return [...map.values()].sort((a,b)=>b.n-a.n);}
@@ -64,7 +65,7 @@ $('session-cancel').onclick=close;
 $('session-import-overlay').onclick=e=>{if(e.target===$('session-import-overlay'))close();};
 $('session-add-pitch').onclick=()=>{const k=Object.keys(names).find(k=>!rows.some(r=>r.key===k));if(k){rows.push(empty(k));render();$('session-review').style.display='block';}};
 $('session-read').onclick=async()=>{
- const file=$('session-file').files[0];if(!file)return err('Select a file first.');if(file.size>5000000)return err('Maximum file size is 5 MB.');fileName=file.name;fileHash='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;const b=$('session-read');b.disabled=true;
+ const file=$('session-file').files[0];if(!file)return err('Select a file first.');if(file.size>5000000)return err('Maximum file size is 5 MB.');fileName=file.name;fileHash='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;$('session-date').value='';const b=$('session-read');b.disabled=true;
  try{const bytes=await file.arrayBuffer(),hash=await crypto.subtle.digest('SHA-256',bytes);fileHash=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');const ext=file.name.split('.').pop().toLowerCase();let data=ext==='pdf'?await pdf(file):ext==='csv'?csv(await file.text()):ext==='json'?JSON.parse(await file.text()):null;if(data&& !Array.isArray(data))data=data.pitches;if(!Array.isArray(data))throw Error('Unsupported file format.');const seen=new Set();rows=data.map(r=>{const k=key(r.name||names[r.key]);if(!k)return null;const out=empty(k);fields.forEach(f=>out[f]=f==='tilt'?r[f]||null:num(r[f],['n','spin','spinMax','strike','strikeExt','out'].includes(f)));return out;}).filter(r=>{if(!r||seen.has(r.key))return false;seen.add(r.key);return true;});if(reportFormat==='individual-session'){
    if(!sessionDate || !individualPitches.length)
      throw Error('Individual-session PDF is missing its pitch rows or session date.');
@@ -92,6 +93,15 @@ $('session-save').onclick=async()=>{
  if(!rows.length)throw Error('Add at least one pitch type.');
  const seen=new Set();for(const r of rows){if(seen.has(r.key))throw Error('Duplicate pitch type');seen.add(r.key);if(reportFormat!=='pitch-type-summary'&&(!Number.isInteger(r.n)||r.n<1))throw Error(r.name+': pitch count must be a positive integer');
  if(reportFormat==='pitch-type-summary')r.n=null;if(r.velo==null||r.velo<20||r.velo>120)throw Error(r.name+': average velocity must be 20–120 mph');if(r.veloMax!=null&&r.veloMax<r.velo)throw Error(r.name+': max velocity is below average');for(const f of ['strike','strikeExt','out'])if(r[f]!=null&&(r[f]<0||r[f]>100))throw Error(r.name+': invalid '+f);}
+ const enteredDate=$('session-date').value.trim();
+ const isHistoricalImport=reportFormat==='pitch-type-summary'||selectedSourceSessions>1;
+ if(!isHistoricalImport && (!window.DZ_HISTORY_MATH?.getDay(enteredDate) ||
+     window.DZ_HISTORY_MATH.getDay(enteredDate)>window.DZ_HISTORY_MATH.getDay(new Date().toLocaleDateString('en-CA'))))
+   throw Error('Enter a valid session date on or before today to track this session. Use the date from the report.');
+ if(reportFormat==='individual-session'&&enteredDate!==sessionDate)
+   throw Error('The session date must match the date verified inside the individual-pitch PDF.');
+ const sessionKind=isHistoricalImport?'historical':'single';
+ const savedDate=isHistoricalImport?null:enteredDate;
  const playerName=$('session-player-name').value.trim(),age=$('session-player-age').value;
  const affiliation=$('session-player-affiliation').value;
  if(mode==='new'&&(!/^[A-Za-z][A-Za-z .'-]{1,99}$/.test(playerName)||!age))throw Error('Enter player name and age group.');
@@ -106,6 +116,18 @@ $('session-save').onclick=async()=>{
  }
  const pid=mode==='new'?'p-'+crypto.randomUUID().replace(/-/g,''):id;
  const ref=db.collection('players').doc(pid),now=firebase.firestore.FieldValue.serverTimestamp(),incoming=rows.map(r=>({...r,name:names[r.key]})).sort((a,b)=>b.n-a.n);
+ const sessionKey='session-'+(sessionFingerprint||fileHash).slice(0,40);
+ const sessionRef=ref.collection('sessions').doc(sessionKey);
+ const sessionRecord={
+   id:sessionKey,kind:sessionKind,date:savedDate,importedAt:new Date().toISOString(),
+   label:sessionKind==='historical'?'Historical multi-session / undated summary':null,
+   file:fileName,sha256:fileHash,reportFormat,
+   sessionFingerprint:sessionFingerprint||null,
+   sourceSessionCount:sessionKind==='single'?1:selectedSourceSessions,
+   pitches:incoming.map(p=>({...p})),
+   pitchData:reportFormat==='individual-session'?individualPitches.map(p=>({...p})):[],
+   importedBy:user.email
+ };
  const audit={file:fileName,sha256:fileHash,by:user.email,at:new Date().toISOString(),
    reportFormat,sourceSessionCount:reportFormat==='pitch-type-summary'?null:(selectedSourceSessions||1),
    pitchCount:reportFormat==='pitch-type-summary'?null:incoming.reduce((s,r)=>s+r.n,0)};
@@ -129,18 +151,24 @@ $('session-save').onclick=async()=>{
      const publicId=String(100000+(random[0]%900000));
      const codeRef=db.collection('playerCodes').doc(publicId);
      created=await db.runTransaction(async tx=>{
-       const [playerSnap,codeSnap]=await Promise.all([tx.get(ref),tx.get(codeRef)]);
+       const [playerSnap,codeSnap,sessionSnap]=await Promise.all([tx.get(ref),tx.get(codeRef),tx.get(sessionRef)]);
+       if(sessionSnap.exists)throw Error('This session already exists in the database.');
        if(playerSnap.exists)throw Error('Player record already exists. Please retry.');
        if(codeSnap.exists)return false; // reserve a different six-digit number
        tx.set(codeRef,{playerId:pid});
        tx.set(ref,{id:pid,publicId,name:playerName,ageLabel:age==='Coach'?'Coach / Adult':age+'U',ageNum:age==='Coach'?28:Number(age),affiliation,sessions:1,dataType:'aggregate',summaryOnly:reportFormat==='pitch-type-summary',throwingHand:detectedThrowingHand,discardedUndefined:0,pitches:incoming,createdBy:user.email,updatedBy:user.email,updatedAt:now,importHistory:[audit]});
+       tx.set(sessionRef,sessionRecord);
        return true;
      });
    }
    if(!created)throw Error('Unable to reserve a unique six-digit ID. Please try again.');
  }else{
    await db.runTransaction(async tx=>{
-     const snap=await tx.get(ref);
+     const baselineRef=ref.collection('sessions').doc('fall-2026-baseline');
+     const [snap,existingSession,baselineSnap]=await Promise.all([
+       tx.get(ref),tx.get(sessionRef),tx.get(baselineRef)
+     ]);
+     if(existingSession.exists)throw Error('This session is already stored for this player.');
      if(!snap.exists)throw Error('Player no longer exists');
      const old=snap.data();
      if(Boolean(old.summaryOnly)!==(reportFormat==='pitch-type-summary'))
@@ -151,6 +179,19 @@ $('session-save').onclick=async()=>{
      if(history.some(h=>h.sha256===fileHash ||
        (sessionFingerprint&&h.sessionFingerprint===sessionFingerprint)))
        throw Error('This Trackman session has already been imported for this player.');
+     if(!baselineSnap.exists){
+       // The first post-upgrade upload atomically freezes all pre-existing
+       // aggregate data. Its source dates are unknown, so it NEVER qualifies
+       // as an individual session in 60-day / 365-day windows.
+       tx.set(baselineRef,{
+         id:'fall-2026-baseline',kind:'baseline',date:null,
+         label:'Fall 2026 Baseline',importedAt:new Date().toISOString(),
+         reportFormat:'legacy-aggregate',pitches:(old.pitches||[]).map(p=>({...p})),
+         sourceSessionCount:old.sessions||null,
+         pitchData:[],importedBy:user.email
+       });
+     }
+     tx.set(sessionRef,sessionRecord);
      if(reportFormat==='pitch-type-summary'){
        // Preserve the previous snapshot inside the existing allowed audit
        // field, and replace rather than falsely adding unknown pitch counts.
