@@ -86,7 +86,7 @@
       sessions:records.filter(x=>x.kind==='single'),source:'lifetime'};
     const source=scoped==='60'?recent(records,today,60):
       scoped==='365'?recent(records,today,365):
-      scoped==='baseline'?records.filter(x=>x.kind==='baseline'||x.kind==='historical'):
+      scoped==='baseline'?records.filter(x=>x.kind==='baseline'):
       records.filter(x=>x.id===scoped);
     return {mode:scoped,label:scoped==='baseline'?'Fall 2026 Baseline':
         source.length===1&&scoped!=='60'&&scoped!=='365'?textDate(source[0].date):scopeDescription(scoped),
