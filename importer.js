@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id), fields=['n','velo','veloMax','spin','spinMax','ext','ivb','hb','tilt','strike','strikeExt','out','vaa','relHeight','relSide','axis2d','axis3d','gyro'];
 const names={fb:'Fastball',cb:'Curveball',ch:'ChangeUp',sk:'Sinker',sw:'Sweeper',sp:'Splitter',sl:'Slider',ct:'Cutter',kn:'Knuckleball',ot:'Other'};
 const aliases={fastball:'fb','four-seam':'fb',curveball:'cb',changeup:'ch',sinker:'sk',sweeper:'sw',splitter:'sp',slider:'sl',cutter:'ct',knuckleball:'kn',other:'ot'};
-let db,user,mode,id,rows=[],fileName='',fileHash='',pdfText='',reportFormat='count-summary',detectedThrowingHand=null,selectedSourceSessions=null;
+let db,user,mode,id,rows=[],fileName='',fileHash='',pdfText='',reportFormat='count-summary',detectedThrowingHand=null,selectedSourceSessions=null,individualPitches=[],sessionDate=null,sessionFingerprint=null;
 const err=e=>{ $('session-import-status').textContent=String(e?.message||e); };
 const num=(s,int=false)=>{if(s===null||s===undefined||String(s).trim()==='')return null;const v=Number(String(s).replace(/,/g,'').replace('%',''));return Number.isFinite(v)?int?Math.round(v):Math.round(v*100)/100:null;};
 const key=s=>aliases[String(s||'').toLowerCase().replace(/[ _]/g,'')]||Object.keys(names).find(k=>names[k].toLowerCase()===String(s).toLowerCase())||null;
@@ -24,6 +24,9 @@ async function pdf(file){
  reportFormat=data.reportFormat||'count-summary';
  detectedThrowingHand=data.throwingHand||null;
  selectedSourceSessions=Number.isInteger(data.selectedSessions)?data.selectedSessions:null;
+ individualPitches=data.reportFormat==='individual-session'&&Array.isArray(data.individualPitches)
+   ?data.individualPitches.map(p=>({...p})):[];
+ sessionDate=data.reportFormat==='individual-session'?data.sessionDate||null:null;
  pdfText=data.text||'';
  if(mode==='new' && data.playerName && !$('session-player-name').value.trim()){
   $('session-player-name').value=data.playerName;
@@ -51,23 +54,35 @@ function render(){
  input.oninput=()=>{r[f]=f==='tilt'?input.value.trim()||null:num(input.value,['n','spin','spinMax','strike','strikeExt','out'].includes(f));};c.append(input);tr.append(c);});
  const c=document.createElement('td'),b=document.createElement('button');b.type='button';b.textContent='Remove';b.onclick=()=>{rows.splice(i,1);render();};c.append(b);tr.append(c);body.append(tr);});
 }
-function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
+function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
 function close(){$('session-import-overlay').style.display='none';document.body.style.overflow='';}
 function weighted(a,b,f){const v=[a,b].filter(x=>x[f]!=null);return v.length?v.reduce((s,x)=>s+x[f]*x.n,0)/v.reduce((s,x)=>s+x.n,0):null;}
-function merge(existing,incoming){const map=new Map(existing.map(r=>[r.key,{...r}]));for(const b of incoming){const a=map.get(b.key);if(!a){map.set(b.key,b);continue;}const c={...a,n:a.n+b.n};['velo','ext','ivb','hb','vaa'].forEach(f=>c[f]=num(weighted(a,b,f)));['spin','strike','strikeExt','out'].forEach(f=>c[f]=num(weighted(a,b,f),true));['veloMax','spinMax'].forEach(f=>c[f]=a[f]==null?b[f]:b[f]==null?a[f]:Math.max(a[f],b[f]));c.tilt=a.ivb!=null&&b.ivb==null?a.tilt:b.ivb!=null&&a.ivb==null?b.tilt:a.n>=b.n?a.tilt:b.tilt;map.set(b.key,c);}return [...map.values()].sort((a,b)=>b.n-a.n);}
+function merge(existing,incoming){const map=new Map(existing.map(r=>[r.key,{...r}]));for(const b of incoming){const a=map.get(b.key);if(!a){map.set(b.key,b);continue;}const c={...a,n:a.n+b.n};['velo','ext','ivb','hb','vaa','relHeight','relSide','spinEff'].forEach(f=>c[f]=num(weighted(a,b,f)));['spin','strike','strikeExt','out'].forEach(f=>c[f]=num(weighted(a,b,f),true));['veloMax','spinMax'].forEach(f=>c[f]=a[f]==null?b[f]:b[f]==null?a[f]:Math.max(a[f],b[f]));c.tilt=a.ivb!=null&&b.ivb==null?a.tilt:b.ivb!=null&&a.ivb==null?b.tilt:a.n>=b.n?a.tilt:b.tilt;map.set(b.key,c);}return [...map.values()].sort((a,b)=>b.n-a.n);}
 $('cloud-add-player').onclick=()=>open('new');
 $('cloud-update-player').onclick=()=>open('update',window.DZ_CURRENT_PLAYER());
 $('session-cancel').onclick=close;
 $('session-import-overlay').onclick=e=>{if(e.target===$('session-import-overlay'))close();};
 $('session-add-pitch').onclick=()=>{const k=Object.keys(names).find(k=>!rows.some(r=>r.key===k));if(k){rows.push(empty(k));render();$('session-review').style.display='block';}};
 $('session-read').onclick=async()=>{
- const file=$('session-file').files[0];if(!file)return err('Select a file first.');if(file.size>5000000)return err('Maximum file size is 5 MB.');fileName=file.name;fileHash='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;const b=$('session-read');b.disabled=true;
- try{const bytes=await file.arrayBuffer(),hash=await crypto.subtle.digest('SHA-256',bytes);fileHash=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');const ext=file.name.split('.').pop().toLowerCase();let data=ext==='pdf'?await pdf(file):ext==='csv'?csv(await file.text()):ext==='json'?JSON.parse(await file.text()):null;if(data&& !Array.isArray(data))data=data.pitches;if(!Array.isArray(data))throw Error('Unsupported file format.');const seen=new Set();rows=data.map(r=>{const k=key(r.name||names[r.key]);if(!k)return null;const out=empty(k);fields.forEach(f=>out[f]=f==='tilt'?r[f]||null:num(r[f],['n','spin','spinMax','strike','strikeExt','out'].includes(f)));return out;}).filter(r=>{if(!r||seen.has(r.key))return false;seen.add(r.key);return true;});render();$('session-review').style.display='block';$('session-pdf-text').textContent=pdfText.slice(0,25000);$('session-review-title').textContent=reportFormat==='pitch-type-summary'?'Review Pitch-Type Averages · Counts Not Supplied':'Review Pitch Summary · One Session';
+ const file=$('session-file').files[0];if(!file)return err('Select a file first.');if(file.size>5000000)return err('Maximum file size is 5 MB.');fileName=file.name;fileHash='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;const b=$('session-read');b.disabled=true;
+ try{const bytes=await file.arrayBuffer(),hash=await crypto.subtle.digest('SHA-256',bytes);fileHash=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');const ext=file.name.split('.').pop().toLowerCase();let data=ext==='pdf'?await pdf(file):ext==='csv'?csv(await file.text()):ext==='json'?JSON.parse(await file.text()):null;if(data&& !Array.isArray(data))data=data.pitches;if(!Array.isArray(data))throw Error('Unsupported file format.');const seen=new Set();rows=data.map(r=>{const k=key(r.name||names[r.key]);if(!k)return null;const out=empty(k);fields.forEach(f=>out[f]=f==='tilt'?r[f]||null:num(r[f],['n','spin','spinMax','strike','strikeExt','out'].includes(f)));return out;}).filter(r=>{if(!r||seen.has(r.key))return false;seen.add(r.key);return true;});if(reportFormat==='individual-session'){
+   if(!sessionDate || !individualPitches.length)
+     throw Error('Individual-session PDF is missing its pitch rows or session date.');
+   const canonical=individualPitches.map(p=>[
+     p.no,p.key,p.velo,p.spin,p.tilt,p.ivb,p.hb,p.ext,p.relHeight,p.relSide,p.spinEff
+   ]);
+   const bytes=new TextEncoder().encode(sessionDate+'|'+JSON.stringify(canonical));
+   const sha=await crypto.subtle.digest('SHA-256',bytes);
+   sessionFingerprint=[...new Uint8Array(sha)].map(x=>x.toString(16).padStart(2,'0')).join('');
+ }
+ render();$('session-review').style.display='block';$('session-pdf-text').textContent=pdfText.slice(0,25000);$('session-review-title').textContent=reportFormat==='pitch-type-summary'?'Review Pitch-Type Averages · Counts Not Supplied':reportFormat==='individual-session'?'Review Individual-Pitch Session · '+individualPitches.length+' Pitches':'Review Pitch Summary · One Session';
  $('session-import-warning').textContent=reportFormat==='pitch-type-summary'
    ? 'This PDF shows pitch-type averages but no pitch counts, usage percentages, maximum velocities or exact session count. The portal will NOT invent them. Uploads of this format replace the prior summary (with the prior values archived), NOT add a session or merge averages. Existing count-based profiles cannot be overwritten with this format.'
-   : 'Only the selected new session may be uploaded. If this PDF includes multiple sessions, export a single new session instead.';
+   : reportFormat==='individual-session'
+     ? 'Verified '+individualPitches.length+' color-coded pitches against Trackman’s summary from '+sessionDate+'. Pitch-type averages are computed from measured rows, ignoring missing cells; review before saving. Raw measurements will be archived with this session.'
+     : 'Only the selected new session may be uploaded. If this PDF includes multiple sessions, export a single new session instead.';
  err(rows.length?'Review every field; correct or add missing data before saving.':'No reliable summary found. Add pitch types and enter values manually using the PDF text below.');}
- catch(e){rows=[];render();const why=String(e?.message||e);const unsafe=/The report is for |This PDF contains .* selected sessions/.test(why);if(unsafe){fileHash='';$('session-review').style.display='none';err(why+' No changes were saved.');}else{$('session-review').style.display='block';err('Extraction incomplete: '+why+'. You may add pitch types manually if the report is for the correct player.');}}
+ catch(e){rows=[];render();const why=String(e?.message||e);const unsafe=/The report is for |This PDF contains .* selected sessions|Trackman individual-session import failed:|Individual-session PDF is missing/.test(why);if(unsafe){fileHash='';$('session-review').style.display='none';err(why+' No changes were saved.');}else{$('session-review').style.display='block';err('Extraction incomplete: '+why+'. You may add pitch types manually if the report is for the correct player.');}}
  finally{b.disabled=false;}
 };
 $('session-save').onclick=async()=>{
@@ -94,6 +109,15 @@ $('session-save').onclick=async()=>{
  const audit={file:fileName,sha256:fileHash,by:user.email,at:new Date().toISOString(),
    reportFormat,sourceSessionCount:reportFormat==='pitch-type-summary'?null:(selectedSourceSessions||1),
    pitchCount:reportFormat==='pitch-type-summary'?null:incoming.reduce((s,r)=>s+r.n,0)};
+ if(reportFormat==='individual-session'){
+   if(!sessionFingerprint||!sessionDate||!individualPitches.length)
+     throw Error('Re-read this individual session PDF before saving.');
+   if(individualPitches.length>600)
+     throw Error('Session has more than 600 individual pitches; split the export to keep the player record safe.');
+   audit.sessionDate=sessionDate;
+   audit.sessionFingerprint=sessionFingerprint;
+   audit.pitchData=individualPitches.map(p=>({...p}));
+ }
  if(reportFormat==='pitch-type-summary'&&mode==='update'){
    if(!window.confirm('Replace this player\'s prior pitch-type averages with this report? The previous averages will remain in the import history, and scouting grades/notes will be preserved. Pitch counts and usage are not available in this report.'))return;
  }
@@ -124,7 +148,9 @@ $('session-save').onclick=async()=>{
      if(old.inactive===true)throw Error('This player is inactive. An administrator must reactivate the profile before uploading another session.');
      if(old.dataType!=='aggregate')throw Error('Raw pitch-log players cannot yet receive aggregate session uploads.');
      const history=Array.isArray(old.importHistory)?old.importHistory.slice(-49):[];
-     if(history.some(h=>h.sha256===fileHash))throw Error('This exact file was already imported for this player.');
+     if(history.some(h=>h.sha256===fileHash ||
+       (sessionFingerprint&&h.sessionFingerprint===sessionFingerprint)))
+       throw Error('This Trackman session has already been imported for this player.');
      if(reportFormat==='pitch-type-summary'){
        // Preserve the previous snapshot inside the existing allowed audit
        // field, and replace rather than falsely adding unknown pitch counts.
