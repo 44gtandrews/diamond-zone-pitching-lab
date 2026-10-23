@@ -1,3 +1,38 @@
+# Rolling profile views and independent training sessions — October 23, 2026
+
+## Confirmed default behavior
+Each aggregate player profile defaults to:
+1. **Last 60 Days** if there are at least two separate **dated individual sessions** in the last 60 days.
+2. Otherwise **Past 365 Days** if at least one dated individual session occurred within 365 days.
+3. Otherwise **Lifetime** using the existing complete career aggregate.
+
+The past-year and 60-day windows use independent, dated sessions ONLY; undated multi-session summaries and pre-upgrade fall aggregates are not falsely treated as recent individual bullpens. This applies to the existing movement scatterplot, velocity charts, usage chart, pitch table, counts, fastball average and grade-usage tie breakers. Age-based scouting grades, notes, mechanics, strength/mobility, player-name font and player-profile section order remain unchanged.
+
+## Preservation and database
+- Source sessions are stored as `players/{playerId}/sessions/{sessionId}`, carrying date, immutable pitch-type summary, and original individual-pitch rows (when supplied). The root `players/{id}.pitches` aggregate is **still maintained** for backward-compatible lifetime and rollback viewing.
+- The first post-upgrade upload to an existing counted or averages-only player **atomically snapshots the pre-existing root aggregate** into an immutable `fall-2026-baseline` document, with unknown source dates kept null. This avoids destructive migration. Before that upload, the historical aggregate is represented as a read-only virtual baseline.
+- Legacy multi-session PDFs are stored as separately labeled undated historical summaries, not fabricated individual sessions.
+- New per-session Trackman PDF uploads carry the verified session date from the PDF. Classic PDF/CSV/JSON single-session uploads require a manual date. The system rejects future dates, missing dates on individual sessions and mismatched embedded PDF dates.
+- SHA-256 document/session fingerprints prevent duplicate insertion. Sessions and the legacy aggregate update in the **same Firestore transaction**. All individual pitch rows now live in the session document, not repeatedly in the main player's bounded audit field, preventing root document bloat.
+- Valid per-metric observation counts are recorded for individual pitch imports, weighted correctly within selected windows and future lifetime merges; older aggregates without raw observations retain their known summary statistics instead of inventing observation counts.
+
+## Profile interface
+- A compact timeframe selector appears **above** the original Movement / Velocity / Usage row: Auto, Last 60 Days, Past 365 Days, Lifetime, Fall 2026 Baseline, or an individual dated/undated imported record.
+- A Session History table below the existing pitch metrics lists source dates, pitch totals, fastball velocity and an action to open that period.
+- Compare two individual sessions or baseline vs a session. The comparison table shows prior/current/delta for each pitch's velocity, maximum velocity, IVB, HB and spin. Movement plot overlays older hollow and newer solid circles, with dashed connectors for matching pitch types.
+- For sessions without count data, usage and totals remain unavailable rather than filled in.
+- Existing **raw** pitch-log profiles retain their original functionality; timeframe selectors currently apply to count-based aggregate profiles.
+
+## Firestore, backups and safety
+- `firestore.rules` now authorizes admin and pitching coaches to **create** immutable per-player session documents; approved coaches can read; a parent may read/list **only their linked active player's sessions**. Only admins can alter or delete session documents.
+- GitHub Actions now deploys the Firestore rules **before** Firebase Hosting. A failed rules deployment blocks Hosting rather than publish a broken application.
+- Admin full backup schema increases from v2 to v3 and includes all player sessions; emergency restore accepts v2 and v3 backups. Admin permanent deletion removes related sessions as well as coaching notes.
+- UI changes can be rolled back through a new GitHub revert commit. Backups and session documents remain separate; rolling back code **does not undo Firestore writes**. This rollout creates no synthetic dates or destructive edits to existing player records.
+- Since Firebase project data are private, development tests use synthetic records only. A full production backup has **not** been downloaded by this release: an administrator should download one from the Admin page before importing new sessions.
+
+## Regression coverage
+Node smoke tests cover 60/365/lifetime fallbacks, undated baselines, metric-valid observation denominators, and pre-existing 38-pitch Trackman PDF recognition. Mock Firestore transaction tests verify automatic baseline creation and full count-weighted session merging. All existing protected profile functions and Trackman PDF parsing paths are preserved.
+
 # Clubhouse directory loading indicators — October 23, 2026
 
 The authenticated portal now shows two matching teal loading states so users never confuse pending data with an empty player roster:
