@@ -1576,6 +1576,50 @@
     .dz-loading-bar>span{animation:none;left:0;width:100%;}
   }
 
+
+  /* Session history lives around the existing Clubhouse analytics layout. */
+  .dz-session-controls{
+    border-top:2px solid #238C99;border-bottom:1px solid #2A464E;
+    background:#10232A;padding:17px 20px;margin:1px 0 18px;
+    border-radius:3px;
+  }
+  .dz-session-head{display:flex;flex-wrap:wrap;align-items:end;gap:17px;}
+  .dz-session-head>div:first-child{flex:1 1 220px;}
+  .dz-session-eyebrow{font:800 9px Inter,sans-serif;letter-spacing:.15em;color:#69C9D0;}
+  .dz-session-status{font:750 13px/1.5 Inter,sans-serif;color:#EDF7F9;margin-top:7px;}
+  .dz-session-selector-label,.dz-compare-inputs label{
+    display:flex;flex-direction:column;gap:7px;
+    color:#96ADB4;font:700 11px Inter,sans-serif;
+  }
+  .dz-session-select{
+    border:1px solid #3A6570;background:#0B1B22;color:#E9F5F6;
+    border-radius:4px;min-height:40px;padding:8px 11px;
+    font:650 12px Inter,sans-serif;min-width:178px;max-width:100%;
+  }
+  .dz-session-comparison{border-top:1px solid #304A52;margin-top:20px;padding-top:17px;}
+  .dz-compare-inputs{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:13px;}
+  .dz-compare-inputs label{flex:1;min-width:190px;}
+  .dz-compare-inputs select{width:100%;}
+  #dz-compare-help{color:#98B4BC;}
+  .dz-session-history{border-top:1px solid #2C4851;margin-top:27px;padding-top:19px;}
+  .dz-session-history h3{font:800 18px Inter,sans-serif;color:#EAF5F7;letter-spacing:-.02em;}
+  .dz-session-history .cloud-help{margin:7px 0 14px;font:500 12px Inter,sans-serif;}
+  .dz-session-history table{width:100%;border-collapse:collapse;}
+  .dz-session-history th,.dz-session-history td{padding:12px 14px;border-bottom:1px solid #294149;text-align:left;font:550 12px Inter,sans-serif;}
+  .dz-session-history th{color:#97B6BF;text-transform:uppercase;letter-spacing:.06em;font-size:10px;}
+  .dz-session-history td{color:#ECF5F7;}
+  .dz-session-history button{padding:6px 10px;min-height:34px;background:#16353D;border:1px solid #2D6872;
+    color:#E9FCFD;border-radius:4px;font:700 11px Inter,sans-serif;}
+  .dz-session-history .dz-source-note{font-size:10px;color:#8AABB4;}
+  @media(max-width:640px){
+    .dz-session-controls{padding:14px;}
+    .dz-session-head{align-items:stretch;gap:12px;}
+    .dz-session-selector-label{width:100%;}
+    .dz-session-select{width:100%;min-width:0;min-height:44px;font-size:14px;}
+    .dz-session-head .cloud-button{min-height:44px;}
+    .dz-session-history th,.dz-session-history td{padding:10px;font-size:11px;white-space:nowrap;}
+  }
+
 </style>
 </head>
 <body>
@@ -1862,8 +1906,30 @@
       <button class="tabbtn" data-tab="strength">Strength &amp; Mobility</button>
     </div>
 
-    <!-- OVERVIEW -->
+    <!-- OVERVIEW: existing plot, velocity, usage and statistics layout remains intact. -->
     <div class="panel active" id="panel-overview">
+      <section id="dz-session-controls" class="dz-session-controls" style="display:none" aria-label="Player performance timeframe">
+        <div class="dz-session-head">
+          <div><span class="dz-session-eyebrow">PERFORMANCE WINDOW</span>
+            <div id="dz-session-status" class="dz-session-status" role="status">Loading session history...</div></div>
+          <label class="dz-session-selector-label" for="dz-session-period">View statistics
+            <select id="dz-session-period" class="dz-session-select">
+              <option value="auto">Auto (recommended)</option>
+              <option value="60">Last 60 Days</option><option value="365">Past 365 Days</option>
+              <option value="lifetime">Lifetime</option><option value="baseline">Fall 2026 Baseline</option>
+            </select>
+          </label>
+          <button id="dz-session-compare" type="button" class="cloud-button secondary dz-compare-toggle">Compare sessions</button>
+        </div>
+        <div id="dz-session-comparison" class="dz-session-comparison" style="display:none">
+          <div class="dz-compare-inputs">
+            <label>Earlier <select id="dz-compare-a" class="dz-session-select"></select></label>
+            <label>Later <select id="dz-compare-b" class="dz-session-select"></select></label>
+          </div>
+          <p id="dz-compare-help" class="cloud-help">Comparisons use pitch-type averages and actual pitch counts where supplied.</p>
+          <div class="table-card" tabindex="0" role="region" aria-label="Comparison metrics"><table id="dz-compare-table"></table></div>
+        </div>
+      </section>
       <div class="chart-row">
         <div class="chart-card">
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -1891,6 +1957,11 @@
       <div class="table-card" tabindex="0" role="region" aria-label="Pitch metrics table, scroll horizontally"><table id="pitch-table"></table></div>
       <div id="dz-hidden-pitches" class="dz-hidden-pitches" aria-live="polite"></div>
       <p class="footnote" id="overview-footnote"></p>
+      <section id="dz-session-history" class="dz-session-history" style="display:none">
+        <h3>Session History</h3>
+        <p class="cloud-help" id="dz-session-history-caption">Individual sessions and preserved historical aggregates.</p>
+        <div class="table-card" tabindex="0" role="region" aria-label="Recorded training sessions"><table id="dz-session-history-table"></table></div>
+      </section>
     </div>
 
     <!-- PITCH LOG (raw-data players only) -->
@@ -2059,7 +2130,10 @@ function groupByType(player){
 }
 function getTypeSummary(player){
   const hidden=player._hiddenPitchTypes||[];
-  if(player.dataType==='aggregate') return (player.pitches||[]).filter(p=>!hidden.includes(p.key));
+  if(player.dataType==='aggregate'){
+    const current=player._periodView?.pitches||player.pitches||[];
+    return current.filter(p=>!hidden.includes(p.key));
+  }
   const groups = groupByType(player);
   return TYPE_INFO.filter(t=>!DISCARD_KEYS.includes(t.key) && !hidden.includes(t.key) && groups[t.key].length>0)
     .map(t=>{
@@ -3022,6 +3096,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="./session-history.js"></script>
 <script src="./trackman-session.js"></script>
 <script src="./trackman-pdf.js"></script>
 <script src="./importer.js"></script>
