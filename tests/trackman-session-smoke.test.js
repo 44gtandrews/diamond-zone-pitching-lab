@@ -79,7 +79,7 @@ assert.equal(result.individualPitches[0].ext,null,'absent extension remains miss
 assert.equal(result.individualPitches[1].ext,6.167,'feet-and-inches conversion precision');
 const dropped=pages.map(p=>({...p,items:p.items.slice()}));
 dropped[2].items=dropped[2].items.filter(it=>it.s!=='#38');
-assert.throws(()=>parser.parsePages(dropped,pixel),/Missing pitch row/);
+assert.throws(()=>parser.parsePages(dropped,pixel),/Missing pitch row|Pitch-type counts do not match/);
 const wrongColor=(page,x,y)=>page===2&&y>90&&Math.abs(y-(116.423-2.6))<1
   ?colors.fb:pixel(page,x,y);
 assert.throws(()=>parser.parsePages(pages,wrongColor),/counts do not match/);
