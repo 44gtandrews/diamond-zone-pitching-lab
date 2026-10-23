@@ -2374,7 +2374,7 @@ async function renderHome(){
 }
 
 /* ================= Reusable scatter chart ================= */
-function scatterChart(containerId, points, xLabel, yLabel, sizeByN){
+function scatterChart(containerId, points, xLabel, yLabel, sizeByN, connectors=[]){
   const isNarrow = window.innerWidth <= 480;
   const w = isNarrow ? 300 : 380;
   const h = 300;
@@ -2394,9 +2394,12 @@ function scatterChart(containerId, points, xLabel, yLabel, sizeByN){
   svg += `<text x="${X(0)+4}" y="${h-pad-2}" font-size="${fsEnd}" fill="${cssColor('ink-soft')}" text-anchor="start" font-family="Inter">-20</text>`;
   svg += `<text x="${pad}" y="${h-10}" font-size="${fsAxis}" fill="${cssColor('ink-soft')}" font-family="Inter">${xLabel}</text>`;
   svg += `<text x="6" y="${pad-8}" font-size="${fsAxis}" fill="${cssColor('ink-soft')}" font-family="Inter">${yLabel}</text>`;
+  connectors.forEach(c=>{
+    svg += `<line x1="${X(c.x1)}" y1="${Y(c.y1)}" x2="${X(c.x2)}" y2="${Y(c.y2)}" stroke="${c.color}" stroke-width="2" stroke-opacity=".8" stroke-dasharray="5 3"/>`;
+  });
   points.forEach((p,i)=>{
     const r = sizeByN ? (isNarrow?7:6) + ((p.n||1)/maxN)*(isNarrow?13:12) : (isNarrow?6:5);
-    svg += `<circle class="dot" cx="${X(p.x)}" cy="${Y(p.y)}" r="${r}" fill="${p.color}" fill-opacity="0.82" stroke="${cssColor('paper-raised')}" stroke-width="1" style="cursor:pointer;" data-i="${i}"/>`;
+    svg += `<circle class="dot" cx="${X(p.x)}" cy="${Y(p.y)}" r="${r}" fill="${p.outline?'none':p.color}" fill-opacity="0.82" stroke="${p.outline?p.color:cssColor('paper-raised')}" stroke-width="${p.outline?3:1}" style="cursor:pointer;" data-i="${i}"/>`;
   });
   svg += `</svg>`;
   const container = document.getElementById(containerId);
@@ -2661,7 +2664,7 @@ function renderOverview(player){
 
   const kpiData = [
     {label:'Total Pitches', value:player.summaryOnly?'—':totalN},
-    {label:player.summaryOnly?'Reports Imported':'Sessions', value:player.summaryOnly?player.sessions:trackmanSessionCount(player)},
+    {label:player.summaryOnly?'Reports Imported':'Sessions', value:player._periodView && player._periodView.mode!=='lifetime' ? player._periodView.sessions.length : player.summaryOnly?player.sessions:trackmanSessionCount(player)},
     {label:'Pitch Types', value:summary.length},
     {label:'Highest Graded Pitch', value:topGraded?topGraded.name:(player._gradesLoadFailed?'Grade unavailable':'Not graded'), small:topGraded?topGraded.grade+' Grade':''},
     {label: player.dataType==='raw' ? 'Fastball Med.' : 'Fastball Avg', value: fb?fmt(fb.velo):'—', small:'mph'},
@@ -3055,8 +3058,9 @@ async function showPlayer(id){
 
   await ensureOverridesLoaded(player);
   await ensureGradesLoaded(player);
-  renderOverview(player);
-  if(player.dataType==='raw') renderPitchLog(player);
+  if(window.DZ_LOAD_SESSION_PROFILE)await window.DZ_LOAD_SESSION_PROFILE(player);
+  else renderOverview(player);
+  if(player.dataType==='raw'){renderOverview(player);renderPitchLog(player);}
   await initPlayerNotes(player);
 
   window.scrollTo(0,0);
@@ -3081,6 +3085,8 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
     </div>
     <label class="field-label" for="session-file">Trackman session file (PDF, CSV, JSON; max 5 MB)</label>
     <input type="file" id="session-file" accept=".pdf,.csv,.json,application/pdf,text/csv,application/json">
+    <label class="field-label" for="session-date">Session date <span style="color:#87AAB2;font-size:11px">(required for individual sessions; verified PDFs fill this automatically)</span></label>
+    <input id="session-date" type="date" autocomplete="off" style="max-width:270px;min-height:43px;background:#0C2027;color:#EDF7F8;border:1px solid #39606B;border-radius:4px;padding:8px 12px;">
     <div class="cloud-actions"><button type="button" class="cloud-button" id="session-read">Read File</button><button type="button" class="cloud-button secondary" id="session-cancel">Cancel</button></div>
     <p class="cloud-status" id="session-import-status" role="status"></p>
     <section id="session-review" style="display:none;">
@@ -3097,6 +3103,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <script src="./session-history.js"></script>
+<script src="./session-ui.js"></script>
 <script src="./trackman-session.js"></script>
 <script src="./trackman-pdf.js"></script>
 <script src="./importer.js"></script>
