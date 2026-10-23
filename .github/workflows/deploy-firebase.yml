@@ -24,10 +24,11 @@ jobs:
       - name: Verify scripts are valid before publishing
         shell: bash
         run: |
-          for file in cloud.js importer.js trackman-pdf.js trackman-session.js firebase-config.js; do
+          for file in cloud.js importer.js session-history.js session-ui.js trackman-pdf.js trackman-session.js firebase-config.js; do
             node --check "$file"
           done
           node tests/trackman-session-smoke.test.js
+          node tests/session-history-smoke.test.js
 
       - name: Stage only approved public app files
         run: bash prepare-firebase-hosting.sh
@@ -41,6 +42,19 @@ jobs:
             echo "::error::Missing GitHub secret FIREBASE_SERVICE_ACCOUNT_DIAMOND_ZONE_PITCHING_LAB. Run firebase init hosting:github once in Google Cloud Shell to connect Firebase to this repository."
             exit 1
           fi
+
+      - name: Deploy session access rules before enabling the new app
+        shell: bash
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DIAMOND_ZONE_PITCHING_LAB }}
+        run: |
+          set -euo pipefail
+          KEY_FILE="$RUNNER_TEMP/diamond-zone-firestore-service.json"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          printf '%s' "$FIREBASE_SA_JSON" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          export GOOGLE_APPLICATION_CREDENTIALS="$KEY_FILE"
+          npx --yes firebase-tools@latest deploy --only firestore:rules --project diamond-zone-pitching-lab --non-interactive
 
       - name: Publish the latest build to the Firebase live channel
         uses: FirebaseExtended/action-hosting-deploy@v0
