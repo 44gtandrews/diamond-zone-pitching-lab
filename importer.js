@@ -96,7 +96,7 @@ $('session-save').onclick=async()=>{
  const enteredDate=$('session-date').value.trim();
  const isHistoricalImport=reportFormat==='pitch-type-summary'||selectedSourceSessions>1;
  if(!isHistoricalImport && (!window.DZ_HISTORY_MATH?.getDay(enteredDate) ||
-     window.DZ_HISTORY_MATH.getDay(enteredDate)>window.DZ_HISTORY_MATH.getDay(new Date().toLocaleDateString('en-CA'))))
+     window.DZ_HISTORY_MATH.getDay(enteredDate)>window.DZ_HISTORY_MATH.getDay((()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');})())))
    throw Error('Enter a valid session date on or before today to track this session. Use the date from the report.');
  if(reportFormat==='individual-session'&&enteredDate!==sessionDate)
    throw Error('The session date must match the date verified inside the individual-pitch PDF.');
