@@ -57,8 +57,36 @@ function render(){
 }
 function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;$('session-date').value='';$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
 function close(){$('session-import-overlay').style.display='none';document.body.style.overflow='';}
-function weighted(a,b,f){const v=[a,b].filter(x=>x[f]!=null);return v.length?v.reduce((s,x)=>s+x[f]*x.n,0)/v.reduce((s,x)=>s+x.n,0):null;}
-function merge(existing,incoming){const map=new Map(existing.map(r=>[r.key,{...r}]));for(const b of incoming){const a=map.get(b.key);if(!a){map.set(b.key,b);continue;}const c={...a,n:a.n+b.n};['velo','ext','ivb','hb','vaa','relHeight','relSide','spinEff'].forEach(f=>c[f]=num(weighted(a,b,f)));['spin','strike','strikeExt','out'].forEach(f=>c[f]=num(weighted(a,b,f),true));['veloMax','spinMax'].forEach(f=>c[f]=a[f]==null?b[f]:b[f]==null?a[f]:Math.max(a[f],b[f]));c.tilt=a.ivb!=null&&b.ivb==null?a.tilt:b.ivb!=null&&a.ivb==null?b.tilt:a.n>=b.n?a.tilt:b.tilt;map.set(b.key,c);}return [...map.values()].sort((a,b)=>b.n-a.n);}
+function observedCount(p,f){
+ const n=p.validCounts?.[f];
+ return Number.isInteger(n)&&n>=0?n:
+   (typeof p[f]==='number'&&Number.isFinite(p[f])?p.n||0:0);
+}
+function weighted(a,b,f){
+ const data=[a,b].filter(p=>typeof p[f]==='number'&&Number.isFinite(p[f])&&observedCount(p,f)>0);
+ const total=data.reduce((sum,p)=>sum+observedCount(p,f),0);
+ return total?data.reduce((sum,p)=>sum+p[f]*observedCount(p,f),0)/total:null;
+}
+function merge(existing,incoming){
+ const map=new Map(existing.map(r=>[r.key,{...r}]));
+ const metrics=['velo','ext','ivb','hb','vaa','relHeight','relSide','spinEff','spin','strike','strikeExt','out','axis2d','axis3d','gyro'];
+ for(const b of incoming){
+   const a=map.get(b.key);
+   if(!a){map.set(b.key,b);continue;}
+   const c={...a,n:a.n+b.n,validCounts:{}};
+   for(const field of metrics){
+     const v=weighted(a,b,field);
+     c[field]=v==null?null:num(v,['spin','strike','strikeExt','out'].includes(field));
+     c.validCounts[field]=observedCount(a,field)+observedCount(b,field);
+   }
+   for(const field of ['veloMax','spinMax']){
+     c[field]=a[field]==null?b[field]:b[field]==null?a[field]:Math.max(a[field],b[field]);
+   }
+   c.tilt=a.ivb!=null&&b.ivb==null?a.tilt:b.ivb!=null&&a.ivb==null?b.tilt:a.n>=b.n?a.tilt:b.tilt;
+   map.set(b.key,c);
+ }
+ return [...map.values()].sort((a,b)=>b.n-a.n);
+}
 $('cloud-add-player').onclick=()=>open('new');
 $('cloud-update-player').onclick=()=>open('update',window.DZ_CURRENT_PLAYER());
 $('session-cancel').onclick=close;
