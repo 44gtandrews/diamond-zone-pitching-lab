@@ -106,8 +106,7 @@
     const {expected,playerName,sessionDate,raw}=summary(pages),pitches=[],seen=new Set();
     for(let pageIndex=1;pageIndex<pages.length;pageIndex++){
       const page=pages[pageIndex],rows=linesFor(page);
-      if(!rows.some(r=>r.items.some(it=>it.s==='Pitch') &&
-        r.items.some(it=>it.s==='no.')))continue;
+      if(!rows.some(r=>/pitch\s*no\.?/i.test(r.items.map(it=>it.s).join(' '))))continue;
       const legends={};
       for(const row of rows){
         if(row.y>=78)break;
