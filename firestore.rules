@@ -125,6 +125,29 @@ service cloud.firestore {
           ['pitches', 'sessions', 'updatedBy', 'updatedAt', 'importHistory']));
       allow delete: if isAdmin();
     }
+    // Per-player sessions are independent, immutable source records.
+    // Player/parents can read ONLY their own linked, active pitcher's sessions.
+    // The profile aggregates in /players are retained for legacy/rollback use.
+    match /players/{playerId}/sessions/{sessionId} {
+      allow get, list: if canViewAll() ||
+        (assignedParent(playerId) &&
+         exists(/databases/$(database)/documents/players/$(playerId)) &&
+         get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
+      allow create: if canWritePitching() &&
+        getAfter(/databases/$(database)/documents/players/$(playerId)).data.id == playerId &&
+        getAfter(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true &&
+        request.resource.data.id == sessionId &&
+        request.resource.data.kind in ['single','baseline','historical'] &&
+        request.resource.data.pitches is list &&
+        request.resource.data.pitches.size() > 0 &&
+        request.resource.data.pitches.size() <= 8 &&
+        request.resource.data.pitchData is list &&
+        request.resource.data.pitchData.size() <= 600 &&
+        request.resource.data.importedBy is string &&
+        (isAdmin() || request.resource.data.importedBy == request.auth.token.email);
+      // No silent rewriting/deletion of session records by regular coaches.
+      allow update, delete: if isAdmin();
+    }
     match /playerCodes/{code} {
       allow get, list: if canViewAll();
       allow create: if canWritePitching()
