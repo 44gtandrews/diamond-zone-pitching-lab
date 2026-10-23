@@ -24,9 +24,10 @@ jobs:
       - name: Verify scripts are valid before publishing
         shell: bash
         run: |
-          for file in cloud.js importer.js trackman-pdf.js firebase-config.js; do
+          for file in cloud.js importer.js trackman-pdf.js trackman-session.js firebase-config.js; do
             node --check "$file"
           done
+          node tests/trackman-session-smoke.test.js
 
       - name: Stage only approved public app files
         run: bash prepare-firebase-hosting.sh
