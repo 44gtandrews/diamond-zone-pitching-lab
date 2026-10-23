@@ -25,9 +25,9 @@ function initSelects(){
  const period=$('dz-session-period');
  while(period.options.length>5)period.remove(5);
  for(const entry of entries){
-  if(entry.kind!=='single')continue;
+  if(entry.kind==='baseline')continue;
   const o=document.createElement('option');o.value=entry.id;
-  o.textContent=math().textDate(entry.date)+' · '+total(entry)+' pitches';
+  o.textContent=(entry.kind==='historical'?'Historical multi-session summary (undated)':math().textDate(entry.date))+' · '+total(entry)+' pitches';
   period.appendChild(o);
  }
  const baseline=period.querySelector('option[value="baseline"]');
