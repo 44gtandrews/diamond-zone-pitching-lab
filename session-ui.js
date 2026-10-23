@@ -31,7 +31,7 @@ function initSelects(){
   period.appendChild(o);
  }
  const baseline=period.querySelector('option[value="baseline"]');
- baseline.disabled=!entries.some(e=>e.kind==='baseline'||e.kind==='historical');
+ baseline.disabled=!entries.some(e=>e.kind==='baseline');
  chooseOptions($('dz-compare-a'),entries);
  chooseOptions($('dz-compare-b'),entries);
  if(entries.length){
