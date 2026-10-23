@@ -57,7 +57,8 @@ function renderHistory(player){
  $('dz-session-history-table').innerHTML=html+'</tbody>';
  $('dz-session-history-table').querySelectorAll('button[data-session-id]').forEach(btn=>{
   btn.addEventListener('click',()=>{
-   $('dz-session-period').value=btn.dataset.sessionId;
+   const entry=rows.find(row=>row.id===btn.dataset.sessionId);
+   $('dz-session-period').value=entry?.kind==='baseline'?'baseline':btn.dataset.sessionId;
    refresh(player);
    $('dz-session-controls').scrollIntoView({behavior:'smooth',block:'start'});
   });
