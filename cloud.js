@@ -21,6 +21,7 @@
   function showAuth(title, description, mode='login', message='') {
     window.DZ_SET_PORTAL_LOADING?.(false);
     window.DZ_AUTHORIZED=false;
+    window.DZ_SESSIONS_DB=null;
     window.DZ_IS_ADMIN=false;
     window.DZ_ROLE=null;
     window.DZ_PARENT_PLAYER_ID=null;
@@ -229,6 +230,7 @@
     window.DZ_EDIT_ENABLED=window.DZ_IS_ADMIN||staff.role==='pitching_coach';
     window.DZ_CAN_UPLOAD=window.DZ_EDIT_ENABLED;
     window.DZ_AUTHORIZED=true;
+    window.DZ_SESSIONS_DB=db;
     document.body.dataset.dzRole=staff.role;
     installStorage();
     window.DZ_SET_PORTAL_LOADING?.(true);
