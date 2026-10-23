@@ -1,3 +1,20 @@
+# Individual-pitch Trackman session PDFs — October 22, 2026
+
+**Third report format supported:** native Trackman pitching-practice reports headed "Pitches in session" with numbered, individually measured pitch rows across multiple PDF pages (example: `TempPlayerSessionReport.pdf`, 38 pitches, July 31, 2026).
+
+- The new `trackman-session.js` parser reads the pitch-by-pitch rows: speed, total spin, spin-axis tilt, IVB, horizontal break, extension, release height/side, and spin efficiency. Feet-and-inches measurements are converted to decimal feet; missing measurements remain null.
+- **Pitch type comes from each row's colored marker**, matched to the same PDF's pitch-type legend (plus gray "Other"). The parser does not guess pitch type from velocity/movement.
+- The source file's "Stats by pitch type" pitch counts are checked against all individual records. Pitch numbers must be consecutive, and no record may have an unresolved color or invalid speed. An unreadable/mismatched session is rejected without saving; it cannot be manually bypassed in the incomplete-extraction flow.
+- A session's averages are calculated per pitch type from available measurements; max velocity/spin use the maximum measured values, count and usage use actual pitch counts, and missing measurements never become zeros.
+- `importer.js` treats this format as **one single new session**. It can be uploaded to a new player or added to an existing *counted, aggregate* player profile, combining summary averages with pitch-count weighting. Existing averages-only profiles remain incompatible to prevent invalid merges.
+- For future analysis, the original individual pitch measurements are archived with that session's import audit (`importHistory[].pitchData`) along with `sessionDate` and a normalized fingerprint. Exact duplicate files and duplicate session fingerprints are blocked on the same player.
+- Existing grade/hidden-pitch state, coaching notes, mechanics and strength work, player IDs, profile format and both earlier PDF readers are unchanged. `cloud.js` and `firestore.rules` were not modified.
+- The new parser and regression test are included in GitHub Actions' pre-publish validation. `prepare-firebase-hosting.sh` includes the new parser in the approved static-hosting build.
+
+**Verified test cases:** 38-pitch report with 15 FB / 7 CT / 1 SP / 4 CH / 7 SW / 4 OT; verified grouped velocities and maxima, correct 6'2"→6.167 ft conversion, missing pitch-row detection, wrong-color failure, and a simulated Firebase transaction merging 20 existing 72 mph fastballs with 15 new 76.38 mph fastballs into 35 at 73.88 mph.
+
+**Limitations:** The PDF contains pitch-by-pitch release coordinates but does not directly measure anatomical arm angle. Per-pitch archive data is retained in Firestore audit history; the existing profile remains an aggregate view rather than exposing a new Pitch Log for those aggregate records. Unreliable/flattened marker-color PDFs are rejected rather than guessed. No production player write is performed as part of development testing.
+
 # Trackman dual-PDF import and pitch-type visibility — October 22, 2026
 
 This release adds safe PDF recognition for both Diamond Zone Trackman/Power BI reports while keeping the original player profile navigation, notes, mechanics, strength, scouting grades, movement graph and Trackman upload permissions.
