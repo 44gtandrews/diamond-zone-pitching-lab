@@ -165,6 +165,10 @@
     const page=await doc.getPage(p),view=page.getViewport({scale:1}),data=await page.getTextContent();
     pages.push({width:view.width,items:data.items.map(it=>({x:it.transform[4],y:view.height-it.transform[5],s:it.str}))});
   }
+  if(window.DZ_TRACKMAN_SESSION?.isSessionPages(pages)){
+    try{return await window.DZ_TRACKMAN_SESSION.parse(doc,pages);}
+    catch(error){throw Error('Trackman individual-session import failed: '+String(error?.message||error));}
+  }
   const result=parsePages(pages);
   if(!result.pitches.length)throw Error('No complete Trackman summary rows found in PDF. Use the review table or a CSV export.');
   return result;
