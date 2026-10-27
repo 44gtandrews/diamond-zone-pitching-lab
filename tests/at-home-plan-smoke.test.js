@@ -37,6 +37,7 @@ assert.match(rules,/match \/players\/\{playerId\}\/atHomePlans\/\{weekId\}/);
 assert.match(rules,/allow get, list: if isAdmin\(\)/);
 assert.match(rules,/allow create: if validPlan\(\)/);
 assert.match(rules,/allow update: if validPlan\(\)/);
-assert.doesNotMatch(rules,/atHomePlans[\s\S]*?allow get, list: if canViewAll\(/);
+const planRules=rules.split('match /players/{playerId}/atHomePlans/{weekId}')[1].split('match /playerCodes/{code}')[0];
+assert.doesNotMatch(planRules,/canViewAll\(|assignedParent\(|isPitchingCoach\(/);
 
 console.log('Admin At-Home Plan tests passed: weekly dates, links, row defaults, UI wiring and admin-only rules.');
