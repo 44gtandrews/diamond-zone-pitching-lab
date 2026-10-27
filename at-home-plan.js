@@ -177,7 +177,7 @@ async function load(){
    const novel=imported.templates.filter(t=>!state.library.some(x=>x.id===t.id));
    if(state.library.length+novel.length<=MAX_TEMPLATES){
     state.library.push(...novel);state.schedule=imported.schedule;
-    state.libraryDirty=novel.length>0;state.weekDirty=novel.length>0;
+    state.libraryDirty=novel.length>0;state.weekDirty=imported.templates.length>0;
     if(novel.length)state.selectedId=novel[0].id;
     status('Previous weekly exercises loaded as editable training days. Select Save to keep the new calendar. Original entries remain preserved.',false);
    }else status('Previous spreadsheet plan preserved. Day Library is full; free up a slot before importing.',true);
