@@ -148,6 +148,62 @@ service cloud.firestore {
       // No silent rewriting/deletion of session records by regular coaches.
       allow update, delete: if isAdmin();
     }
+    // Administrator-only at-home training plans. This is a separate per-player
+    // subcollection so existing staff/parent profile and session reads do not
+    // expose plan content, even when those users know a plan's document ID.
+    match /players/{playerId}/atHomePlans/{weekId} {
+      function validPlan() {
+        return isAdmin()
+          && exists(/databases/$(database)/documents/players/$(playerId))
+          && weekId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}
+      allow get, list: if canViewAll();
+      allow create: if canWritePitching()
+        && code.matches('^[1-9][0-9]{5}$')
+        && request.resource.data.keys().hasOnly(['playerId'])
+        && request.resource.data.playerId is string
+        && getAfter(/databases/$(database)/documents/players/$(request.resource.data.playerId)).data.publicId == code;
+      allow update, delete: if false;
+    }
+    match /playerEdits/{playerId}/sections/{section} {
+      allow get: if canViewAll() || (assignedParent(playerId)
+        && exists(/databases/$(database)/documents/players/$(playerId))
+        && get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
+      allow list: if canViewAll();
+      allow create, update: if canWritePitching()
+        && exists(/databases/$(database)/documents/players/$(playerId))
+        && section in ['notes', 'mechanics', 'strength', 'grades', 'type-overrides']
+        && request.resource.data.keys().hasOnly(['value', 'updatedAt', 'editedBy'])
+        && request.resource.data.keys().hasAll(['value', 'updatedAt', 'editedBy'])
+        && request.resource.data.value is string
+        && request.resource.data.value.size() <= 50000
+        && (isAdmin() || request.resource.data.editedBy == request.auth.token.email);
+      allow delete: if isAdmin();
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
+)
+          && request.resource.data.keys().hasOnly(
+            ['weekStart', 'title', 'notes', 'rows', 'revision', 'updatedBy', 'updatedAt'])
+          && request.resource.data.keys().hasAll(
+            ['weekStart', 'title', 'notes', 'rows', 'revision', 'updatedBy', 'updatedAt'])
+          && request.resource.data.weekStart == weekId
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.notes is string
+          && request.resource.data.notes.size() <= 3000
+          && request.resource.data.rows is list
+          && request.resource.data.rows.size() <= 80
+          && request.resource.data.revision is int
+          && request.resource.data.updatedBy == request.auth.token.email.lower()
+          && request.resource.data.updatedAt == request.time;
+      }
+      allow get, list: if isAdmin();
+      allow create: if validPlan() && request.resource.data.revision == 1;
+      allow update: if validPlan()
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if isAdmin();
+    }
     match /playerCodes/{code} {
       allow get, list: if canViewAll();
       allow create: if canWritePitching()
