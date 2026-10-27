@@ -2981,6 +2981,7 @@ window.DZ_OPEN_CURRENT_URL=async()=>{
 };
 window.DZ_OPEN_PLAYER=async id=>{
   if(window.DZ_ROLE==='player_parent'&&id!==window.DZ_PARENT_PLAYER_ID)return;
+  if(window.DZ_AT_HOME_CONFIRM_EXIT && !window.DZ_AT_HOME_CONFIRM_EXIT())return;
   const p=PLAYERS[id];
   if(!p || p.inactive===true)return;
   if(p.publicId && DZ_SIX_DIGITS.test(String(p.publicId))){
@@ -2992,6 +2993,7 @@ window.DZ_OPEN_PLAYER=async id=>{
   await showPlayer(id);
 };
 window.DZ_GO_HOME=()=>{
+  if(window.DZ_AT_HOME_CONFIRM_EXIT && !window.DZ_AT_HOME_CONFIRM_EXIT())return;
   if(window.DZ_ROLE==='player_parent'){
     window.DZ_OPEN_CURRENT_URL();
     return;
@@ -3001,6 +3003,7 @@ window.DZ_GO_HOME=()=>{
   showHome();
 };
 window.DZ_OPEN_ADMIN=()=>{
+  if(window.DZ_AT_HOME_CONFIRM_EXIT && !window.DZ_AT_HOME_CONFIRM_EXIT())return;
   if(!window.DZ_AUTHORIZED || !window.DZ_IS_ADMIN){
     window.DZ_GO_HOME();
     return;
@@ -3026,6 +3029,7 @@ function dzSetTopNav(view){
 }
 function showAdmin(){
   if(!window.DZ_AUTHORIZED || !window.DZ_IS_ADMIN){showHome();return;}
+  window.DZ_AT_HOME_RESET?.();
   currentPlayerId=null;
   document.getElementById('view-player').style.display='none';
   document.getElementById('view-home').style.display='none';
@@ -3054,6 +3058,7 @@ function showHome(){
     window.DZ_OPEN_CURRENT_URL();
     return;
   }
+  window.DZ_AT_HOME_RESET?.();
   currentPlayerId = null;
   document.getElementById('view-admin').style.display = 'none';
   document.getElementById('view-player').style.display = 'none';
