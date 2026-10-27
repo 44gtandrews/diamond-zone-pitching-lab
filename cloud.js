@@ -20,6 +20,7 @@
 
   function showAuth(title, description, mode='login', message='') {
     window.DZ_SET_PORTAL_LOADING?.(false);
+    window.DZ_AT_HOME_RESET?.();
     window.DZ_AUTHORIZED=false;
     window.DZ_SESSIONS_DB=null;
     window.DZ_IS_ADMIN=false;
