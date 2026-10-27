@@ -1620,6 +1620,37 @@
     .dz-session-history th,.dz-session-history td{padding:10px;font-size:11px;white-space:nowrap;}
   }
 
+
+  /* At-home plan: interface is hidden for non-admins; Firestore enforces authorization. */
+  body:not([data-dz-role="admin"]) #tab-at-home-btn,
+  body:not([data-dz-role="admin"]) #panel-at-home {display:none!important;}
+  .dz-plan-shell{background:#0E2028;border:1px solid #31505B;border-radius:6px;padding:22px;margin:14px 0 50px;}
+  .dz-plan-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;}
+  .dz-plan-header h2{font:800 23px Inter,sans-serif;color:#F4FBFC;margin:0 0 8px;}
+  .dz-plan-header p,.dz-plan-hint{font:400 12px/1.6 Inter,sans-serif;color:#A4BDC5;margin:5px 0 14px;}
+  .dz-plan-private{font:700 11px Inter,sans-serif;color:#A4E4E7;background:#153943;padding:8px 10px;border:1px solid #286D77;border-radius:4px;}
+  .dz-plan-weekbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:19px 0;padding:16px 0;border-top:1px solid #2C4750;border-bottom:1px solid #2C4750;}
+  .dz-plan-weekbar label,.dz-plan-meta label{font:700 12px Inter,sans-serif;color:#DCEBED;display:flex;flex-direction:column;gap:7px;}
+  .dz-plan-weekbar input,.dz-plan-meta input,.dz-plan-meta textarea,.dz-plan-cell{background:#0A1820;color:#F3FAFB;border:1px solid #35545E;border-radius:3px;padding:10px;font:500 13px Inter,sans-serif;min-height:40px;min-width:0;}
+  .dz-plan-weekbar input{color-scheme:dark;}
+  .dz-plan-range{color:#8EB1B9;font-size:12px;}
+  .dz-plan-meta{display:grid;gap:16px;margin:14px 0 17px;}
+  .dz-plan-meta input{max-width:560px;}
+  .dz-plan-meta textarea{resize:vertical;min-height:84px;width:100%;}
+  .dz-plan-table-scroll{overflow-x:auto;border:1px solid #37545F;-webkit-overflow-scrolling:touch;}
+  .dz-plan-table{width:max-content;min-width:100%;border-collapse:collapse;}
+  .dz-plan-table th{background:#142B34;color:#C2E5E9;font:800 11px Inter,sans-serif;padding:11px;text-align:left;white-space:nowrap;border-bottom:1px solid #3A5962;}
+  .dz-plan-table td{vertical-align:top;padding:8px 5px;border-bottom:1px solid #29414B;}
+  .dz-plan-table td:nth-child(1){min-width:123px}.dz-plan-table td:nth-child(2){min-width:124px}
+  .dz-plan-table td:nth-child(3){min-width:220px}.dz-plan-table td:nth-child(4){min-width:190px}
+  .dz-plan-table td:nth-child(5){min-width:215px}.dz-plan-table td:nth-child(6){min-width:235px}
+  .dz-plan-table .dz-plan-cell{width:100%;font-size:12px;padding:9px 7px;}
+  .dz-plan-resource-link{display:inline-block;margin:8px 4px 0;font-size:12px;color:#73DDE4;}
+  .dz-plan-remove{background:transparent;color:#FFBCBC;border:1px solid #6C4449;border-radius:3px;min-height:39px;padding:7px 10px;cursor:pointer;}
+  .dz-plan-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:19px;}
+  .dz-plan-actions #dz-plan-save{margin-left:auto;}
+  #dz-plan-status{min-height:20px;overflow-wrap:anywhere;}
+  @media(max-width:600px){.dz-plan-shell{padding:15px 11px}.dz-plan-weekbar{gap:9px}.dz-plan-weekbar .cloud-button{min-height:43px}.dz-plan-actions .cloud-button{width:100%}.dz-plan-actions #dz-plan-save{margin-left:0}}
 </style>
 </head>
 <body>
@@ -1904,6 +1935,7 @@
       <button class="tabbtn" data-tab="notes">Notes</button>
       <button class="tabbtn" data-tab="mechanics">Mechanical Changes</button>
       <button class="tabbtn" data-tab="strength">Strength &amp; Mobility</button>
+      <button class="tabbtn" data-tab="at-home" id="tab-at-home-btn" style="display:none;">At-Home Plan</button>
     </div>
 
     <!-- OVERVIEW: existing plot, velocity, usage and statistics layout remains intact. -->
@@ -2033,6 +2065,36 @@
         <button class="save-btn" id="strength-save">Save notes</button>
         <span class="save-status" id="status-strength">Saved</span>
       </div>
+    </div>
+    <!-- Administrator-only weekly training table -->
+    <div class="panel" id="panel-at-home">
+      <section class="dz-plan-shell">
+        <div class="dz-plan-header"><div><h2>At-Home Training Plan</h2><p>Private admin workspace — build weekly throwing, strength, mobility and recovery programs. Saved in Firebase for this player.</p></div><span class="dz-plan-private">Administrator only</span></div>
+        <div class="dz-plan-weekbar">
+          <button type="button" class="cloud-button secondary" id="dz-plan-prev" aria-label="Previous week">← Previous</button>
+          <label for="dz-plan-week">Week of <input type="date" id="dz-plan-week" /></label>
+          <button type="button" class="cloud-button secondary" id="dz-plan-next" aria-label="Next week">Next →</button>
+          <span id="dz-plan-date-range" class="dz-plan-range"></span>
+        </div>
+        <div class="dz-plan-meta">
+          <label>Program title <input type="text" id="dz-plan-title" maxlength="120" placeholder="Offseason · Foundation Block"></label>
+          <label>Coach instructions <textarea id="dz-plan-notes" maxlength="3000" rows="3" placeholder="Directions, rest guidelines, training priorities"></textarea></label>
+        </div>
+        <p class="dz-plan-hint">Add exercises by day. Prescriptions may include sets, reps, throwing distance, duration or intensity. Optional resource links must use HTTPS.</p>
+        <div class="dz-plan-table-scroll" role="region" tabindex="0" aria-label="At-home training spreadsheet, scroll horizontally">
+          <table class="dz-plan-table">
+            <thead><tr><th>Day</th><th>Category</th><th>Exercise / Drill</th><th>Prescription</th><th>Coach Notes</th><th>Resource Link</th><th>Action</th></tr></thead>
+            <tbody id="dz-plan-rows"></tbody>
+          </table>
+        </div>
+        <p id="dz-plan-empty" class="dz-plan-hint">No exercises added for this week.</p>
+        <div class="dz-plan-actions">
+          <button type="button" class="cloud-button secondary" id="dz-plan-add">+ Add Exercise</button>
+          <button type="button" class="cloud-button secondary" id="dz-plan-copy">Copy Previous Week</button>
+          <button type="button" class="cloud-button" id="dz-plan-save">Save Plan to Firebase</button>
+        </div>
+        <p id="dz-plan-status" class="cloud-status" role="status" aria-live="polite"></p>
+      </section>
     </div>
   </div>
 </div>
@@ -2867,10 +2929,12 @@ document.getElementById('strength-save').addEventListener('click', async ()=>{
 /* ================= Tabs ================= */
 document.querySelectorAll('.tabbtn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
+    if(btn.dataset.tab==='at-home' && !window.DZ_IS_ADMIN)return;
     document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='at-home')window.DZ_AT_HOME_OPEN?.(currentPlayerId);
   });
 });
 
@@ -3024,6 +3088,7 @@ async function showPlayer(id){
   const player = PLAYERS[id];
   if(!player || player.inactive===true){ showHome(); return; }
   currentPlayerId = id;
+  window.DZ_AT_HOME_ON_PLAYER?.(player);
   // Returning from a profile opens the corresponding directory section.
   DZ_DIRECTORY_TAB=dzIsExternal(player)?'external':'internal';
   document.getElementById('view-admin').style.display = 'none';
@@ -3050,6 +3115,7 @@ async function showPlayer(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-overview').classList.add('active');
   document.getElementById('tab-pitchlog-btn').style.display = player.dataType==='raw' ? '' : 'none';
+  document.getElementById('tab-at-home-btn').style.display = window.DZ_IS_ADMIN ? '' : 'none';
 
   moveViewMode = 'avg';
   document.querySelectorAll('#move-toggle .toggle-btn').forEach(b=>b.classList.remove('active'));
@@ -3108,5 +3174,6 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="./trackman-pdf.js"></script>
 <script src="./importer.js"></script>
 <script src="./cloud.js"></script>
+<script src="./at-home-plan.js"></script>
 </body>
 </html>
