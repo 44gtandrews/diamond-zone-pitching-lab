@@ -62,6 +62,19 @@
     return all.some(s=>/pitches\s+in\s+session/i.test(s)) &&
       all.some(s=>/stats\s+by\s+pitch\s+type/i.test(s));
   }
+  // TrackMan places "Pitching practice" beside the player name. In compact
+  // layouts the report title may fall inside the old name-coordinate window.
+  // Keep name matching exact after removing this known report title only.
+  function normalizePlayerName(name){
+    const raw=String(name||'').trim()
+      .replace(/\s+pitching\s+practice\b.*$/i,'').trim();
+    const ordered=raw.includes(',')?raw.replace(/^([^,]+),\s*(.*)$/,'$2 $1'):raw;
+    return ordered.toLowerCase().replace(/[^a-z]/g,'');
+  }
+  function playerNamesMatch(reportName,profileName){
+    const fromReport=normalizePlayerName(reportName);
+    return Boolean(fromReport)&&fromReport===normalizePlayerName(profileName);
+  }
   function summary(pages){
     const first=linesFor(pages[0]),expected={},raw=[];
     let titleFound=false;
@@ -85,8 +98,11 @@
        r.items.some(it=>it.s.toLowerCase()==='practice')));
     let playerName=null,sessionDate=null;
     if(rowName){
-      const left=rowName.items.filter(it=>it.x>4&&it.x<98).map(it=>it.s);
-      playerName=left.join(' ').trim()||null;
+      // The identity ends at the label, not at a fixed PDF x-coordinate.
+      // Some TrackMan reports render the label before x=98 or in one text item.
+      const header=rowName.items.filter(it=>it.x>4).map(it=>it.s).join(' ').replace(/\s+/g,' ').trim();
+      const label=/\bpitching\s+practice\b/i.exec(header);
+      playerName=label?header.slice(0,label.index).trim()||null:null;
       const full=rowName.items.map(it=>it.s).join(' ');
       const d=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})\b/i.exec(full);
       if(d){
@@ -210,5 +226,5 @@
     try{return parsePages(pages,sample);}
     finally{for(const c of canvases.values()){c.ctx.canvas.width=0;c.ctx.canvas.height=0;}}
   }
-  window.DZ_TRACKMAN_SESSION={isSessionPages,parsePages,parse};
+  window.DZ_TRACKMAN_SESSION={isSessionPages,parsePages,parse,normalizePlayerName,playerNamesMatch};
 })();
