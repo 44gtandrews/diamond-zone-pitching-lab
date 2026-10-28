@@ -32,13 +32,10 @@ async function pdf(file){
  if(mode==='new' && data.playerName && !$('session-player-name').value.trim()){
   $('session-player-name').value=data.playerName;
  }
- const normalizeName=name=>{
-   const text=String(name||'').trim();
-   return (text.includes(',')?text.replace(/^([^,]+),\s*(.*)$/,'$2 $1'):text)
-     .toLowerCase().replace(/[^a-z]/g,'');
- };
+ // Compare the actual player identity, excluding a known TrackMan report
+ // heading. A different first or last name must still block the upload.
  if(mode==='update' && data.playerName && PLAYERS[id]?.name
-   && normalizeName(data.playerName)!==normalizeName(PLAYERS[id].name)){
+   && !window.DZ_TRACKMAN_SESSION?.playerNamesMatch?.(data.playerName,PLAYERS[id].name)){
   throw Error('The report is for '+data.playerName+', but this is '+PLAYERS[id].name+"'s profile. Open the matching player profile instead.");
  }
  if(mode==='update' && data.selectedSessions>1){
