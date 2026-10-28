@@ -67,8 +67,8 @@
   // Keep name matching exact after removing this known report title only.
   function normalizePlayerName(name){
     const raw=String(name||'').trim()
-      .replace(/\\s+pitching\\s+practice\\b.*$/i,'').trim();
-    const ordered=raw.includes(',')?raw.replace(/^([^,]+),\\s*(.*)$/,'$2 $1'):raw;
+      .replace(/\s+pitching\s+practice\b.*$/i,'').trim();
+    const ordered=raw.includes(',')?raw.replace(/^([^,]+),\s*(.*)$/,'$2 $1'):raw;
     return ordered.toLowerCase().replace(/[^a-z]/g,'');
   }
   function playerNamesMatch(reportName,profileName){
@@ -100,8 +100,8 @@
     if(rowName){
       // The identity ends at the label, not at a fixed PDF x-coordinate.
       // Some TrackMan reports render the label before x=98 or in one text item.
-      const header=rowName.items.filter(it=>it.x>4).map(it=>it.s).join(' ').replace(/\\s+/g,' ').trim();
-      const label=/\\bpitching\\s+practice\\b/i.exec(header);
+      const header=rowName.items.filter(it=>it.x>4).map(it=>it.s).join(' ').replace(/\s+/g,' ').trim();
+      const label=/\bpitching\s+practice\b/i.exec(header);
       playerName=label?header.slice(0,label.index).trim()||null:null;
       const full=rowName.items.map(it=>it.s).join(' ');
       const d=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})\b/i.exec(full);
