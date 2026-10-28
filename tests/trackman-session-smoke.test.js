@@ -84,4 +84,26 @@ const wrongColor=(page,x,y)=>page===2&&y>90&&Math.abs(y-(116.423-2.6))<1
   ?colors.fb:pixel(page,x,y);
 assert.throws(()=>parser.parsePages(pages,wrongColor),/counts do not match/);
 assert.equal(parser.isSessionPages([{items:[{s:'Stats by Pitch Type'},{s:'Release Height'}]}]),false);
+
+// TrackMan often prints "Pitching practice" close to or inside the player-name
+// x-coordinate window. It is a report title, not part of a player's name.
+const compactHeader=pages.map(p=>({...p,items:p.items.map(it=>({...it}))}));
+compactHeader[0].items.find(it=>it.s==='Pitching practice').x=83.5;
+assert.equal(parser.parsePages(compactHeader,pixel).playerName,'Griffin Andrews',
+  'compact header excludes title despite x<98');
+
+const combinedHeader=pages.map(p=>({...p,items:p.items.map(it=>({...it}))}));
+combinedHeader[0].items=combinedHeader[0].items.filter(it=>
+  !(it.y===29&&['Griffin','Andrews','Pitching practice'].includes(it.s)));
+combinedHeader[0].items.push({x:6.6,y:29,s:'PJ Colon Pitching practice'});
+assert.equal(parser.parsePages(combinedHeader,pixel).playerName,'PJ Colon',
+  'combined player and title PDF text strips the report label');
+assert.equal(parser.playerNamesMatch('PJ Colon Pitching practice','PJ Colon'),true);
+assert.equal(parser.playerNamesMatch('Colon, PJ Pitching practice','PJ Colon'),true);
+assert.equal(parser.playerNamesMatch('PJ Colon','PJ Colon'),true);
+assert.equal(parser.playerNamesMatch('PJ Collins Pitching practice','PJ Colon'),false);
+assert.equal(parser.playerNamesMatch('Joe Colon Pitching practice','PJ Colon'),false);
+assert.equal(parser.playerNamesMatch('', 'PJ Colon'),false);
+assert.equal(parser.playerNamesMatch('Pitching practice','PJ Colon'),false);
+
 console.log('Trackman session PDF smoke tests passed: 38 pitches, 6 types, missing-cell handling, strict validation.');
