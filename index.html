@@ -3,7 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diamond Zone CT — Pitching Portal</title>
+<title>DZ Pitching Portal</title>
+<meta name="description" content="DiamondZone Pitching Portal — player profiles, pitching data, coaching notes and training plans.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DiamondZone">
+<meta property="og:title" content="DZ Pitching Portal">
+<meta property="og:description" content="DiamondZone player profiles, pitching data and coaching resources.">
+<meta property="og:url" content="https://dzpitchingportal.app/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="DZ Pitching Portal">
+<meta name="twitter:description" content="DiamondZone player profiles, pitching data and coaching resources.">
 <link rel="icon" type="image/svg+xml" href="./dz-logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -232,7 +241,7 @@
   @media(max-width:480px){.wrap,.home-wrap{padding-inline:16px;}.cloud-card{margin:18px 12px;padding:17px}.player-row{padding:13px 11px}.kpi{padding:13px 12px}.tabbtn{padding:10px 11px;}}
 
   /* ===============================================================
-     DIAMOND ZONE CT THEME · teal / black / athletic condensed type
+     DIAMONDZONE CT THEME · teal / black / athletic condensed type
      Visual-only layer — preserves app structure, data and behaviors.
      =============================================================== */
   body{
@@ -1715,20 +1724,21 @@
   @media(max-width:1060px){.mech-columns{grid-template-columns:repeat(2,minmax(0,1fr));}.mech-completed-column{grid-column:1/-1;}}
   @media(max-width:740px){.mech-columns{grid-template-columns:1fr;gap:11px;}.mech-completed-column{grid-column:auto;}.mech-column .field-hint{min-height:0;}}
 
-  /* Brand: use the supplied Diamond Zone artwork instead of decorative gradients. */
+  /* Brand: teal-gradient DZ artwork over a subtle dark gradient masthead. */
   :root{--accent:#008c95;--accent-deep:#008c95;}
   body{background:#091217;}
   .masthead,#view-player .masthead,#view-home .masthead,#view-admin .masthead{
     background-color:#091217;
-    background-image:url('./dz-teal-background.svg');
-    background-size:310px 310px;
-    background-position:right 7% center;
-    background-repeat:no-repeat;
+    background-image:url('./dz-teal-background.svg'),
+      linear-gradient(115deg,#091319 0%,#0C2027 62%,#0E2C34 100%);
+    background-size:310px 310px,cover;
+    background-position:right 7% center,center;
+    background-repeat:no-repeat,no-repeat;
   }
   #view-player .masthead::after{display:none;}
   @media(max-width:700px){
     .masthead,#view-player .masthead,#view-home .masthead,#view-admin .masthead{
-      background-size:210px 210px;background-position:right -70px center;
+      background-size:210px 210px,cover;background-position:right -70px center,center;
     }
   }
   .dz-pitch-counts-shell{margin:14px 0 35px;padding:18px 20px 22px;border:1px solid #35505A;background:#101E24;border-radius:6px;}
@@ -1801,7 +1811,7 @@
 </head>
 <body>
 <section id="cloud-auth-screen" aria-live="polite">
-  <div class="masthead"><div class="home-wrap dz-branded-head"><img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="106" height="92"><div class="dz-head-copy"><p class="facility">Diamond Zone CT · Pitching Lab</p><h1 class="page-title">Pitching Portal</h1><p class="page-sub">Private player profiles · secure shared coaching notes</p></div></div></div>
+  <div class="masthead"><div class="home-wrap dz-branded-head"><img class="dz-brand-logo" src="./dz-logo.svg" alt="DiamondZone DZ logo" width="106" height="92"><div class="dz-head-copy"><p class="facility">DiamondZone CT · Pitching Lab</p><h1 class="page-title">Pitching Portal</h1><p class="page-sub">Private player profiles · secure shared coaching notes</p></div></div></div>
   <div class="cloud-card">
     <h2 id="cloud-auth-title">Connecting...</h2>
     <p id="cloud-auth-description">Checking coach access.</p>
@@ -1825,8 +1835,8 @@
 <div id="cloud-bar" style="display:none;">
   <div class="wrap">
     <div class="dz-nav-brand">
-      <img src="./dz-logo.svg" width="48" height="48" alt="Diamond Zone logo">
-      <div><strong>Diamond Zone</strong><small>Pitching Portal</small></div>
+      <img src="./dz-logo.svg" width="48" height="48" alt="DiamondZone logo">
+      <div><strong>DiamondZone</strong><small>Pitching Portal</small></div>
     </div>
     <nav class="dz-site-tabs" aria-label="Pitching Portal sections">
       <button type="button" id="cloud-directory-nav" class="dz-site-tab active">Directory</button>
@@ -1853,7 +1863,7 @@
       <div class="dz-head-copy">
         <p class="facility">Player management</p>
         <h1 class="page-title">Player Directory</h1>
-        <p class="page-sub">Diamond Zone program and lesson pitchers, with scouting grades and velocities.</p>
+        <p class="page-sub">DiamondZone program and lesson pitchers, with scouting grades and velocities.</p>
       </div>
       <div class="dz-home-actions">
         <button type="button" class="dz-scale-link" id="dz-scroll-scale">20–80 scale <span aria-hidden="true">↗</span></button>
@@ -2046,7 +2056,7 @@
       <label>Player name<input id="cloud-edit-name" type="text" required minlength="2" maxlength="100" autocomplete="off"></label>
       <label>Program affiliation
         <select id="cloud-edit-affiliation" required>
-          <option value="internal">Internal · Diamond Zone program</option>
+          <option value="internal">Internal · DiamondZone program</option>
           <option value="external">External · Lessons / other teams</option>
         </select>
       </label>
@@ -2072,10 +2082,10 @@
     <div class="wrap">
       <div class="masthead-row">
         <div class="dz-profile-identity">
-          <img class="dz-brand-logo" src="./dz-logo.svg" alt="Diamond Zone DZ logo" width="92" height="80">
+          <img class="dz-brand-logo" src="./dz-logo.svg" alt="DiamondZone DZ logo" width="92" height="80">
           <div class="dz-head-copy">
           <a href="#" class="back-link">← All Players</a>
-          <p class="facility">Diamond Zone CT · Pitching Lab</p>
+          <p class="facility">DiamondZone CT · Pitching Lab</p>
           <h1 class="player-name" id="player-name"></h1>
           <p class="player-sub" id="player-sub"></p>
           <div class="dz-id-line"><span id="player-public-id">Player ID pending</span><button type="button" id="player-copy-link" class="cloud-button secondary" style="min-height:36px;padding:6px 12px;" disabled>Copy profile link</button><span id="player-copy-status" role="status" style="font-size:12px;"></span></div>
@@ -2777,7 +2787,7 @@ function buildFootnote(player, totalN){
   const benchNote = bench!==undefined
     ? ` Velo is shaded against average fastball velocity for ${player.ageLabel} (${bench} mph) — red above the mark (better), blue below it (worse), darker meaning further off average either way. Max, IVB, and HB are wired for the same treatment but unshaded for now — no age-group norms for those yet, pending a fuller look once more players' data is in.`
     : '';
-  return `Figures pulled directly from the Diamond Zone CT session export (${player.sessions} session${player.sessions===1?'':'s'}, ${totalN} pitches). Movement chart plots each pitch type's average break. ${discardNote}${benchNote} Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still yours to set by hand — no model behind it yet).`;
+  return `Figures pulled directly from the DiamondZone CT session export (${player.sessions} session${player.sessions===1?'':'s'}, ${totalN} pitches). Movement chart plots each pitch type's average break. ${discardNote}${benchNote} Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still yours to set by hand — no model behind it yet).`;
 }
 
 
@@ -3394,7 +3404,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
     <p class="cloud-help" id="session-target"></p>
     <div class="cloud-form" id="session-new-fields" style="display:none;">
       <label>Player name<input id="session-player-name" maxlength="100" autocomplete="off" placeholder="First Last"></label>
-      <label>Program affiliation<select id="session-player-affiliation" required><option value="internal">Internal · Diamond Zone program</option><option value="external">External · Lessons / other teams</option></select></label>
+      <label>Program affiliation<select id="session-player-affiliation" required><option value="internal">Internal · DiamondZone program</option><option value="external">External · Lessons / other teams</option></select></label>
       <label>Age group<select id="session-player-age"><option value="">Select group</option><option value="10">10U</option><option value="11">11U</option><option value="12">12U</option><option value="13">13U</option><option value="14">14U</option><option value="15">15U</option><option value="16">16U</option><option value="17">17U</option><option value="18">18U</option><option value="Coach">Coach / Adult</option></select></label>
     </div>
     <label class="field-label" for="session-file">Trackman session file (PDF, CSV, JSON; max 5 MB)</label>
