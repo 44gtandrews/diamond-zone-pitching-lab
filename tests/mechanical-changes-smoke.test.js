@@ -34,6 +34,11 @@ assert.equal(m.normalize({positives:[1,'x'],negatives:'bad',completed:[null,{tex
 const serialized=JSON.parse(JSON.stringify(done));
 assert.deepEqual(m.normalize(serialized),done,'JSON round trip preserves completed changes and sources');
 
+const mechanicalUi=fs.readFileSync('mechanical-changes.js','utf8');
+assert.match(mechanicalUi,/completionBox\.type='checkbox'/);
+assert.match(mechanicalUi,/Mark '\+group\+' mechanical note '/);
+assert.match(mechanicalUi,/window\.DZ_EDIT_ENABLED/);
+assert.match(mechanicalUi,/current=reopen\(current,i\)/);
 const html=fs.readFileSync('index.html','utf8');
 const stage=fs.readFileSync('prepare-firebase-hosting.sh','utf8');
 const workflow=fs.readFileSync('.github/workflows/deploy-firebase.yml','utf8');
