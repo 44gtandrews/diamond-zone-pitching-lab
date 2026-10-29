@@ -1761,6 +1761,42 @@
   .dz-count-editor .cloud-button{min-height:41px;}
   @media(max-width:650px){.dz-pitch-counts-shell{padding:13px 9px}.dz-count-top h2{font-size:21px;min-width:0;flex:1}.dz-count-day{min-height:62px;padding:5px}.dz-count-day .dz-count-value{font-size:21px;margin-bottom:2px}.dz-count-day-header{font-size:10px}.dz-count-editor .cloud-button{padding:9px 10px;}}
 
+
+  /* Admin access: readable role categories, status and direct account filtering. */
+  #view-admin .dz-admin-role-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:20px 0 16px;}
+  .dz-access-stat{border:1px solid #31505A;background:#132B33;border-radius:5px;padding:12px 13px;min-width:0;}
+  .dz-access-stat strong{display:block;color:#EAF8F9;font:800 24px 'Barlow Condensed',Inter,sans-serif;}
+  .dz-access-stat span{display:block;margin-top:4px;color:#BCD6DB;font:650 11px Inter,sans-serif;overflow-wrap:anywhere;}
+  .dz-admin-account-filters{display:grid;grid-template-columns:minmax(160px,2fr) repeat(2,minmax(135px,1fr));gap:10px 12px;margin:7px 0 10px;}
+  .dz-admin-account-filters label{display:flex;flex-direction:column;gap:6px;color:#BDD6DC;font:650 11px Inter,sans-serif;}
+  #view-admin #admin-panel .dz-admin-account-filters input,
+  #view-admin #admin-panel .dz-admin-account-filters select{
+    display:block;width:100%;max-width:none;min-width:0;min-height:42px;background:#11252D;color:#F2F9FA;
+    border:1px solid #3B5863;border-radius:4px;padding:9px 11px;font:550 12px Inter,sans-serif;
+  }
+  .dz-admin-filter-count{margin:12px 0 4px;font:550 11px Inter,sans-serif;color:#ABC6CC;}
+  #view-admin #admin-panel .dz-coach-list>li.dz-account-row{display:grid;grid-template-columns:minmax(175px,1fr) minmax(270px,1.35fr);align-items:center;gap:14px;padding:15px 12px;border-bottom:1px solid #294550;}
+  #view-admin .dz-account-row .dz-coach-email{font:750 13px/1.5 Inter,sans-serif;color:#F3FAFB;overflow-wrap:anywhere;}
+  #view-admin .dz-account-row .dz-coach-meta{font:550 11px/1.6 Inter,sans-serif;color:#A6C0C6;}
+  .dz-account-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 5px;}
+  .dz-account-badge{font:750 10px Inter,sans-serif;padding:5px 7px;border-radius:3px;border:1px solid #3C5963;color:#D9ECEF;background:#1B333D;}
+  .dz-account-badge.dz-role-badge{border-color:#008c95;color:#E6F9FA;background:#113941;}
+  .dz-account-badge.dz-account-disabled{color:#F2C2B4;border-color:#765253;background:#36262A;}
+  #view-admin .dz-account-row .dz-role-controls{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:0;background:none;border:none;}
+  #view-admin .dz-account-row .dz-role-controls label{font:600 11px Inter,sans-serif;color:#B4CDD2;}
+  #view-admin .dz-account-row .dz-role-select{flex:1 1 140px;max-width:230px;min-height:40px;}
+  #view-admin .dz-account-row .dz-linked-player{flex:1 1 145px;min-width:145px;max-width:270px;min-height:40px;}
+  #view-admin .dz-account-row .dz-role-controls button{flex:0 0 auto;min-height:39px;white-space:nowrap;}
+  @media(max-width:1000px){#view-admin .dz-admin-role-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
+    #view-admin #admin-panel .dz-coach-list>li.dz-account-row{grid-template-columns:1fr;}
+  }
+  @media(max-width:580px){#view-admin .dz-admin-account-filters{grid-template-columns:1fr;}
+    #view-admin #admin-panel .dz-coach-list>li.dz-account-row{padding:15px 10px;}
+    #view-admin .dz-account-row .dz-role-controls{display:grid;grid-template-columns:1fr 1fr;}
+    #view-admin .dz-account-row .dz-role-controls>label,#view-admin .dz-account-row .dz-role-controls>select{grid-column:1/-1;max-width:none;width:100%;}
+    #view-admin .dz-account-row .dz-role-controls button{width:100%;font-size:12px;min-width:0;}
+  }
+
 </style>
 </head>
 <body>
@@ -1939,7 +1975,30 @@
         <button class="cloud-button" type="submit">Approve Account</button>
       </form>
       <p class="cloud-status" id="cloud-invite-status" role="status"></p>
-      <ul id="cloud-allowlist" class="dz-coach-list"></ul>
+      <div id="dz-admin-role-summary" class="dz-admin-role-summary" role="status" aria-live="polite"></div>
+      <div class="dz-admin-account-filters">
+        <label for="dz-admin-account-search">Find an account
+          <input id="dz-admin-account-search" type="search" placeholder="Search email or linked player" autocomplete="off">
+        </label>
+        <label for="dz-admin-role-filter">Filter by role
+          <select id="dz-admin-role-filter" aria-label="Filter accounts by role">
+            <option value="all">All roles</option>
+            <option value="player_parent">Player / Parent</option>
+            <option value="coach">Coach · View Only</option>
+            <option value="pitching_coach">Pitching Coach · Editor</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </label>
+        <label for="dz-admin-account-status">Access status
+          <select id="dz-admin-account-status" aria-label="Filter accounts by access status">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </label>
+      </div>
+      <p class="dz-admin-filter-count" id="dz-admin-filter-count" role="status"></p>
+      <ul id="cloud-allowlist" class="dz-coach-list" aria-label="Approved user accounts and roles"></ul>
       <p class="cloud-status" id="cloud-request-status" role="status"></p>
       </section>
       <section id="dz-admin-inactive" class="dz-inactive-panel" aria-labelledby="cloud-inactive-heading">
