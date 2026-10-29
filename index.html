@@ -1922,6 +1922,32 @@
   }
   #dz-count-type:focus-visible{outline:2px solid #008c95;outline-offset:2px;}
 
+
+  /* Signup intent is visible only during registration or a verified user's missing request. */
+  .cloud-registration-fields{
+    display:grid;gap:13px;margin:14px 0 12px;padding:14px;
+    background:#102A32;border:1px solid #335863;border-radius:5px;
+  }
+  .cloud-registration-fields label{
+    display:flex;flex-direction:column;gap:6px;
+    font:650 12px Inter,sans-serif;color:#E0F1F4;
+  }
+  .cloud-registration-fields input,.cloud-registration-fields select{
+    display:block;min-height:44px;width:100%;max-width:none;
+    padding:10px 12px;border:1px solid #4A6872;border-radius:4px;
+    color:#F5FBFC;background:#0A2028;font:500 15px Inter,sans-serif;
+  }
+  .cloud-registration-player-fields{display:grid;gap:11px;}
+  .cloud-registration-fields .cloud-help{margin:1px 0;font-size:11px;line-height:1.5;}
+  .dz-request-group-title{margin:22px 0 10px;font:800 17px 'Barlow Condensed',Inter,sans-serif;color:#E5F7F9;}
+  .dz-request-context{display:grid;gap:6px;margin:10px 0 6px;padding:10px 12px;
+    background:#0E2730;border:1px solid #31525C;border-radius:4px;
+    font:600 12px/1.5 Inter,sans-serif;color:#D3E9ED;overflow-wrap:anywhere;}
+  .dz-match-suggestion{display:block;color:#BAE6E9;font-size:11px;line-height:1.5;}
+  .dz-match-warning{color:#FFD4A3;font-size:11px;}
+  .dz-verification-details{margin:20px 0;border-top:1px solid #35545E;padding-top:12px;}
+  .dz-verification-details summary{cursor:pointer;font:650 12px Inter,sans-serif;color:#B6D3D9;}
+  @media(max-width:640px){.cloud-registration-fields{padding:12px;}.dz-request-context{padding:9px 10px;}}
 </style>
 </head>
 <body>
@@ -1937,7 +1963,29 @@
     </form>
     <div id="cloud-auth-actions" class="cloud-actions" style="display:none;">
       <button class="cloud-button secondary" type="button" id="cloud-signup">Create account</button>
+      <button class="cloud-button secondary" type="button" id="cloud-cancel-signup" style="display:none">Cancel registration</button>
       <button class="cloud-button secondary" type="button" id="cloud-reset">Reset password</button>
+    </div>
+    <div id="cloud-registration-fields" class="cloud-registration-fields" style="display:none">
+      <label for="cloud-register-role">I am registering as
+        <select id="cloud-register-role">
+          <option value="">Choose your role...</option>
+          <option value="player">Player</option>
+          <option value="parent">Parent / Guardian</option>
+          <option value="coach">Coach</option>
+        </select>
+      </label>
+      <div id="cloud-register-player-fields" class="cloud-registration-player-fields" style="display:none">
+        <label for="cloud-register-player-name">Player's full name
+          <input id="cloud-register-player-name" type="text" maxlength="100" autocomplete="off" placeholder="First and last name">
+        </label>
+        <label for="cloud-register-player-id">Player profile ID (optional)
+          <input id="cloud-register-player-id" type="text" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="6-digit ID, if known">
+        </label>
+        <p class="cloud-help">Enter the player whose profile you want to see. We suggest a match to the administrator; only the administrator can approve and link the account. No player directory is shown during signup.</p>
+      </div>
+      <p class="cloud-help">Your selection requests access only. DiamondZone must verify your email and approve your account before you can view any player data.</p>
+      <button type="button" id="cloud-request-intent-submit" class="cloud-button" style="display:none">Submit access request</button>
     </div>
     <div id="cloud-verification-actions" class="cloud-actions" style="display:none;">
       <button class="cloud-button" id="cloud-recheck">I've verified — continue</button>
@@ -2077,11 +2125,18 @@
       </nav>
       <section id="dz-admin-requests" class="dz-admin-group">
       <div class="admin-section-head" style="margin-top:26px;">
-        <h3 class="field-label" id="admin-pending-heading">Pending coach requests <span id="cloud-pending-count" class="dz-count">0</span></h3>
+        <h3 class="field-label" id="admin-pending-heading">Pending Access Requests <span id="cloud-pending-count" class="dz-count">0</span></h3>
         <button type="button" id="cloud-refresh-requests" class="cloud-button secondary">Refresh requests</button>
       </div>
-      <p class="cloud-help">Verified applicants appear here. Choose the correct role before approving. Player/Parent accounts must be linked to one specific player.</p>
-      <ul class="dz-coach-list" id="cloud-pending-requests" aria-labelledby="admin-pending-heading"></ul>
+      <p class="cloud-help">Verified applicants are grouped by their requested registration type. Review the applicant's details and confirm the correct role and linked player before approving. Suggested matches never grant access automatically.</p>
+      <h4 class="dz-request-group-title">Players &amp; Parents <span id="cloud-pending-family-count" class="dz-count">0</span></h4>
+      <ul class="dz-coach-list" id="cloud-pending-family" aria-label="Pending player and guardian registration requests"></ul>
+      <h4 class="dz-request-group-title">Coaches <span id="cloud-pending-coach-count" class="dz-count">0</span></h4>
+      <ul class="dz-coach-list" id="cloud-pending-requests" aria-label="Pending coach and legacy requests"></ul>
+      <details id="cloud-awaiting-verification-details" class="dz-verification-details">
+        <summary>Awaiting email verification <span id="cloud-awaiting-verification-count">0</span></summary>
+        <ul id="cloud-awaiting-verification" class="dz-coach-list"></ul>
+      </details>
       <h3 class="field-label" style="margin-top:24px;">Denied requests</h3>
       <ul class="dz-coach-list" id="cloud-denied-requests"></ul>
       </section>
@@ -3577,6 +3632,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="./at-home-plan.js"></script>
 <script src="./mechanical-changes.js"></script>
 <script src="./pitch-counts.js"></script>
+<script src="./registration-policy.js"></script>
 <script src="./cloud.js"></script>
 </body>
 </html>
