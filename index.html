@@ -1868,6 +1868,60 @@
       font-size:14px;
     }
   }
+
+  /* Compact mobile player metrics — show all five KPIs in only two short rows. */
+  @media (max-width:640px){
+    #view-player .kpis{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      grid-auto-flow:row;
+      gap:0;
+      border-top:1px solid #2D4852;
+    }
+    #view-player .kpis>.kpi{
+      grid-column:span 2;
+      min-width:0;
+      padding:8px 9px;
+      border-right:1px solid #28424B;
+      border-bottom:1px solid #28424B;
+    }
+    #view-player .kpis>.kpi:nth-child(3),
+    #view-player .kpis>.kpi:last-child{border-right:0;}
+    #view-player .kpis>.kpi:nth-child(n+4){
+      grid-column:span 3;
+      border-bottom:0;
+    }
+    #view-player .kpis>.kpi:nth-child(4){border-right:1px solid #28424B;}
+    #view-player .kpis>.kpi:last-child{grid-column:span 3;}
+    #view-player .kpi-label{
+      font-size:9px;
+      line-height:1.2;
+      letter-spacing:.025em;
+      margin-bottom:3px;
+    }
+    #view-player .kpi-value{
+      font-size:23px;
+      line-height:1.06;
+      overflow-wrap:anywhere;
+    }
+    #view-player .kpi-value small{font-size:10px;}
+    #view-player .kpi:nth-child(4) .kpi-value{font-size:16px;}
+    #view-player .tabbar{margin-top:14px;}
+  }
+  /* Training category persists with manually entered pitch counts. */
+  .dz-count-type-label{min-width:110px;max-width:165px;}
+  #dz-count-type{
+    min-height:41px;
+    width:100%;
+    border:1px solid #42707A;
+    border-radius:3px;
+    background:#132B32;
+    color:#F5FAFA;
+    font:650 13px Inter,sans-serif;
+    padding:7px 10px;
+  }
+  #dz-count-type:focus-visible{outline:2px solid #008c95;outline-offset:2px;}
+
 </style>
 </head>
 <body>
@@ -2338,6 +2392,13 @@
             <span>Pitch count</span>
           </label>
           <input type="number" min="1" max="999" step="1" inputmode="numeric" id="dz-count-input" placeholder="e.g. 35">
+          <label for="dz-count-type" class="dz-count-type-label">Session type
+            <select id="dz-count-type" aria-label="Pitch count session type">
+              <option value="">Select type</option>
+              <option value="game">Game</option>
+              <option value="bullpen">Bullpen</option>
+            </select>
+          </label>
           <p id="dz-count-source" class="dz-count-source" aria-live="polite"></p>
           <button type="button" id="dz-count-save" class="cloud-button">Save</button>
           <button type="button" id="dz-count-delete" class="cloud-button secondary">Remove</button>
