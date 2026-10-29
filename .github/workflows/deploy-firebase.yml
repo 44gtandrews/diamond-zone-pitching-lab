@@ -35,6 +35,7 @@ jobs:
           node tests/pitch-counts-smoke.test.js
           node tests/trackman-pitch-count-calendar-smoke.test.js
           node tests/branding-smoke.test.js
+          node tests/header-opacity-fade-smoke.test.js
           node tests/profile-back-button-smoke.test.js
 
       - name: Stage only approved public app files
