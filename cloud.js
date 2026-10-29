@@ -76,8 +76,12 @@
       ...info
     };
     const ref=db.collection('coachRequests').doc(user.uid);
-    const existing=await ref.get();
-    if(existing.exists)throw Error('An access request already exists. Contact the administrator if changes are needed.');
+    // Unverified accounts cannot read requests. Firestore create-only rules
+    // protect against replacing an existing application.
+    if(user.emailVerified){
+      const existing=await ref.get();
+      if(existing.exists)throw Error('An access request already exists. Contact the administrator if changes are needed.');
+    }
     await ref.set(data);
   }
   function toggleSignup(active){
