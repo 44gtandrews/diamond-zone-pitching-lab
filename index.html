@@ -1689,6 +1689,31 @@
   .dz-override-confirm p{font:500 11px/1.45 Inter,sans-serif;color:#B8D1D7;margin:4px 0 8px;overflow-wrap:anywhere;}
   .dz-override-confirm .dz-override-actions{display:flex;gap:8px;flex-wrap:wrap;}
   .dz-override-confirm .dz-override-actions button{min-height:32px;padding:6px 10px;font:700 11px Inter,sans-serif;border-radius:4px;}
+
+  /* Mechanical coaching notes: three status columns with non-destructive completion. */
+  .mech-intro{margin:2px 0 15px;}
+  .mech-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start;}
+  .mech-column{min-width:0;padding:15px 14px;border:1px solid var(--line-strong);background:var(--paper-raised);border-radius:4px;}
+  .mech-column .field-label{font-size:14px;}
+  .mech-column .field-hint{min-height:36px;}
+  .mech-column .note-list{margin-bottom:12px;}
+  .mech-entry{border:1px solid var(--line-strong);background:var(--paper-raised);padding:7px;border-radius:3px;}
+  .mech-entry .mech-textarea{display:block;min-height:88px;width:100%;padding:9px;resize:vertical;}
+  .mech-entry-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;margin-top:7px;}
+  .mech-entry-actions button,.mech-reopen-btn{border:1px solid var(--line-strong);background:var(--paper-raised);color:var(--ink);font:650 11px Inter,sans-serif;cursor:pointer;border-radius:3px;padding:6px 8px;min-height:32px;}
+  .mech-complete-control{display:inline-flex;align-items:center;gap:6px;font:700 11px Inter,sans-serif;color:var(--accent-deep);cursor:pointer;min-height:32px;}
+  .mech-complete-control input[type="checkbox"]{width:16px;height:16px;min-height:0;margin:0;accent-color:var(--accent-deep);cursor:pointer;}
+  .mech-reopen-btn:hover{background:var(--accent-deep);color:var(--paper);}
+  .mech-entry-actions .mech-remove-btn{color:var(--ink-soft);}
+  .mech-done-entry{background:var(--paper-raised);border:1px solid var(--line-strong);border-left:3px solid var(--accent-deep);border-radius:3px;padding:11px 10px;}
+  .mech-done-text{font-size:13px;line-height:1.5;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;}
+  .mech-done-meta{display:flex;gap:5px 10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:9px;color:var(--ink-soft);font:500 10px Inter,sans-serif;}
+  .mech-reopen-btn{margin-left:auto;}
+  .mech-empty{font:400 12px/1.5 Inter,sans-serif;color:var(--ink-soft);margin:4px 0 12px;}
+  .mech-check-symbol{font-size:13px;color:var(--accent-deep);}
+  #view-player.dz-readonly .mech-entry .mech-textarea{background:var(--paper-raised);cursor:default;}
+  @media(max-width:1060px){.mech-columns{grid-template-columns:repeat(2,minmax(0,1fr));}.mech-completed-column{grid-column:1/-1;}}
+  @media(max-width:740px){.mech-columns{grid-template-columns:1fr;gap:11px;}.mech-completed-column{grid-column:auto;}.mech-column .field-hint{min-height:0;}}
 </style>
 </head>
 <body>
@@ -2071,19 +2096,25 @@
 
     <!-- MECHANICAL CHANGES -->
     <div class="panel" id="panel-mechanics">
-      <div class="two-col">
-        <div class="field-block">
+      <p class="field-hint mech-intro">Track current mechanical changes and check off completed work. Completed items move into the third column; select Save changes to sync with Firebase.</p>
+      <div class="mech-columns">
+        <section class="field-block mech-column" aria-label="Positive mechanical notes">
           <div class="field-label">Positives</div>
           <div class="field-hint">What's clicking mechanically right now.</div>
           <div class="note-list" id="mech-pos-list"></div>
           <button class="add-note-btn" type="button" id="mech-pos-add">+ Add note</button>
-        </div>
-        <div class="field-block">
+        </section>
+        <section class="field-block mech-column" aria-label="Mechanical changes to work on">
           <div class="field-label">Areas to work on</div>
-          <div class="field-hint">What still needs attention.</div>
+          <div class="field-hint">Changes you're actively training.</div>
           <div class="note-list" id="mech-neg-list"></div>
           <button class="add-note-btn" type="button" id="mech-neg-add">+ Add note</button>
-        </div>
+        </section>
+        <section class="field-block mech-column mech-completed-column" aria-label="Completed mechanical changes">
+          <div class="field-label">Completed <span class="mech-check-symbol" aria-hidden="true">✓</span></div>
+          <div class="field-hint">Finished changes, kept for reference. Reopen if needed.</div>
+          <div class="note-list" id="mech-completed-list"></div>
+        </section>
       </div>
       <div class="save-row">
         <button class="save-btn" id="mechanics-save">Save changes</button>
@@ -2972,8 +3003,7 @@ async function initPlayerNotes(player){
 
   let savedMech = {positives:[], negatives:[]};
   try{ const res = await window.storage.get(player.id+':mechanics', false); if(res&&res.value) savedMech = JSON.parse(res.value); }catch(e){}
-  player._mechPosList = makeNoteList('mech-pos-list','mech-pos-add', savedMech.positives);
-  player._mechNegList = makeNoteList('mech-neg-list','mech-neg-add', savedMech.negatives);
+  player._mechanicalBoard = window.DZ_CREATE_MECHANICAL_BOARD(savedMech);
 
   let savedStrength = [];
   try{ const res = await window.storage.get(player.id+':strength', false); if(res&&res.value) savedStrength = JSON.parse(res.value); }catch(e){}
@@ -2989,7 +3019,7 @@ document.getElementById('mechanics-save').addEventListener('click', async ()=>{
   if(!window.DZ_EDIT_ENABLED)return;
   const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-mechanics');
   try{
-    const payload = { positives: player._mechPosList.getValues(), negatives: player._mechNegList.getValues() };
+    const payload = player._mechanicalBoard.getValues();
     await window.storage.set(player.id+':mechanics', JSON.stringify(payload), false);
     flashStatus(statusEl,'Saved');
   }catch(e){ flashStatus(statusEl,'Save failed — try again'); }
@@ -3269,6 +3299,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="./upload-override-policy.js"></script>
 <script src="./importer.js"></script>
 <script src="./at-home-plan.js"></script>
+<script src="./mechanical-changes.js"></script>
 <script src="./cloud.js"></script>
 </body>
 </html>
