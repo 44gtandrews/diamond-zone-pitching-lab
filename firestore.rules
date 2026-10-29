@@ -165,7 +165,7 @@ service cloud.firestore {
       }
       function validPitchCount() {
         return canWritePitching()
-          && activePlayer()
+          && exists(/databases/$(database)/documents/players/$(playerId))
           && dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
           && request.resource.data.keys().hasOnly(['date', 'month', 'count', 'updatedBy', 'updatedAt'])
           && request.resource.data.keys().hasAll(['date', 'month', 'count', 'updatedBy', 'updatedAt'])
@@ -181,7 +181,7 @@ service cloud.firestore {
       allow get, list: if canViewAll() ||
         (assignedParent(playerId) && activePlayer());
       allow create, update: if validPitchCount();
-      allow delete: if canWritePitching() && activePlayer();
+      allow delete: if canWritePitching() && exists(/databases/$(database)/documents/players/$(playerId));
     }
     // Per-player calendars and reusable day libraries. Admin access is checked
     // by the server for every read/write, independent of hidden UI controls.
