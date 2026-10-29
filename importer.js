@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id), fields=['n','velo','veloMax','spin','spinMax','ext','ivb','hb','tilt','strike','strikeExt','out','vaa','relHeight','relSide','axis2d','axis3d','gyro'];
 const names={fb:'Fastball',cb:'Curveball',ch:'ChangeUp',sk:'Sinker',sw:'Sweeper',sp:'Splitter',sl:'Slider',ct:'Cutter',kn:'Knuckleball',ot:'Other'};
 const aliases={fastball:'fb','four-seam':'fb',curveball:'cb',changeup:'ch',sinker:'sk',sweeper:'sw',splitter:'sp',slider:'sl',cutter:'ct',knuckleball:'kn',other:'ot'};
-let db,user,mode,id,rows=[],fileName='',fileHash='',pdfText='',reportFormat='count-summary',detectedThrowingHand=null,selectedSourceSessions=null,individualPitches=[],sessionDate=null,sessionFingerprint=null,reportPlayerName=null;
+let db,user,mode,id,rows=[],fileName='',fileHash='',pdfText='',reportFormat='count-summary',detectedThrowingHand=null,selectedSourceSessions=null,individualPitches=[],sessionDate=null,sessionFingerprint=null,reportPlayerName=null,overrideConfirmationKey=null,overridePendingKey=null;
 const err=e=>{ $('session-import-status').textContent=String(e?.message||e); };
 const policy=()=>window.DZ_IMPORT_OVERRIDE_POLICY;
 function mismatches(date=$('session-date').value.trim()){
@@ -13,17 +13,25 @@ function mismatches(date=$('session-date').value.trim()){
  });
 }
 function overrideSelected(){return window.DZ_IS_ADMIN===true && $('session-admin-override').checked===true;}
+function overrideKey(problems,date){
+ return JSON.stringify([mode,id,fileHash,reportPlayerName,sessionDate,date,problems]);
+}
+function clearOverrideConfirmation(){
+ overrideConfirmationKey=null;overridePendingKey=null;
+ $('session-override-confirm').style.display='none';
+ $('session-override-summary').textContent='';
+}
 function refreshOverrideWarning(){
+ clearOverrideConfirmation();
  const panel=$('session-admin-override-wrap');
- panel.style.display=window.DZ_IS_ADMIN===true?'block':'none';
+ panel.style.display=window.DZ_IS_ADMIN===true?'flex':'none';
  if(!window.DZ_IS_ADMIN)return;
  const list=mismatches();
  const el=$('session-admin-issues');
- el.textContent=list.length
-   ? list.map(issue=>issue.type==='name'
-      ? 'Report name: '+issue.source+' · Profile name: '+issue.target
-      : 'PDF date: '+(issue.source||'not present')+' · Selected date: '+(issue.target||'not selected')).join(' | ')
-   : 'No name or date discrepancies detected. Override is not needed.';
+ el.textContent=list.map(issue=>issue.type==='name'
+    ? 'Name: '+issue.source+' → '+issue.target
+    : 'Date: '+(issue.source||'not present')+' → '+(issue.target||'not selected')).join(' · ');
+ el.style.display=list.length?'block':'none';
  el.classList.toggle('cloud-error',list.length>0);
 }
 
@@ -77,7 +85,7 @@ function render(){
  const c=document.createElement('td'),b=document.createElement('button');b.type='button';b.textContent='Remove';b.onclick=()=>{rows.splice(i,1);render();};c.append(b);tr.append(c);body.append(tr);});
 }
 function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;reportPlayerName=null;$('session-date').value='';$('session-admin-override').checked=false;$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';refreshOverrideWarning();err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
-function close(){$('session-import-overlay').style.display='none';document.body.style.overflow='';}
+function close(){clearOverrideConfirmation();$('session-import-overlay').style.display='none';document.body.style.overflow='';}
 function observedCount(p,f){
  const n=p.validCounts?.[f];
  return Number.isInteger(n)&&n>=0?n:
@@ -116,6 +124,24 @@ $('session-add-pitch').onclick=()=>{const k=Object.keys(names).find(k=>!rows.som
 $('session-file').addEventListener('change',()=>{$('session-date').value='';$('session-admin-override').checked=false;reportPlayerName=null;sessionDate=null;refreshOverrideWarning();});
 $('session-date').addEventListener('change',refreshOverrideWarning);
 $('session-admin-override').addEventListener('change',refreshOverrideWarning);
+$('session-override-cancel').addEventListener('click',()=>{
+ clearOverrideConfirmation();
+ err('Override confirmation cancelled. No changes were saved.');
+});
+$('session-override-approve').addEventListener('click',()=>{
+ if(!window.DZ_IS_ADMIN||!overrideSelected()||!overridePendingKey)return;
+ const enteredDate=$('session-date').value.trim();
+ const key=overrideKey(mismatches(enteredDate),enteredDate);
+ if(key!==overridePendingKey){
+   clearOverrideConfirmation();
+   err('The report or selected date changed. Review and save again.');
+   return;
+ }
+ overrideConfirmationKey=key;
+ overridePendingKey=null;
+ $('session-override-confirm').style.display='none';
+ $('session-save').click();
+});
 $('session-read').onclick=async()=>{
  const file=$('session-file').files[0];if(!file)return err('Select a file first.');if(file.size>5000000)return err('Maximum file size is 5 MB.');fileName=file.name;fileHash='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;reportPlayerName=null;const b=$('session-read');b.disabled=true;
  try{const bytes=await file.arrayBuffer(),hash=await crypto.subtle.digest('SHA-256',bytes);fileHash=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');const ext=file.name.split('.').pop().toLowerCase();let data=ext==='pdf'?await pdf(file):ext==='csv'?csv(await file.text()):ext==='json'?JSON.parse(await file.text()):null;if(data&& !Array.isArray(data))data=data.pitches;if(!Array.isArray(data))throw Error('Unsupported file format.');const seen=new Set();rows=data.map(r=>{const k=key(r.name||names[r.key]);if(!k)return null;const out=empty(k);fields.forEach(f=>out[f]=f==='tilt'?r[f]||null:num(r[f],['n','spin','spinMax','strike','strikeExt','out'].includes(f)));return out;}).filter(r=>{if(!r||seen.has(r.key))return false;seen.add(r.key);return true;});if(reportFormat==='individual-session'){
@@ -154,11 +180,20 @@ $('session-save').onclick=async()=>{
  const decision=policy().approval(problems,window.DZ_IS_ADMIN===true,overrideSelected());
  if(!decision.allowed)throw Error(decision.message);
  if(decision.needsConfirmation){
-   const summary=problems.map(issue=>issue.type==='name'
-     ? 'Name: '+issue.source+' → '+issue.target
-     : 'Date: '+(issue.source||'not supplied in PDF')+' → '+issue.target).join('\n');
-   if(!window.confirm('ADMIN OVERRIDE — confirm this file belongs on the selected player profile.\n\n'+summary+'\n\nThe selected session date will be saved, and the override will be logged. This will NOT bypass duplicate or pitch-data checks. Continue?'))return;
+   const key=overrideKey(problems,enteredDate);
+   if(overrideConfirmationKey!==key){
+     overrideConfirmationKey=null;
+     overridePendingKey=key;
+     const summary=problems.map(issue=>issue.type==='name'
+       ? 'Name: '+issue.source+' → '+issue.target
+       : 'Date: '+(issue.source||'not in PDF')+' → '+issue.target).join(' · ');
+     $('session-override-summary').textContent=summary+' · Confirm this file belongs to the selected player. Your approval will be logged.';
+     $('session-override-confirm').style.display='block';
+     err('Review the override details beside Save.');
+     return;
+   }
  }
+ clearOverrideConfirmation();
  const overrideAudit=problems.length?{
    types:problems.map(p=>p.type),sourcePlayerName:reportPlayerName||null,
    profileName:mode==='update'?PLAYERS[id]?.name:null,
