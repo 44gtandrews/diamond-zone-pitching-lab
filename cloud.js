@@ -1,4 +1,4 @@
-/* Diamond Zone CT — authenticated, shared Firestore storage */
+/* DiamondZone CT — authenticated, shared Firestore storage */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -296,7 +296,7 @@
           if(version!==accessVersion)return;
           const declined=previous.exists && previous.data().status==='denied';
           showAuth(declined?'Access request denied':'Coach account disabled',
-            declined?'Access was declined by the administrator. Contact Diamond Zone to inquire.':
+            declined?'Access was declined by the administrator. Contact DiamondZone to inquire.':
             'This account has been disabled. Contact the administrator to inquire.','verify');
           return;
         }
@@ -324,11 +324,11 @@
         if(version!==accessVersion)return;
         const state=request.data()?.status;
         if(state==='denied'){
-          showAuth('Access request denied','The administrator has declined access for this account. Contact Diamond Zone if you believe this was a mistake.','verify');
+          showAuth('Access request denied','The administrator has declined access for this account. Contact DiamondZone if you believe this was a mistake.','verify');
         }else if(state==='approved'){
           showAuth('Approval processing','Your request has been approved. Sign in again shortly; contact the administrator if your roster access is not enabled.','verify');
         }else{
-          showAuth('Access request pending','Your verified account has been submitted to Diamond Zone for review. You cannot access player data until the administrator approves it. Select the continue button after approval.','verify');
+          showAuth('Access request pending','Your verified account has been submitted to DiamondZone for review. You cannot access player data until the administrator approves it. Select the continue button after approval.','verify');
         }
         return;
       }
@@ -711,7 +711,7 @@
 
   function dzValidateBackup(parsed){
     if(!parsed||parsed.format!=='diamond-zone-full-backup'||![2,3,4].includes(parsed.schemaVersion)||
-       !parsed.collections||typeof parsed.collections!=='object')throw Error('Select a Diamond Zone FULL backup (schema version 2).');
+       !parsed.collections||typeof parsed.collections!=='object')throw Error('Select a DiamondZone FULL backup (schema version 2).');
     if(parsed.projectId!==firebase.app().options.projectId)
       throw Error('Backup is from a different Firebase project. Restore cancelled.');
     const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits','playerSessions','playerPitchCounts'];
