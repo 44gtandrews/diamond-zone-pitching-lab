@@ -7,6 +7,7 @@
   const loginActions = $('cloud-auth-actions');
   const verifyActions = $('cloud-verification-actions');
   const status = $('cloud-auth-status');
+  let signupMode=false;
   let auth, db, activeUser=null, staff=null;
   let accessVersion=0;
   window.DZ_AUTHORIZED = false;
@@ -41,8 +42,64 @@
     loginActions.style.display=mode==='login'?'flex':'none';
     verifyActions.style.display=mode==='verify'?'flex':'none';
     status.textContent=message;
+    const registration=$('cloud-registration-fields');
+    registration.style.display=mode==='request'?'grid':'none';
+    $('cloud-request-intent-submit').style.display=mode==='request'?'block':'none';
+    signupMode=false;
+    $('cloud-signup').textContent='Create account';
+    $('cloud-signup').style.display='';
+    $('cloud-signup-confirm').style.display='none';
+    $('cloud-cancel-signup').style.display='none';
+    $('cloud-reset').style.display='';
+    $('cloud-login-button').style.display='';
   }
   const emailKey=s=>String(s||'').trim().toLowerCase();
+  const registration=()=>window.DZ_REGISTRATION;
+  function syncRegistrationFields(){
+    const role=$('cloud-register-role').value;
+    $('cloud-register-player-fields').style.display=registration().family(role)?'grid':'none';
+  }
+  $('cloud-register-role').addEventListener('change',syncRegistrationFields);
+  function applicantIntent(){
+    const requestedRole=$('cloud-register-role').value;
+    const playerName=registration().family(requestedRole)?$('cloud-register-player-name').value.trim():'';
+    const playerCode=registration().family(requestedRole)?$('cloud-register-player-id').value.trim():'';
+    if(!registration().validIntent(requestedRole,playerName,playerCode))
+      throw Error(requestedRole==='coach'?'Choose a registration type.':
+        'Choose Player, Parent / Guardian or Coach; players/parents must enter a full player name and an optional valid six-digit ID.');
+    return {requestedRole,playerName,playerCode};
+  }
+  async function createAccessRequest(user,info){
+    if(!user?.uid||!user.email)throw Error('Sign in again to submit an access request.');
+    const data={
+      uid:user.uid,email:emailKey(user.email),
+      status:user.emailVerified?'pending':'awaiting_verification',
+      requestedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      ...info
+    };
+    const ref=db.collection('coachRequests').doc(user.uid);
+    // Unverified accounts cannot read requests. Firestore create-only rules
+    // protect against replacing an existing application.
+    if(user.emailVerified){
+      const existing=await ref.get();
+      if(existing.exists)throw Error('An access request already exists. Contact the administrator if changes are needed.');
+    }
+    await ref.set(data);
+  }
+  function toggleSignup(active){
+    signupMode=active;
+    $('cloud-registration-fields').style.display=active?'grid':'none';
+    $('cloud-request-intent-submit').style.display='none';
+    $('cloud-signup').textContent='Create account';
+    $('cloud-signup').style.display=active?'none':'';
+    $('cloud-signup-confirm').style.display=active?'block':'none';
+    $('cloud-cancel-signup').style.display=active?'block':'none';
+    $('cloud-reset').style.display=active?'none':'';
+    $('cloud-login-button').style.display=active?'none':'';
+    if(active)notify(status,'Select your registration type. Player and parent requests require the player’s name.');
+    else notify(status,'');
+    syncRegistrationFields();
+  }
   function friendly(e) {
     const msg=String(e?.message||e);
     if (/auth\/invalid-credential|auth\/wrong-password|auth\/user-not-found/.test(msg)) return 'Email or password not accepted.';
@@ -285,7 +342,7 @@
       showAuth('Verify your email','Open your Firebase verification email and confirm your address before entering the portal.','verify');
       return;
     }
-    showAuth('Checking coach approval','Verifying your permission to access the roster.','loading');
+    showAuth('Checking account approval','Verifying your permission to access the portal.','loading');
     try {
       await user.getIdToken(true);
       const doc=await db.collection('allowlist').doc(emailKey(user.email)).get();
@@ -300,19 +357,19 @@
             'This account has been disabled. Contact the administrator to inquire.','verify');
           return;
         }
-        // An authenticated, email-verified coach may create ONE pending request.
-        // Firestore denies all roster reads until a separate admin approval.
+        // Verified account holders submit a request with untrusted signup intent.
+        // Firestore denies ALL player reads until an admin creates allowlist access.
         const requestRef=db.collection('coachRequests').doc(user.uid);
         let request;
         try {
           request=await requestRef.get();
           if(!request.exists){
-            await requestRef.set({
-              uid:user.uid,
-              email:emailKey(user.email),
-              status:'pending',
-              requestedAt:firebase.firestore.FieldValue.serverTimestamp()
-            });
+            showAuth('Complete your access request',
+              'Choose whether you are a player, parent/guardian or coach. Your account remains restricted until administrator approval.','request');
+            return;
+          }
+          if(request.data()?.status==='awaiting_verification'){
+            await requestRef.update({status:'pending'});
             request=await requestRef.get();
           }
         }catch(e){
@@ -352,13 +409,42 @@
     finally{btn.disabled=false;}
   });
   $('cloud-signup').addEventListener('click',async()=>{
+    if(!signupMode){toggleSignup(true);return;}
     const email=emailKey($('cloud-email').value),password=$('cloud-password').value;
-    if(!email||password.length<6){notify(status,'Enter a valid email and password (at least six characters).',true);return;}
+    if(!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email)||password.length<6){
+      notify(status,'Enter a valid email and password (at least six characters).',true);return;
+    }
+    let info;
+    try{info=applicantIntent();}
+    catch(e){notify(status,friendly(e),true);return;}
+    const btn=$('cloud-signup');btn.disabled=true;
     try{
       const result=await auth.createUserWithEmailAndPassword(email,password);
+      let recorded=false;
+      try{
+        await createAccessRequest(result.user,info);
+        recorded=true;
+      }catch(e){
+        console.warn('New account created, but request creation needs retry',e);
+      }
       await result.user.sendEmailVerification();
-      showAuth('Verification sent','Check your email and confirm your address. An admin must separately approve your email.','verify','Verification sent to '+email);
+      showAuth('Verification sent',
+        'Verify your email, then your registration will be reviewed by an administrator. No player data can be accessed before approval.','verify',
+        recorded?'Verification sent to '+email:
+        'Verification sent. After verifying, use Continue to finish submitting your access request.');
     }catch(e){notify(status,friendly(e),true);}
+    finally{btn.disabled=false;}
+  });
+  $('cloud-signup-confirm').addEventListener('click',()=>$('cloud-signup').click());
+  $('cloud-cancel-signup').addEventListener('click',()=>toggleSignup(false));
+  $('cloud-request-intent-submit').addEventListener('click',async()=>{
+    const btn=$('cloud-request-intent-submit');btn.disabled=true;
+    try{
+      if(!auth.currentUser?.emailVerified)throw Error('Verify your email before requesting access.');
+      await createAccessRequest(auth.currentUser,applicantIntent());
+      await checkAccess(auth.currentUser);
+    }catch(e){notify(status,friendly(e),true);}
+    finally{btn.disabled=false;}
   });
   $('cloud-reset').addEventListener('click',async()=>{
     const email=emailKey($('cloud-email').value);
@@ -788,8 +874,12 @@
     for(const item of decoded.coachRequests){
       if(typeof item.data.uid!=='string'||item.data.uid!==item.id||
          typeof item.data.email!=='string'||
-         !['pending','approved','denied'].includes(item.data.status)||
-         !(item.data.requestedAt instanceof firebase.firestore.Timestamp))
+         !['awaiting_verification','pending','approved','denied'].includes(item.data.status)||
+         !(item.data.requestedAt instanceof firebase.firestore.Timestamp)||
+         (item.data.requestedRole!=null &&
+           (!registration().INTENTS.includes(item.data.requestedRole) ||
+            !registration().validIntent(item.data.requestedRole,
+              item.data.playerName,item.data.playerCode))))
         throw Error('Invalid coach access-request entry.');
     }
     return {decoded,backupPlayers,codes};
@@ -1065,8 +1155,11 @@
   }
   async function listCoaches() {
     if(staff?.role!=='admin')return;
-    const pending=$('cloud-pending-requests'),denied=$('cloud-denied-requests'),list=$('cloud-allowlist');
-    pending.replaceChildren();denied.replaceChildren();list.replaceChildren();
+    const pending=$('cloud-pending-requests'),family=$('cloud-pending-family'),
+      awaiting=$('cloud-awaiting-verification'),
+      denied=$('cloud-denied-requests'),list=$('cloud-allowlist');
+    pending.replaceChildren();family.replaceChildren();awaiting.replaceChildren();
+    denied.replaceChildren();list.replaceChildren();
     notify($('cloud-request-status'),'Loading account access requests...');
     try{
       const [allowlist,requests]=await Promise.all([
@@ -1075,35 +1168,90 @@
       const entries=Array.from(requests.docs)
         .sort((a,b)=>(b.data().requestedAt?.toMillis?.()||0)-
                      (a.data().requestedAt?.toMillis?.()||0));
-      let pendingCount=0,deniedCount=0;
+      let pendingCount=0,familyCount=0,coachCount=0,awaitingCount=0,deniedCount=0;
+      function applicantDetails(d,container,picker){
+        const box=document.createElement('div');box.className='dz-request-context';
+        const requested=d.requestedRole;
+        const type=document.createElement('div');
+        type.textContent='Requested: '+
+          (registration().label[requested]||'Not specified (legacy signup)');
+        box.append(type);
+        if(registration().family(requested)){
+          const player=document.createElement('div');
+          player.textContent='Player provided: '+(d.playerName||'Not provided')+
+            (d.playerCode?' · Profile ID #'+d.playerCode:'');
+          box.append(player);
+          const matches=registration().suggestions(d,PLAYERS);
+          const hint=document.createElement('span');
+          hint.className='dz-match-suggestion';
+          if(matches.length===1){
+            const match=matches[0];
+            hint.textContent='Suggested '+match.reason.toLowerCase()+' match: '+
+              match.name+(match.publicId?' · #'+match.publicId:'')+
+              '. Verify before approval.';
+            if(!match.nameMatches && match.reason==='Player ID'){
+              hint.classList.add('dz-match-warning');
+              hint.textContent+=' The supplied name differs from the matched profile.';
+            }
+          }else if(matches.length>1){
+            hint.textContent='Multiple matching player profiles. Select the correct one manually.';
+          }else{
+            hint.textContent='No matching player found. Search the linked-player dropdown.';
+          }
+          box.append(hint);
+        }
+        container.querySelector('.dz-coach-detail').append(box);
+      }
+      function pickerFor(d){
+        const isFamily=registration().family(d.requestedRole);
+        const matches=registration().suggestions(d,PLAYERS);
+        // Exact-name or ID matches are suggestions ONLY: admin approval is mandatory.
+        // Name conflict on an ID match must be resolved manually.
+        const guessedId=isFamily&&matches.length===1&&matches[0].nameMatches
+          ?matches[0].id:'';
+        return rolePicker(isFamily?'player_parent':'coach',guessedId);
+      }
       for(const request of entries){
         const d=request.data(),email=emailKey(d.email);
         if(!email || !d.uid)continue;
-        const meta=requestDate(d)+' · Verified email';
+        const meta=requestDate(d);
         if(d.status==='pending'){
           pendingCount++;
-          const picker=rolePicker();
-          const li=coachCard(email,meta,[
-            {label:'Approve role',run:()=>decideRequest(
+          const isFamily=registration().family(d.requestedRole);
+          if(isFamily)familyCount++;else coachCount++;
+          const picker=pickerFor(d);
+          const li=coachCard(email,meta+' · Verified email',[
+            {label:'Approve selected role',run:()=>decideRequest(
               request,'approved',picker.select.value,picker.linked.value)},
             {label:'Deny',secondary:true,run:()=>decideRequest(request,'denied')}
           ]);
+          applicantDetails(d,li,picker);
           li.appendChild(picker.controls);
-          pending.appendChild(li);
+          (isFamily?family:pending).appendChild(li);
+        }else if(d.status==='awaiting_verification'){
+          awaitingCount++;
+          const li=coachCard(email,meta+' · Email not verified',[]);
+          applicantDetails(d,li,null);awaiting.appendChild(li);
         }else if(d.status==='denied'){
           deniedCount++;
-          const picker=rolePicker();
+          const picker=pickerFor(d);
           const li=coachCard(email,'Denied · '+meta,[
-            {label:'Approve role',run:()=>decideRequest(
+            {label:'Approve selected role',run:()=>decideRequest(
               request,'approved',picker.select.value,picker.linked.value)},
             {label:'Reconsider',secondary:true,run:()=>decideRequest(request,'pending')}
           ]);
+          applicantDetails(d,li,picker);
           li.appendChild(picker.controls);
           denied.appendChild(li);
         }
       }
-      if(!pendingCount)pending.appendChild(emptyCoachRow('No pending requests.'));
+      if(!familyCount)family.appendChild(emptyCoachRow('No pending player or parent requests.'));
+      if(!coachCount)pending.appendChild(emptyCoachRow('No pending coach requests.'));
+      if(!awaitingCount)awaiting.appendChild(emptyCoachRow('No registrations awaiting verification.'));
       if(!deniedCount)denied.appendChild(emptyCoachRow('No denied requests.'));
+      $('cloud-pending-family-count').textContent=String(familyCount);
+      $('cloud-pending-coach-count').textContent=String(coachCount);
+      $('cloud-awaiting-verification-count').textContent=String(awaitingCount);
       $('cloud-pending-count').textContent=String(pendingCount);
       $('cloud-pending-badge').textContent=String(pendingCount);
       $('cloud-pending-badge').style.display=pendingCount?'inline-block':'none';
