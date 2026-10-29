@@ -1,0 +1,21 @@
+/* Back-to-All-Players header affordance and preserved navigation. */
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const html=fs.readFileSync('index.html','utf8');
+const styles=html.slice(0,html.indexOf('</style>'));
+const profile=html.slice(html.indexOf('<!-- ============== PLAYER VIEW ============== -->'));
+assert.match(profile,/<div class="dz-player-back-row">/);
+assert.match(profile,/<a href="#" class="back-link dz-player-back-link" aria-label="Back to All Players">/);
+assert.match(profile,/<span>Back to All Players<\/span>/);
+assert.ok(profile.indexOf('class="dz-player-back-row"')<profile.indexOf('class="dz-profile-identity"'),'return button must precede player name');
+assert.equal((profile.match(/class="back-link dz-player-back-link"/g)||[]).length,1);
+assert.match(styles,/#view-player a\.dz-player-back-link\s*\{/);
+assert.match(styles,/min-height:46px/);
+assert.match(styles,/background:#008c95/);
+assert.match(styles,/font:800 14px/);
+assert.match(styles,/@media\(max-width:640px\)\{\s*#view-player \.dz-player-back-row/);
+assert.match(styles,/width:100%/);
+assert.match(html,/document\.querySelectorAll\('\.back-link'\)\.forEach\(a=>a\.addEventListener\('click',e=>\{/);
+assert.match(html,/e\.preventDefault\(\);window\.DZ_GO_HOME\(\);/);
+console.log('Back-to-players prominent profile button and existing navigation tests passed.');
