@@ -36,7 +36,7 @@ const workflow=fs.readFileSync('.github/workflows/deploy-firebase.yml','utf8');
 assert.match(asset,/viewBox="0 0 432 432"/);
 assert.match(asset,/#008c95/);
 assert.match(logo,/#008c95/);
-assert.match(css,/background-image:url\('\.\/dz-teal-background\.svg'\)/);
+assert.match(css,/background-image:url\('\.\/dz-teal-background\.svg\?v=opacityfade1'\)/);
 assert.match(css,/--accent:#008c95/);
 assert.match(html,/data-tab="pitch-counts"/);
 assert.match(html,/id="panel-pitch-counts"/);

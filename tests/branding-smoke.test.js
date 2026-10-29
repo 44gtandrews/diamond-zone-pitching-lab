@@ -24,7 +24,7 @@ for(const [name,svg] of [['header',artwork],['logo',icon]]){
  assert.match(svg,/fill="url\(#dz-(?:logo|brand)-gradient\)"/,'path is not gradient filled in '+name);
  assert.match(svg,/DiamondZone/,'old branding in '+name);
 }
-assert.match(css,/background-image:url\('\.\/dz-teal-background\.svg'\),\s*linear-gradient\(/);
+assert.match(css,/background-image:url\('\.\/dz-teal-background\.svg\?v=opacityfade1'\),\s*linear-gradient\(/);
 assert.match(css,/background-size:310px 310px,cover/);
 assert.match(css,/background-size:210px 210px,cover/);
 console.log('DiamondZone gradient + title and preview metadata checks passed.');

@@ -1,0 +1,24 @@
+/* Ensure only the large right-side header artwork fades to transparency. */
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const large=fs.readFileSync('dz-teal-background.svg','utf8');
+const small=fs.readFileSync('dz-logo.svg','utf8');
+const html=fs.readFileSync('index.html','utf8');
+const css=html.split('</style>')[0];
+assert.match(large,/<linearGradient id="dz-opacity-gradient" x1="0%" y1="0%" x2="0%" y2="100%">/);
+assert.match(large,/<stop offset="0%" stop-color="#fff" stop-opacity="1"\/>/);
+assert.match(large,/<stop offset="18%" stop-color="#fff" stop-opacity="1"\/>/);
+assert.match(large,/<stop offset="55%" stop-color="#fff" stop-opacity="\.62"\/>/);
+assert.match(large,/<stop offset="82%" stop-color="#fff" stop-opacity="\.22"\/>/);
+assert.match(large,/<stop offset="100%" stop-color="#fff" stop-opacity="0"\/>/);
+assert.match(large,/<mask id="dz-downward-opacity-mask" maskUnits="userSpaceOnUse"/);
+assert.match(large,/<g mask="url\(#dz-downward-opacity-mask\)">/);
+assert.match(large,/fill="url\(#dz-logo-gradient\)"/);
+assert.match(small,/fill="url\(#dz-brand-gradient\)"/);
+assert.doesNotMatch(small,/dz-downward-opacity-mask|dz-opacity-gradient/);
+assert.match(css,/background-image:url\('\.\/dz-teal-background\.svg\?v=opacityfade1'\)/);
+assert.match(css,/background-size:310px 310px,cover/);
+assert.match(css,/background-size:210px 210px,cover/);
+assert.match(html,/src="\.\/dz-logo\.svg"/);
+console.log('Large-header-only downward opacity fade checks passed.');
