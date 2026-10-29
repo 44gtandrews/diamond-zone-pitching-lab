@@ -47,6 +47,8 @@
     $('cloud-request-intent-submit').style.display=mode==='request'?'block':'none';
     signupMode=false;
     $('cloud-signup').textContent='Create account';
+    $('cloud-signup').style.display='';
+    $('cloud-signup-confirm').style.display='none';
     $('cloud-cancel-signup').style.display='none';
     $('cloud-reset').style.display='';
     $('cloud-login-button').style.display='';
@@ -88,7 +90,9 @@
     signupMode=active;
     $('cloud-registration-fields').style.display=active?'grid':'none';
     $('cloud-request-intent-submit').style.display='none';
-    $('cloud-signup').textContent=active?'Create account & verify email':'Create account';
+    $('cloud-signup').textContent='Create account';
+    $('cloud-signup').style.display=active?'none':'';
+    $('cloud-signup-confirm').style.display=active?'block':'none';
     $('cloud-cancel-signup').style.display=active?'block':'none';
     $('cloud-reset').style.display=active?'none':'';
     $('cloud-login-button').style.display=active?'none':'';
@@ -338,7 +342,7 @@
       showAuth('Verify your email','Open your Firebase verification email and confirm your address before entering the portal.','verify');
       return;
     }
-    showAuth('Checking coach approval','Verifying your permission to access the roster.','loading');
+    showAuth('Checking account approval','Verifying your permission to access the portal.','loading');
     try {
       await user.getIdToken(true);
       const doc=await db.collection('allowlist').doc(emailKey(user.email)).get();
@@ -431,6 +435,7 @@
     }catch(e){notify(status,friendly(e),true);}
     finally{btn.disabled=false;}
   });
+  $('cloud-signup-confirm').addEventListener('click',()=>$('cloud-signup').click());
   $('cloud-cancel-signup').addEventListener('click',()=>toggleSignup(false));
   $('cloud-request-intent-submit').addEventListener('click',async()=>{
     const btn=$('cloud-request-intent-submit');btn.disabled=true;
@@ -869,8 +874,12 @@
     for(const item of decoded.coachRequests){
       if(typeof item.data.uid!=='string'||item.data.uid!==item.id||
          typeof item.data.email!=='string'||
-         !['pending','approved','denied'].includes(item.data.status)||
-         !(item.data.requestedAt instanceof firebase.firestore.Timestamp))
+         !['awaiting_verification','pending','approved','denied'].includes(item.data.status)||
+         !(item.data.requestedAt instanceof firebase.firestore.Timestamp)||
+         (item.data.requestedRole!=null &&
+           (!registration().INTENTS.includes(item.data.requestedRole) ||
+            !registration().validIntent(item.data.requestedRole,
+              item.data.playerName,item.data.playerCode))))
         throw Error('Invalid coach access-request entry.');
     }
     return {decoded,backupPlayers,codes};
