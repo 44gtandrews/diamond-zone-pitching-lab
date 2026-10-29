@@ -57,7 +57,7 @@ function renderEditor(){
  $('dz-count-input').disabled=state.saving;$('dz-count-save').disabled=state.saving;
 }
 async function load(){
- if(!canView()||state.loading)return;
+ if(!canView())return;
  const nonce=++state.nonce,pid=state.playerId,month=state.month;
  state.loading=true;state.loaded=false;state.selected=null;message('Loading saved pitch counts…');$('dz-count-editor').hidden=true;render();
  try{
@@ -91,7 +91,7 @@ $('dz-count-save').addEventListener('click',()=>void save(false));$('dz-count-de
 $('dz-count-cancel').addEventListener('click',()=>{state.selected=null;render();renderEditor();message('');});
 $('dz-count-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void save(false);}});
 window.DZ_PITCH_COUNTS_RESET=reset;
-window.DZ_PITCH_COUNTS_ON_PLAYER=p=>{if(!canView()||!p){reset();return;}if(state.playerId!==p.id){reset();state.playerId=p.id;}};
+window.DZ_PITCH_COUNTS_ON_PLAYER=p=>{if(window.DZ_AUTHORIZED!==true||!p){reset();return;}if(state.playerId!==p.id){reset();state.playerId=p.id;}};
 window.DZ_PITCH_COUNTS_OPEN=id=>{if(canView()&&id===state.playerId&&!state.loading&&!state.loaded)void load();};
 reset();
 })();
