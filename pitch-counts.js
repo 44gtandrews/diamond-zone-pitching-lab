@@ -13,6 +13,8 @@ function gridDates(month){
 }
 function band(n){return Number.isInteger(n)&&n>=1?(n<=20?'yellow':n<=40?'orange':'red'):'none';}
 function validCount(n){return Number.isInteger(n)&&n>=1&&n<=999;}
+function validType(t){return t==='game'||t==='bullpen';}
+function typeLabel(t){return t==='game'?'Game':t==='bullpen'?'Bullpen':null;}
 function autoFromSessions(records,month){
  parseMonth(month);
  const output={};
@@ -43,18 +45,18 @@ function combineCounts(manual,automatic){
    if(validCount(count))combined[date]=count;
  return combined;
 }
-const helper={parseMonth,moveMonth,gridDates,band,validCount,autoFromSessions,combineCounts};
+const helper={parseMonth,moveMonth,gridDates,band,validCount,validType,typeLabel,autoFromSessions,combineCounts};
 if(typeof module!=='undefined'&&module.exports)module.exports=helper;
 if(typeof document==='undefined')return;
 const $=id=>document.getElementById(id);
 const today=new Date();
-const state={playerId:null,month:monthKey(today.getFullYear(),today.getMonth()+1),counts:{},manualCounts:{},autoDetails:{},selected:null,loading:false,saving:false,loaded:false,nonce:0};
+const state={playerId:null,month:monthKey(today.getFullYear(),today.getMonth()+1),counts:{},manualCounts:{},manualTypes:{},autoDetails:{},selected:null,loading:false,saving:false,loaded:false,nonce:0};
 const canView=()=>window.DZ_AUTHORIZED===true&&Boolean(state.playerId);
 const canEdit=()=>canView()&&window.DZ_EDIT_ENABLED===true;
 const collection=()=>window.DZ_SESSIONS_DB.collection('players').doc(state.playerId).collection('pitchCounts');
 function message(t,isError=false){const e=$('dz-count-status');e.textContent=t;e.classList.toggle('cloud-error',isError);}
 function reset(){
- state.nonce++;state.playerId=null;state.counts={};state.manualCounts={};state.autoDetails={};state.selected=null;state.loaded=false;state.loading=false;state.saving=false;
+ state.nonce++;state.playerId=null;state.counts={};state.manualCounts={};state.manualTypes={};state.autoDetails={};state.selected=null;state.loaded=false;state.loading=false;state.saving=false;
  const d=new Date();state.month=monthKey(d.getFullYear(),d.getMonth()+1);
  $('dz-count-calendar').replaceChildren();$('dz-count-editor').hidden=true;message('');
 }
@@ -72,13 +74,14 @@ function render(){
    tile.className='dz-count-day dz-count-'+band(count)+(sameMonth?'':' dz-count-other')+(date===todayKey?' dz-count-today':'')+(date===state.selected?' dz-count-selected':'');
    tile.disabled=!sameMonth||state.loading;
    const isManual=Object.prototype.hasOwnProperty.call(state.manualCounts,date);
-   const source=isManual?'manual correction':state.autoDetails[date]?'TrackMan session':'';
+   const classification=isManual?typeLabel(state.manualTypes[date]):null;
+   const source=isManual?'manual correction'+(classification?' · '+classification:''):state.autoDetails[date]?'TrackMan session':'';
    tile.setAttribute('aria-label',date+(count?' · '+count+' pitches'+(source?' · '+source:''):' · no pitch count'));
    const number=document.createElement('span');number.className='dz-count-number';number.textContent=String(Number(date.slice(-2)));tile.append(number);
    if(count){
      const n=document.createElement('strong');n.className='dz-count-value';n.textContent=String(count);tile.append(n);
      const label=document.createElement('small');label.className='dz-count-origin';
-     label.textContent=isManual?'Edited':'TrackMan';tile.append(label);
+     label.textContent=isManual?(classification||'Edited'):'TrackMan';tile.append(label);
    }
    tile.addEventListener('click',()=>{state.selected=date;render();renderEditor();});cells.append(tile);
  }
@@ -91,11 +94,13 @@ function renderEditor(){
  const isManual=Object.prototype.hasOwnProperty.call(state.manualCounts,state.selected);
  $('dz-count-selected-date').textContent=new Intl.DateTimeFormat('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'}).format(new Date(state.selected+'T12:00:00'));
  $('dz-count-input').value=Number.isSafeInteger(n)&&n>0?String(n):'';
+ $('dz-count-type').value=isManual&&validType(state.manualTypes[state.selected])?state.manualTypes[state.selected]:'';
  $('dz-count-source').textContent=isManual
    ? 'Manual correction saved'+(auto?' · TrackMan total: '+auto.count+' pitches from '+auto.sessions+' session(s)':'')
    : auto?'Auto-filled from '+auto.sessions+' TrackMan session(s). Editing saves a manual correction.':'No TrackMan session for this date. Enter a pitch count manually.';
  $('dz-count-delete').textContent=auto?'Use TrackMan count':'Remove';
  $('dz-count-delete').disabled=!isManual||state.saving;
+ $('dz-count-type').disabled=state.saving;
  $('dz-count-input').disabled=state.saving;$('dz-count-save').disabled=state.saving;
 }
 async function load(){
@@ -111,37 +116,44 @@ async function load(){
        .where('date','>=',month+'-01').where('date','<=',month+'-31').get()
    ]);
    if(nonce!==state.nonce||pid!==state.playerId||month!==state.month||!canView())return;
-   const manual={};manualSnapshot.forEach(doc=>{
+   const manual={},types={};manualSnapshot.forEach(doc=>{
      const data=doc.data();
-     if(doc.id.startsWith(month+'-')&&data.date===doc.id&&validCount(data.count))manual[doc.id]=data.count;
+     if(doc.id.startsWith(month+'-')&&data.date===doc.id&&validCount(data.count)){
+       manual[doc.id]=data.count;
+       if(validType(data.type))types[doc.id]=data.type;
+     }
    });
    const sessions=[];sessionSnapshot.forEach(doc=>sessions.push(doc.data()));
    state.manualCounts=manual;
+   state.manualTypes=types;
    state.autoDetails=autoFromSessions(sessions,month);
    state.counts=combineCounts(manual,state.autoDetails);
    state.loaded=true;message('');
  }catch(e){if(nonce===state.nonce){
-   state.counts={};state.manualCounts={};state.autoDetails={};
+   state.counts={};state.manualCounts={};state.manualTypes={};state.autoDetails={};
    message('Unable to load pitch counts: '+(e.message||e),true);
  }}
  finally{if(nonce===state.nonce){state.loading=false;render();}}
 }
-function navigate(step){if(state.saving)return;state.month=moveMonth(state.month,step);state.selected=null;state.counts={};state.manualCounts={};state.autoDetails={};void load();}
+function navigate(step){if(state.saving)return;state.month=moveMonth(state.month,step);state.selected=null;state.counts={};state.manualCounts={};state.manualTypes={};state.autoDetails={};void load();}
 async function save(remove=false){
  if(!canEdit()||!state.loaded||!state.selected||state.saving)return;
  const date=state.selected,player=state.playerId,nonce=state.nonce;if(!date.startsWith(state.month+'-'))return;
  const raw=$('dz-count-input').value.trim(),value=Number(raw);
+ const type=$('dz-count-type').value;
  if(!remove&&(!validCount(value)||!/^([1-9]\d{0,2})$/.test(raw))){message('Enter a whole number between 1 and 999.',true);return;}
+ if(!remove&&!validType(type)){message('Select Game or Bullpen before saving.',true);return;}
  state.saving=true;renderEditor();message(remove?'Removing count…':'Saving count…');
  try{
    const user=firebase.auth().currentUser;if(!user?.email)throw Error('Sign in again before saving.');
    const ref=collection().doc(date);
    if(remove)await ref.delete();
-   else await ref.set({date,month:state.month,count:value,updatedBy:user.email.toLowerCase(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+   else await ref.set({date,month:state.month,count:value,type,updatedBy:user.email.toLowerCase(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
    if(nonce!==state.nonce||player!==state.playerId)return;
-   if(remove)delete state.manualCounts[date];else state.manualCounts[date]=value;
+   if(remove){delete state.manualCounts[date];delete state.manualTypes[date];}
+   else {state.manualCounts[date]=value;state.manualTypes[date]=type;}
    state.counts=combineCounts(state.manualCounts,state.autoDetails);
-   message(remove?(state.autoDetails[date]?'Manual correction removed; TrackMan count restored.':'Pitch count removed.'):'Manual pitch count saved.');
+   message(remove?(state.autoDetails[date]?'Manual correction removed; TrackMan count restored.':'Pitch count removed.'):'Manual '+typeLabel(type)+' pitch count saved.');
  }catch(e){if(nonce===state.nonce)message('Could not save pitch count: '+(e.message||e),true);}
  finally{if(nonce===state.nonce){state.saving=false;render();renderEditor();}}
 }

@@ -34,6 +34,7 @@ jobs:
           node tests/mechanical-changes-smoke.test.js
           node tests/pitch-counts-smoke.test.js
           node tests/trackman-pitch-count-calendar-smoke.test.js
+          node tests/pitch-count-session-type-and-mobile-kpis-smoke.test.js
           node tests/branding-smoke.test.js
           node tests/header-opacity-fade-smoke.test.js
           python3 -c "import xml.etree.ElementTree as ET; ET.parse('dz-teal-background.svg'); ET.parse('dz-logo.svg')"

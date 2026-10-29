@@ -48,7 +48,7 @@ assert.match(importer,/if\(sessionKind==='single'\)window\.DZ_PITCH_COUNTS_REFRE
 assert.match(importer,/if\(existingSession\.exists\)throw Error\('This session is already stored/);
 assert.match(html,/id="dz-count-source"/);
 assert.match(html,/Auto[matic]*|TrackMan sessions appear automatically/);
-assert.match(src,/label\.textContent=isManual\?'Edited':'TrackMan'/);
+assert.match(src,/label\.textContent=isManual\?\(classification\|\|'Edited'\):'TrackMan'/);
 assert.match(src,/auto\?'Use TrackMan count':'Remove'/);
 assert.match(rules,/match \/players\/\{playerId\}\/pitchCounts\/\{dayId\}/);
 assert.match(rules,/match \/players\/\{playerId\}\/sessions\/\{sessionId\}/);
