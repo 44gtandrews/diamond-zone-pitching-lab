@@ -64,14 +64,46 @@ service cloud.firestore {
       allow delete: if isAdmin() && email != request.auth.token.email;
     }
     match /coachRequests/{userId} {
+      // Applicant-provided registration intent is not an access grant.
+      function validApplicant() {
+        return request.auth != null
+          && request.auth.uid == userId
+          && request.auth.token.email is string
+          && request.resource.data.keys().hasOnly([
+            'uid','email','status','requestedAt','requestedRole','playerName','playerCode'
+          ])
+          && request.resource.data.keys().hasAll([
+            'uid','email','status','requestedAt','requestedRole','playerName','playerCode'
+          ])
+          && request.resource.data.uid == userId
+          && request.resource.data.email == request.auth.token.email.lower()
+          && request.resource.data.requestedAt == request.time
+          && request.resource.data.status ==
+             (request.auth.token.email_verified == true ? 'pending' : 'awaiting_verification')
+          && request.resource.data.requestedRole in ['player','parent','coach']
+          && request.resource.data.playerName is string
+          && request.resource.data.playerCode is string
+          && (
+            (request.resource.data.requestedRole == 'coach'
+              && request.resource.data.playerName == ''
+              && request.resource.data.playerCode == '')
+            ||
+            (request.resource.data.requestedRole in ['player','parent']
+              && request.resource.data.playerName.size() >= 2
+              && request.resource.data.playerName.size() <= 100
+              && (request.resource.data.playerCode == ''
+                  || request.resource.data.playerCode.matches('^[1-9][0-9]{5}$')))
+          );
+      }
       allow get: if isAdmin() || (verified() && request.auth.uid == userId);
       allow list: if isAdmin();
-      // Admin-only emergency restore of historic coach applications.
+      // Keep legacy verified request creation and admin backup restore compatible.
       allow create: if (isAdmin()
         && request.resource.data.uid == userId
         && request.resource.data.email is string
-        && request.resource.data.status in ['pending', 'approved', 'denied']
+        && request.resource.data.status in ['awaiting_verification','pending','approved','denied']
         && request.resource.data.requestedAt is timestamp)
+        || validApplicant()
         || (verified()
         && request.auth.uid == userId
         && request.resource.data.keys().hasOnly(['uid', 'email', 'status', 'requestedAt'])
@@ -80,7 +112,15 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email.lower()
         && request.resource.data.status == 'pending'
         && request.resource.data.requestedAt == request.time);
-      allow update: if isAdmin()
+      // Only a verified user may promote their own awaiting request to pending.
+      // They cannot change role, linked player, status to approved, or review fields.
+      allow update: if (verified()
+        && request.auth.uid == userId
+        && resource.data.status == 'awaiting_verification'
+        && resource.data.email == request.auth.token.email.lower()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'pending')
+        || (isAdmin()
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
         && request.resource.data.requestedAt == resource.data.requestedAt
@@ -88,7 +128,7 @@ service cloud.firestore {
           .hasOnly(['status', 'reviewedAt', 'reviewedBy'])
         && request.resource.data.status in ['pending', 'approved', 'denied']
         && request.resource.data.reviewedBy == request.auth.token.email
-        && request.resource.data.reviewedAt == request.time;
+        && request.resource.data.reviewedAt == request.time);
       allow delete: if isAdmin();
     }
     match /players/{playerId} {
