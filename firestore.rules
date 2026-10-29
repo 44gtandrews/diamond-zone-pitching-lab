@@ -167,7 +167,7 @@ service cloud.firestore {
         return canWritePitching()
           && exists(/databases/$(database)/documents/players/$(playerId))
           && dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-          && request.resource.data.keys().hasOnly(['date', 'month', 'count', 'updatedBy', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['date', 'month', 'count', 'type', 'updatedBy', 'updatedAt'])
           && request.resource.data.keys().hasAll(['date', 'month', 'count', 'updatedBy', 'updatedAt'])
           && request.resource.data.date == dayId
           && request.resource.data.month is string
@@ -176,6 +176,7 @@ service cloud.firestore {
           && request.resource.data.count is int
           && request.resource.data.count >= 1
           && request.resource.data.count <= 999
+          && (!request.resource.data.keys().hasAny(['type']) || request.resource.data.type in ['game', 'bullpen'])
           && request.resource.data.updatedBy == request.auth.token.email.lower()
           && request.resource.data.updatedAt == request.time;
       }
