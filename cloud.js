@@ -950,7 +950,7 @@
     const controls=document.createElement('div');
     controls.className='dz-role-controls';
     const label=document.createElement('label');label.className='dz-coach-meta';
-    label.textContent='Role';
+    label.textContent='Assigned role';
     const select=document.createElement('select');
     select.className='type-select dz-role-select';
     select.setAttribute('aria-label','Account role');
@@ -1079,11 +1079,46 @@
       const lastInvited=invitePlayer.value;
       playerOptions(invitePlayer,lastInvited);
       syncInvitePlayer();
-      const entriesApproved=Array.from(allowlist.docs).sort((a,b)=>a.id.localeCompare(b.id));
+      const order={player_parent:0,coach:1,pitching_coach:2,admin:3};
+      const entriesApproved=Array.from(allowlist.docs).sort((a,b)=>
+        (order[a.data().role]??9)-(order[b.data().role]??9) || a.id.localeCompare(b.id));
+      const activeAccounts=entriesApproved.filter(doc=>doc.data().active);
+      const tiles=[
+        ['Active accounts',activeAccounts.length],
+        ['Players / Parents',activeAccounts.filter(doc=>doc.data().role==='player_parent').length],
+        ['Coaching staff',activeAccounts.filter(doc=>['coach','pitching_coach'].includes(doc.data().role)).length],
+        ['Disabled accounts',entriesApproved.length-activeAccounts.length]
+      ];
+      const overview=$('dz-admin-role-summary');overview.replaceChildren();
+      for(const [label,value] of tiles){
+        const tile=document.createElement('div');tile.className='dz-access-stat';
+        const count=document.createElement('strong');count.textContent=String(value);
+        const name=document.createElement('span');name.textContent=label;
+        tile.append(count,name);overview.append(tile);
+      }
       for(const doc of entriesApproved){
         const d=doc.data(),mine=doc.id===emailKey(activeUser.email);
         const statusText=d.active?'Active':'Disabled';
-        const li=coachCard(doc.id,(ROLE_LABELS[d.role]||d.role)+' · '+statusText+(mine?' · You':''),[]);
+        const linkedName=d.role==='player_parent'
+          ? (PLAYERS[d.playerId]?.name || 'No linked player') : '';
+        const li=coachCard(doc.id,mine?'Your account · Permission changes disabled':'Account permissions',[]);
+        li.classList.add('dz-account-row');
+        li.dataset.role=d.role||'unknown';
+        li.dataset.state=d.active?'active':'disabled';
+        li.dataset.search=[doc.id,linkedName,(ROLE_LABELS[d.role]||d.role)].join(' ').toLowerCase();
+        const badgeRow=document.createElement('div');badgeRow.className='dz-account-badges';
+        const roleBadge=document.createElement('span');roleBadge.className='dz-account-badge dz-role-badge';
+        roleBadge.textContent=ROLE_LABELS[d.role]||d.role||'Unassigned';
+        const accessBadge=document.createElement('span');
+        accessBadge.className='dz-account-badge'+(d.active?'':' dz-account-disabled');
+        accessBadge.textContent=statusText;
+        badgeRow.append(roleBadge,accessBadge);
+        li.querySelector('.dz-coach-detail').append(badgeRow);
+        if(d.role==='player_parent'){
+          const relation=document.createElement('div');relation.className='dz-coach-meta';
+          relation.textContent='Linked player: '+linkedName;
+          li.querySelector('.dz-coach-detail').append(relation);
+        }
         if(!mine){
           const picker=rolePicker(d.role,d.playerId);
           const save=document.createElement('button');
@@ -1115,12 +1150,30 @@
         list.appendChild(li);
       }
       if(!entriesApproved.length)list.appendChild(emptyCoachRow('No approved accounts yet.'));
+      filterAccounts();
       notify($('cloud-request-status'),'Account permissions refreshed.');
     }catch(e){
       notify($('cloud-request-status'),'Unable to load account permissions: '+friendly(e),true);
       pending.appendChild(emptyCoachRow('Check that updated Firestore rules are deployed.'));
     }
   }
+  function filterAccounts(){
+    const search=$('dz-admin-account-search').value.trim().toLowerCase();
+    const role=$('dz-admin-role-filter').value,status=$('dz-admin-account-status').value;
+    const rows=Array.from($('cloud-allowlist').querySelectorAll('li.dz-account-row'));
+    let visible=0;
+    for(const li of rows){
+      const show=(!search||li.dataset.search.includes(search))
+        &&(role==='all'||li.dataset.role===role)
+        &&(status==='all'||li.dataset.state===status);
+      li.style.display=show?'':'none';
+      if(show)visible++;
+    }
+    $('dz-admin-filter-count').textContent='Showing '+visible+' of '+rows.length+' accounts';
+  }
+  $('dz-admin-account-search').addEventListener('input',filterAccounts);
+  $('dz-admin-role-filter').addEventListener('change',filterAccounts);
+  $('dz-admin-account-status').addEventListener('change',filterAccounts);
   window.DZ_REFRESH_COACH_REQUESTS=()=>listCoaches();
   $('cloud-refresh-requests').addEventListener('click',()=>listCoaches());
   const inviteRole=$('cloud-invite-role'),invitePlayer=$('cloud-invite-player');
