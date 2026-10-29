@@ -1676,6 +1676,12 @@
   @media(max-width:700px){.dz-plan-shell{padding:14px 11px}.dz-plan-meta{grid-template-columns:1fr}.dz-day-workspace{grid-template-columns:1fr}.dz-day-list{display:flex;flex-direction:row;max-height:none;overflow-x:auto;padding-bottom:6px}.dz-library-item{min-width:140px;max-width:185px}.dz-plan-calendar{grid-template-columns:repeat(2,minmax(0,1fr))}.dz-calendar-cell{min-height:135px}.dz-plan-weekbar{gap:9px}.dz-day-editor{padding:12px 9px}.dz-plan-actions #dz-plan-save{width:100%}}
   @media(max-width:380px){.dz-day-fields{grid-template-columns:1fr}.dz-calendar-head{padding:8px 6px}}
 
+
+  .dz-admin-upload-override{margin:14px 0;padding:12px 14px;background:#132A33;border:1px solid #3A7582;border-radius:5px;}
+  .dz-admin-upload-override>label{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font:600 13px/1.5 Inter,sans-serif;color:#D9F7F9;cursor:pointer;}
+  .dz-admin-upload-override input[type="checkbox"]{width:20px;height:20px;accent-color:#24BAC8;flex:none;}
+  .dz-admin-upload-override .cloud-help{margin:8px 0 5px;color:#B9D0D5;}
+  #session-admin-issues{font-size:12px;margin:8px 0 0;overflow-wrap:anywhere;white-space:normal;}
 </style>
 </head>
 <body>
@@ -3220,6 +3226,11 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
     <input type="file" id="session-file" accept=".pdf,.csv,.json,application/pdf,text/csv,application/json">
     <label class="field-label" for="session-date">Session date <span style="color:#87AAB2;font-size:11px">(required for individual sessions; verified PDFs fill this automatically)</span></label>
     <input id="session-date" type="date" autocomplete="off" style="max-width:270px;min-height:43px;background:#0C2027;color:#EDF7F8;border:1px solid #39606B;border-radius:4px;padding:8px 12px;">
+    <div id="session-admin-override-wrap" style="display:none;" class="dz-admin-upload-override">
+      <label for="session-admin-override"><input type="checkbox" id="session-admin-override"> <strong>Admin Override</strong> — allow a different report name or session date</label>
+      <p class="cloud-help">For legitimate name variations (Joe/Joseph) or manually corrected dates. Check the player and session carefully. Requires confirmation and records the override. Duplicate uploads and invalid pitch measurements are still blocked.</p>
+      <p id="session-admin-issues" class="cloud-status" role="status" aria-live="polite"></p>
+    </div>
     <div class="cloud-actions"><button type="button" class="cloud-button" id="session-read">Read File</button><button type="button" class="cloud-button secondary" id="session-cancel">Cancel</button></div>
     <p class="cloud-status" id="session-import-status" role="status"></p>
     <section id="session-review" style="display:none;">
@@ -3239,6 +3250,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="./session-ui.js"></script>
 <script src="./trackman-session.js"></script>
 <script src="./trackman-pdf.js"></script>
+<script src="./upload-override-policy.js"></script>
 <script src="./importer.js"></script>
 <script src="./at-home-plan.js"></script>
 <script src="./cloud.js"></script>

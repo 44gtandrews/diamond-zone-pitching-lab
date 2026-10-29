@@ -144,7 +144,15 @@ service cloud.firestore {
         request.resource.data.pitchData is list &&
         request.resource.data.pitchData.size() <= 600 &&
         request.resource.data.importedBy is string &&
-        (isAdmin() || request.resource.data.importedBy == request.auth.token.email);
+        (isAdmin() || request.resource.data.importedBy == request.auth.token.email) &&
+        // Admin overrides are enforced by Firestore, not just a browser checkbox.
+        (!request.resource.data.keys().hasAny(['adminOverride']) ||
+         (isAdmin()
+          && request.resource.data.adminOverride is map
+          && request.resource.data.adminOverride.types is list
+          && request.resource.data.adminOverride.types.size() > 0
+          && request.resource.data.adminOverride.types.size() <= 2
+          && request.resource.data.adminOverride.approvedBy == request.auth.token.email.lower()));
       // No silent rewriting/deletion of session records by regular coaches.
       allow update, delete: if isAdmin();
     }
