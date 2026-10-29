@@ -83,18 +83,23 @@ function createBoard(initial){
      entry.append(ta);
      if(!readonly){
        const toolbar=document.createElement('div');toolbar.className='mech-entry-actions';
-       const completeButton=makeButton('✓ Complete','mech-complete-btn',()=>{
+       const completionLabel=document.createElement('label');
+       completionLabel.className='mech-complete-control';
+       const completionBox=document.createElement('input');
+       completionBox.type='checkbox';
+       completionBox.setAttribute('aria-label','Mark '+group+' mechanical note '+(i+1)+' complete');
+       completionBox.addEventListener('change',()=>{
          capture();
-         if(!current[group][i].trim()){ta.focus();return;}
+         if(!current[group][i].trim()){completionBox.checked=false;ta.focus();return;}
          current=complete(current,group,i);
          render();markUnsaved();
        });
-       completeButton.setAttribute('aria-label','Mark '+group+' mechanical note '+(i+1)+' complete');
+       completionLabel.append(completionBox,document.createTextNode('Complete'));
        const remove=makeButton('Remove','mech-remove-btn',()=>{
          capture();current[group].splice(i,1);render();markUnsaved();
        });
        remove.setAttribute('aria-label','Remove '+group+' mechanical note '+(i+1));
-       toolbar.append(completeButton,remove);entry.append(toolbar);
+       toolbar.append(completionLabel,remove);entry.append(toolbar);
      }
      list.append(entry);
    });
