@@ -36,6 +36,7 @@ jobs:
           node tests/trackman-pitch-count-calendar-smoke.test.js
           node tests/branding-smoke.test.js
           node tests/header-opacity-fade-smoke.test.js
+          python3 -c "import xml.etree.ElementTree as ET; ET.parse('dz-teal-background.svg'); ET.parse('dz-logo.svg')"
           node tests/profile-back-button-smoke.test.js
 
       - name: Stage only approved public app files
