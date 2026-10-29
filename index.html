@@ -1757,7 +1757,8 @@
   .dz-count-day{min-width:0;min-height:96px;border:1px solid #334C56;background:#15252D;color:#E4EEF0;padding:8px 10px;cursor:pointer;border-radius:3px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;}
   .dz-count-day.dz-count-yellow,.dz-count-day.dz-count-orange,.dz-count-day.dz-count-red{border-color:transparent;}
   .dz-count-day .dz-count-number{font:700 12px Inter,sans-serif;}
-  .dz-count-day .dz-count-value{font:900 27px 'Barlow Condensed',Inter,sans-serif;line-height:1;align-self:center;margin-bottom:7px;}
+  .dz-count-day .dz-count-value{font:900 27px 'Barlow Condensed',Inter,sans-serif;line-height:1;align-self:center;margin-bottom:3px;}
+  .dz-count-origin{font:650 9px Inter,sans-serif;letter-spacing:.02em;align-self:center;opacity:.75;}
   .dz-count-day.dz-count-other{opacity:.35;background:#102027;cursor:default;}
   .dz-count-day.dz-count-today{outline:2px solid #008c95;outline-offset:-2px;}
   .dz-count-day.dz-count-selected{outline:3px solid #F1F8F9;outline-offset:-3px;}
@@ -1767,8 +1768,10 @@
   .dz-count-editor[hidden]{display:none!important;}
   .dz-count-editor label{display:flex;flex-direction:column;gap:4px;font:600 12px Inter,sans-serif;color:#D4ECEE;}
   .dz-count-editor label span{font:500 11px Inter,sans-serif;color:#9EBDC4;}
+  .dz-count-source{flex:1 1 100%;margin:2px 0 1px;font:500 11px/1.45 Inter,sans-serif;color:#B4CDD2;order:2;}
   #dz-count-input{width:100px;min-height:41px;background:#132B32;color:#F5FAFA;border:1px solid #42707A;border-radius:3px;padding:7px;font:700 16px Inter,sans-serif;}
   .dz-count-editor .cloud-button{min-height:41px;}
+  .dz-count-editor .dz-count-source{order:0;}
   @media(max-width:650px){.dz-pitch-counts-shell{padding:13px 9px}.dz-count-top h2{font-size:21px;min-width:0;flex:1}.dz-count-day{min-height:62px;padding:5px}.dz-count-day .dz-count-value{font-size:21px;margin-bottom:2px}.dz-count-day-header{font-size:10px}.dz-count-editor .cloud-button{padding:9px 10px;}}
 
 
@@ -2329,12 +2332,13 @@
           <span><i class="dz-count-swatch dz-count-red"></i> 41+ pitches</span>
         </div>
         <div class="dz-count-calendar" id="dz-count-calendar" aria-label="Pitch counts by date"></div>
-        <p id="dz-count-edit-hint" class="dz-count-hint">Select a day to enter its pitch count.</p>
+        <p id="dz-count-edit-hint" class="dz-count-hint">Dated TrackMan sessions appear automatically. Select a day to correct or enter a count.</p>
         <div id="dz-count-editor" class="dz-count-editor" hidden>
           <label for="dz-count-input"><strong id="dz-count-selected-date"></strong>
             <span>Pitch count</span>
           </label>
           <input type="number" min="1" max="999" step="1" inputmode="numeric" id="dz-count-input" placeholder="e.g. 35">
+          <p id="dz-count-source" class="dz-count-source" aria-live="polite"></p>
           <button type="button" id="dz-count-save" class="cloud-button">Save</button>
           <button type="button" id="dz-count-delete" class="cloud-button secondary">Remove</button>
           <button type="button" id="dz-count-cancel" class="cloud-button secondary">Cancel</button>

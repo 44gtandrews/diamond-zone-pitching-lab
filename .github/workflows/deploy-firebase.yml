@@ -33,6 +33,7 @@ jobs:
           node tests/at-home-plan-smoke.test.js
           node tests/mechanical-changes-smoke.test.js
           node tests/pitch-counts-smoke.test.js
+          node tests/trackman-pitch-count-calendar-smoke.test.js
           node tests/branding-smoke.test.js
           node tests/profile-back-button-smoke.test.js
 

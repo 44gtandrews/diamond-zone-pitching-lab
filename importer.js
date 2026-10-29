@@ -321,7 +321,11 @@ $('session-save').onclick=async()=>{
      }
    });
  }
- await window.DZ_RELOAD_ROSTER();close();if(mode==='new')await window.DZ_OPEN_PLAYER(pid);else await showPlayer(pid);
+ await window.DZ_RELOAD_ROSTER();
+ // The calendar is derived from immutable dated single-session records.
+ // Invalidate the visible month immediately after a successful import.
+ if(sessionKind==='single')window.DZ_PITCH_COUNTS_REFRESH?.(pid);
+ close();if(mode==='new')await window.DZ_OPEN_PLAYER(pid);else await showPlayer(pid);
  }catch(e){err(e);}finally{$('session-save').disabled=false;}
 };
 window.DZ_IMPORTER_INIT=({firestore,currentUser})=>{db=firestore;user=currentUser;};
