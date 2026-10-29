@@ -767,7 +767,8 @@
       if(!backupPlayers.has(item.playerId) ||
          typeof item.id!=='string'||!/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(item.id)||
          item.data.date!==item.id||item.data.month!==item.id.slice(0,7)||
-         !Number.isInteger(item.data.count)||item.data.count<1||item.data.count>999)
+         !Number.isInteger(item.data.count)||item.data.count<1||item.data.count>999||
+         (item.data.type!=null&&!['game','bullpen'].includes(item.data.type)))
         throw Error('Invalid daily pitch-count entry: '+item.playerId+' / '+item.id);
     }
     for(const item of decoded.playerEdits){
@@ -871,6 +872,7 @@
           item=>db.collection('players').doc(item.playerId).collection('pitchCounts').doc(item.id),
           item=>({
             date:item.id,month:item.id.slice(0,7),count:item.data.count,
+            ...(item.data.type!=null?{type:item.data.type}:{}),
             updatedBy:activeUser.email.toLowerCase(),
             updatedAt:firebase.firestore.FieldValue.serverTimestamp()
           }),20);
