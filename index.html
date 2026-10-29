@@ -1807,6 +1807,63 @@
     #view-admin .dz-account-row .dz-role-controls button{width:100%;font-size:12px;min-width:0;}
   }
 
+
+  /* High-visibility player-directory return, above the profile identity. */
+  #view-player .dz-player-back-row{
+    display:flex;
+    justify-content:flex-start;
+    margin:0 0 20px;
+  }
+  #view-player a.dz-player-back-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:11px;
+    min-height:46px;
+    padding:11px 18px 11px 12px;
+    margin:0;
+    border:2px solid #008c95;
+    border-radius:6px;
+    background:#008c95;
+    color:#061619;
+    font:800 14px/1.3 Inter,system-ui,sans-serif;
+    letter-spacing:.005em;
+    text-decoration:none;
+    text-transform:none;
+    box-shadow:0 5px 16px rgba(0,0,0,.25);
+    transition:background .16s ease,border-color .16s ease,transform .16s ease;
+  }
+  #view-player a.dz-player-back-link:hover{
+    background:#25b2ba;
+    border-color:#25b2ba;
+    color:#061619;
+    transform:translateY(-1px);
+  }
+  #view-player a.dz-player-back-link:focus-visible{
+    outline:3px solid #fff;
+    outline-offset:3px;
+  }
+  #view-player .dz-back-arrow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;
+    height:26px;
+    flex:none;
+    border-radius:4px;
+    background:rgba(5,30,33,.15);
+    font-size:23px;
+    line-height:1;
+  }
+  @media(max-width:640px){
+    #view-player .dz-player-back-row{margin-bottom:13px;}
+    #view-player a.dz-player-back-link{
+      width:100%;
+      min-height:49px;
+      justify-content:flex-start;
+      font-size:14px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -2080,11 +2137,16 @@
 <div id="view-player" style="display:none;">
   <div class="masthead">
     <div class="wrap">
+      <div class="dz-player-back-row">
+        <a href="#" class="back-link dz-player-back-link" aria-label="Back to All Players">
+          <span class="dz-back-arrow" aria-hidden="true">←</span>
+          <span>Back to All Players</span>
+        </a>
+      </div>
       <div class="masthead-row">
         <div class="dz-profile-identity">
           <img class="dz-brand-logo" src="./dz-logo.svg" alt="DiamondZone DZ logo" width="92" height="80">
           <div class="dz-head-copy">
-          <a href="#" class="back-link">← All Players</a>
           <p class="facility">DiamondZone CT · Pitching Lab</p>
           <h1 class="player-name" id="player-name"></h1>
           <p class="player-sub" id="player-sub"></p>
