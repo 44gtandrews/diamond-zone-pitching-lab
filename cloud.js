@@ -7,6 +7,7 @@
   const loginActions = $('cloud-auth-actions');
   const verifyActions = $('cloud-verification-actions');
   const status = $('cloud-auth-status');
+  let signupMode=false;
   let auth, db, activeUser=null, staff=null;
   let accessVersion=0;
   window.DZ_AUTHORIZED = false;
@@ -41,8 +42,56 @@
     loginActions.style.display=mode==='login'?'flex':'none';
     verifyActions.style.display=mode==='verify'?'flex':'none';
     status.textContent=message;
+    const registration=$('cloud-registration-fields');
+    registration.style.display=mode==='request'?'grid':'none';
+    $('cloud-request-intent-submit').style.display=mode==='request'?'block':'none';
+    signupMode=false;
+    $('cloud-signup').textContent='Create account';
+    $('cloud-cancel-signup').style.display='none';
+    $('cloud-reset').style.display='';
+    $('cloud-login-button').style.display='';
   }
   const emailKey=s=>String(s||'').trim().toLowerCase();
+  const registration=()=>window.DZ_REGISTRATION;
+  function syncRegistrationFields(){
+    const role=$('cloud-register-role').value;
+    $('cloud-register-player-fields').style.display=registration().family(role)?'grid':'none';
+  }
+  $('cloud-register-role').addEventListener('change',syncRegistrationFields);
+  function applicantIntent(){
+    const requestedRole=$('cloud-register-role').value;
+    const playerName=registration().family(requestedRole)?$('cloud-register-player-name').value.trim():'';
+    const playerCode=registration().family(requestedRole)?$('cloud-register-player-id').value.trim():'';
+    if(!registration().validIntent(requestedRole,playerName,playerCode))
+      throw Error(requestedRole==='coach'?'Choose a registration type.':
+        'Choose Player, Parent / Guardian or Coach; players/parents must enter a full player name and an optional valid six-digit ID.');
+    return {requestedRole,playerName,playerCode};
+  }
+  async function createAccessRequest(user,info){
+    if(!user?.uid||!user.email)throw Error('Sign in again to submit an access request.');
+    const data={
+      uid:user.uid,email:emailKey(user.email),
+      status:user.emailVerified?'pending':'awaiting_verification',
+      requestedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      ...info
+    };
+    const ref=db.collection('coachRequests').doc(user.uid);
+    const existing=await ref.get();
+    if(existing.exists)throw Error('An access request already exists. Contact the administrator if changes are needed.');
+    await ref.set(data);
+  }
+  function toggleSignup(active){
+    signupMode=active;
+    $('cloud-registration-fields').style.display=active?'grid':'none';
+    $('cloud-request-intent-submit').style.display='none';
+    $('cloud-signup').textContent=active?'Create account & verify email':'Create account';
+    $('cloud-cancel-signup').style.display=active?'block':'none';
+    $('cloud-reset').style.display=active?'none':'';
+    $('cloud-login-button').style.display=active?'none':'';
+    if(active)notify(status,'Select your registration type. Player and parent requests require the player’s name.');
+    else notify(status,'');
+    syncRegistrationFields();
+  }
   function friendly(e) {
     const msg=String(e?.message||e);
     if (/auth\/invalid-credential|auth\/wrong-password|auth\/user-not-found/.test(msg)) return 'Email or password not accepted.';
@@ -300,19 +349,19 @@
             'This account has been disabled. Contact the administrator to inquire.','verify');
           return;
         }
-        // An authenticated, email-verified coach may create ONE pending request.
-        // Firestore denies all roster reads until a separate admin approval.
+        // Verified account holders submit a request with untrusted signup intent.
+        // Firestore denies ALL player reads until an admin creates allowlist access.
         const requestRef=db.collection('coachRequests').doc(user.uid);
         let request;
         try {
           request=await requestRef.get();
           if(!request.exists){
-            await requestRef.set({
-              uid:user.uid,
-              email:emailKey(user.email),
-              status:'pending',
-              requestedAt:firebase.firestore.FieldValue.serverTimestamp()
-            });
+            showAuth('Complete your access request',
+              'Choose whether you are a player, parent/guardian or coach. Your account remains restricted until administrator approval.','request');
+            return;
+          }
+          if(request.data()?.status==='awaiting_verification'){
+            await requestRef.update({status:'pending'});
             request=await requestRef.get();
           }
         }catch(e){
@@ -352,13 +401,41 @@
     finally{btn.disabled=false;}
   });
   $('cloud-signup').addEventListener('click',async()=>{
+    if(!signupMode){toggleSignup(true);return;}
     const email=emailKey($('cloud-email').value),password=$('cloud-password').value;
-    if(!email||password.length<6){notify(status,'Enter a valid email and password (at least six characters).',true);return;}
+    if(!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email)||password.length<6){
+      notify(status,'Enter a valid email and password (at least six characters).',true);return;
+    }
+    let info;
+    try{info=applicantIntent();}
+    catch(e){notify(status,friendly(e),true);return;}
+    const btn=$('cloud-signup');btn.disabled=true;
     try{
       const result=await auth.createUserWithEmailAndPassword(email,password);
+      let recorded=false;
+      try{
+        await createAccessRequest(result.user,info);
+        recorded=true;
+      }catch(e){
+        console.warn('New account created, but request creation needs retry',e);
+      }
       await result.user.sendEmailVerification();
-      showAuth('Verification sent','Check your email and confirm your address. An admin must separately approve your email.','verify','Verification sent to '+email);
+      showAuth('Verification sent',
+        'Verify your email, then your registration will be reviewed by an administrator. No player data can be accessed before approval.','verify',
+        recorded?'Verification sent to '+email:
+        'Verification sent. After verifying, use Continue to finish submitting your access request.');
     }catch(e){notify(status,friendly(e),true);}
+    finally{btn.disabled=false;}
+  });
+  $('cloud-cancel-signup').addEventListener('click',()=>toggleSignup(false));
+  $('cloud-request-intent-submit').addEventListener('click',async()=>{
+    const btn=$('cloud-request-intent-submit');btn.disabled=true;
+    try{
+      if(!auth.currentUser?.emailVerified)throw Error('Verify your email before requesting access.');
+      await createAccessRequest(auth.currentUser,applicantIntent());
+      await checkAccess(auth.currentUser);
+    }catch(e){notify(status,friendly(e),true);}
+    finally{btn.disabled=false;}
   });
   $('cloud-reset').addEventListener('click',async()=>{
     const email=emailKey($('cloud-email').value);
