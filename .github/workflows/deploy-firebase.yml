@@ -34,6 +34,7 @@ jobs:
           node tests/mechanical-changes-smoke.test.js
           node tests/pitch-counts-smoke.test.js
           node tests/branding-smoke.test.js
+          node tests/profile-back-button-smoke.test.js
 
       - name: Stage only approved public app files
         run: bash prepare-firebase-hosting.sh
