@@ -1146,8 +1146,11 @@
   }
   async function listCoaches() {
     if(staff?.role!=='admin')return;
-    const pending=$('cloud-pending-requests'),denied=$('cloud-denied-requests'),list=$('cloud-allowlist');
-    pending.replaceChildren();denied.replaceChildren();list.replaceChildren();
+    const pending=$('cloud-pending-requests'),family=$('cloud-pending-family'),
+      awaiting=$('cloud-awaiting-verification'),
+      denied=$('cloud-denied-requests'),list=$('cloud-allowlist');
+    pending.replaceChildren();family.replaceChildren();awaiting.replaceChildren();
+    denied.replaceChildren();list.replaceChildren();
     notify($('cloud-request-status'),'Loading account access requests...');
     try{
       const [allowlist,requests]=await Promise.all([
@@ -1156,35 +1159,90 @@
       const entries=Array.from(requests.docs)
         .sort((a,b)=>(b.data().requestedAt?.toMillis?.()||0)-
                      (a.data().requestedAt?.toMillis?.()||0));
-      let pendingCount=0,deniedCount=0;
+      let pendingCount=0,familyCount=0,coachCount=0,awaitingCount=0,deniedCount=0;
+      function applicantDetails(d,container,picker){
+        const box=document.createElement('div');box.className='dz-request-context';
+        const requested=d.requestedRole;
+        const type=document.createElement('div');
+        type.textContent='Requested: '+
+          (registration().label[requested]||'Not specified (legacy signup)');
+        box.append(type);
+        if(registration().family(requested)){
+          const player=document.createElement('div');
+          player.textContent='Player provided: '+(d.playerName||'Not provided')+
+            (d.playerCode?' · Profile ID #'+d.playerCode:'');
+          box.append(player);
+          const matches=registration().suggestions(d,PLAYERS);
+          const hint=document.createElement('span');
+          hint.className='dz-match-suggestion';
+          if(matches.length===1){
+            const match=matches[0];
+            hint.textContent='Suggested '+match.reason.toLowerCase()+' match: '+
+              match.name+(match.publicId?' · #'+match.publicId:'')+
+              '. Verify before approval.';
+            if(!match.nameMatches && match.reason==='Player ID'){
+              hint.classList.add('dz-match-warning');
+              hint.textContent+=' The supplied name differs from the matched profile.';
+            }
+          }else if(matches.length>1){
+            hint.textContent='Multiple matching player profiles. Select the correct one manually.';
+          }else{
+            hint.textContent='No matching player found. Search the linked-player dropdown.';
+          }
+          box.append(hint);
+        }
+        container.querySelector('.dz-coach-detail').append(box);
+      }
+      function pickerFor(d){
+        const isFamily=registration().family(d.requestedRole);
+        const matches=registration().suggestions(d,PLAYERS);
+        // Exact-name or ID matches are suggestions ONLY: admin approval is mandatory.
+        // Name conflict on an ID match must be resolved manually.
+        const guessedId=isFamily&&matches.length===1&&matches[0].nameMatches
+          ?matches[0].id:'';
+        return rolePicker(isFamily?'player_parent':'coach',guessedId);
+      }
       for(const request of entries){
         const d=request.data(),email=emailKey(d.email);
         if(!email || !d.uid)continue;
-        const meta=requestDate(d)+' · Verified email';
+        const meta=requestDate(d);
         if(d.status==='pending'){
           pendingCount++;
-          const picker=rolePicker();
-          const li=coachCard(email,meta,[
-            {label:'Approve role',run:()=>decideRequest(
+          const isFamily=registration().family(d.requestedRole);
+          if(isFamily)familyCount++;else coachCount++;
+          const picker=pickerFor(d);
+          const li=coachCard(email,meta+' · Verified email',[
+            {label:'Approve selected role',run:()=>decideRequest(
               request,'approved',picker.select.value,picker.linked.value)},
             {label:'Deny',secondary:true,run:()=>decideRequest(request,'denied')}
           ]);
+          applicantDetails(d,li,picker);
           li.appendChild(picker.controls);
-          pending.appendChild(li);
+          (isFamily?family:pending).appendChild(li);
+        }else if(d.status==='awaiting_verification'){
+          awaitingCount++;
+          const li=coachCard(email,meta+' · Email not verified',[]);
+          applicantDetails(d,li,null);awaiting.appendChild(li);
         }else if(d.status==='denied'){
           deniedCount++;
-          const picker=rolePicker();
+          const picker=pickerFor(d);
           const li=coachCard(email,'Denied · '+meta,[
-            {label:'Approve role',run:()=>decideRequest(
+            {label:'Approve selected role',run:()=>decideRequest(
               request,'approved',picker.select.value,picker.linked.value)},
             {label:'Reconsider',secondary:true,run:()=>decideRequest(request,'pending')}
           ]);
+          applicantDetails(d,li,picker);
           li.appendChild(picker.controls);
           denied.appendChild(li);
         }
       }
-      if(!pendingCount)pending.appendChild(emptyCoachRow('No pending requests.'));
+      if(!familyCount)family.appendChild(emptyCoachRow('No pending player or parent requests.'));
+      if(!coachCount)pending.appendChild(emptyCoachRow('No pending coach requests.'));
+      if(!awaitingCount)awaiting.appendChild(emptyCoachRow('No registrations awaiting verification.'));
       if(!deniedCount)denied.appendChild(emptyCoachRow('No denied requests.'));
+      $('cloud-pending-family-count').textContent=String(familyCount);
+      $('cloud-pending-coach-count').textContent=String(coachCount);
+      $('cloud-awaiting-verification-count').textContent=String(awaitingCount);
       $('cloud-pending-count').textContent=String(pendingCount);
       $('cloud-pending-badge').textContent=String(pendingCount);
       $('cloud-pending-badge').style.display=pendingCount?'inline-block':'none';
