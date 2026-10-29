@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 OUT=".firebase-build"
-FILES=(index.html firebase-config.js session-history.js session-ui.js trackman-session.js trackman-pdf.js upload-override-policy.js importer.js cloud.js mechanical-changes.js at-home-plan.js pitch-counts.js dz-logo.svg dz-teal-background.svg)
+FILES=(index.html firebase-config.js session-history.js session-ui.js trackman-session.js trackman-pdf.js upload-override-policy.js importer.js cloud.js registration-policy.js mechanical-changes.js at-home-plan.js pitch-counts.js dz-logo.svg dz-teal-background.svg)
 for file in "${FILES[@]}"; do
   if [ ! -f "$file" ]; then
     echo "Missing required app file: $file" >&2
