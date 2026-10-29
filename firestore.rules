@@ -156,6 +156,142 @@ service cloud.firestore {
       // No silent rewriting/deletion of session records by regular coaches.
       allow update, delete: if isAdmin();
     }
+    // Daily pitch counts: staff may edit, all team coaches may view;
+    // a linked Player/Parent can view only that player's counts.
+    match /players/{playerId}/pitchCounts/{dayId} {
+      function activePlayer() {
+        return exists(/databases/$(database)/documents/players/$(playerId))
+          && get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true;
+      }
+      function validPitchCount() {
+        return canWritePitching()
+          && exists(/databases/$(database)/documents/players/$(playerId))
+          && dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.keys().hasOnly(['date', 'month', 'count', 'updatedBy', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['date', 'month', 'count', 'updatedBy', 'updatedAt'])
+          && request.resource.data.date == dayId
+          && request.resource.data.month is string
+          && request.resource.data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])
+          && request.resource.data.count is int
+          && request.resource.data.count >= 1
+          && request.resource.data.count <= 999
+          && request.resource.data.updatedBy == request.auth.token.email.lower()
+          && request.resource.data.updatedAt == request.time;
+      }
+      allow get, list: if canViewAll() ||
+        (assignedParent(playerId) && activePlayer());
+      allow create, update: if validPitchCount();
+      allow delete: if canWritePitching() && exists(/databases/$(database)/documents/players/$(playerId));
+    }
+    // Per-player calendars and reusable day libraries. Admin access is checked
+    // by the server for every read/write, independent of hidden UI controls.
+    match /players/{playerId}/atHomePlans/{weekId} {
+      function validPlan() {
+        return isAdmin()
+          && exists(/databases/$(database)/documents/players/$(playerId))
+          && weekId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.keys().hasOnly(
+            ['weekStart', 'title', 'notes', 'rows', 'revision', 'updatedBy', 'updatedAt', 'schedule', 'assignmentsVersion'])
+          && request.resource.data.keys().hasAll(
+            ['weekStart', 'title', 'notes', 'rows', 'revision', 'updatedBy', 'updatedAt'])
+          && request.resource.data.weekStart == weekId
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.notes is string
+          && request.resource.data.notes.size() <= 3000
+          && request.resource.data.rows is list
+          && request.resource.data.rows.size() <= 80
+          && request.resource.data.revision is int
+          && request.resource.data.updatedBy == request.auth.token.email.lower()
+          && request.resource.data.updatedAt == request.time
+          && (
+            !request.resource.data.keys().hasAny(['schedule', 'assignmentsVersion'])
+            ||
+            (request.resource.data.keys().hasAll(['schedule', 'assignmentsVersion'])
+             && request.resource.data.assignmentsVersion == 1
+             && request.resource.data.schedule is list
+             && request.resource.data.schedule.size() == 7
+             && request.resource.data.schedule[0] is list
+             && request.resource.data.schedule[1] is list
+             && request.resource.data.schedule[2] is list
+             && request.resource.data.schedule[3] is list
+             && request.resource.data.schedule[4] is list
+             && request.resource.data.schedule[5] is list
+             && request.resource.data.schedule[6] is list
+             && request.resource.data.schedule[0].size() <= 4
+             && request.resource.data.schedule[1].size() <= 4
+             && request.resource.data.schedule[2].size() <= 4
+             && request.resource.data.schedule[3].size() <= 4
+             && request.resource.data.schedule[4].size() <= 4
+             && request.resource.data.schedule[5].size() <= 4
+             && request.resource.data.schedule[6].size() <= 4)
+          );
+      }
+      allow get, list: if isAdmin();
+      allow create: if validPlan() && request.resource.data.revision == 1;
+      allow update: if validPlan()
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if isAdmin();
+    }
+    match /players/{playerId}/atHomeDays/{libraryId} {
+      function validLibrary() {
+        return isAdmin()
+          && libraryId == 'library'
+          && exists(/databases/$(database)/documents/players/$(playerId))
+          && request.resource.data.keys().hasOnly(['templates', 'revision', 'updatedBy', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['templates', 'revision', 'updatedBy', 'updatedAt'])
+          && request.resource.data.templates is list
+          && request.resource.data.templates.size() <= 40
+          && request.resource.data.revision is int
+          && request.resource.data.updatedBy == request.auth.token.email.lower()
+          && request.resource.data.updatedAt == request.time;
+      }
+      allow get, list: if isAdmin() && libraryId == 'library';
+      allow create: if validLibrary() && request.resource.data.revision == 1;
+      allow update: if validLibrary()
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if isAdmin() && libraryId == 'library';
+    }
+    match /playerCodes/{code} {
+      allow get, list: if canViewAll();
+      allow create: if canWritePitching()
+        && code.matches('^[1-9][0-9]{5}$')
+        && request.resource.data.keys().hasOnly(['playerId'])
+        && request.resource.data.playerId is string
+        && getAfter(/databases/$(database)/documents/players/$(request.resource.data.playerId)).data.publicId == code;
+      allow update, delete: if false;
+    }
+    match /playerEdits/{playerId}/sections/{section} {
+      allow get: if canViewAll() || (assignedParent(playerId)
+        && exists(/databases/$(database)/documents/players/$(playerId))
+        && get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
+      allow list: if canViewAll();
+      allow create, update: if canWritePitching()
+        && exists(/databases/$(database)/documents/players/$(playerId))
+        && section in ['notes', 'mechanics', 'strength', 'grades', 'type-overrides']
+        && request.resource.data.keys().hasOnly(['value', 'updatedAt', 'editedBy'])
+        && request.resource.data.keys().hasAll(['value', 'updatedAt', 'editedBy'])
+        && request.resource.data.value is string
+        && request.resource.data.value.size() <= 50000
+        && (isAdmin() || request.resource.data.editedBy == request.auth.token.email);
+      allow delete: if isAdmin();
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
+)
+          && dayId.matches(request.resource.data.month + '-[0-9]{2}')
+          && request.resource.data.count is int
+          && request.resource.data.count >= 1
+          && request.resource.data.count <= 999
+          && request.resource.data.updatedBy == request.auth.token.email.lower()
+          && request.resource.data.updatedAt == request.time;
+      }
+      allow get, list: if canViewAll() ||
+        (assignedParent(playerId) && activePlayer());
+      allow create, update: if validPitchCount();
+      allow delete: if canWritePitching() && activePlayer();
+    }
     // Per-player calendars and reusable day libraries. Admin access is checked
     // by the server for every read/write, independent of hidden UI controls.
     match /players/{playerId}/atHomePlans/{weekId} {

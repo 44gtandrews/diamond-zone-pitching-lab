@@ -21,6 +21,7 @@
   function showAuth(title, description, mode='login', message='') {
     window.DZ_SET_PORTAL_LOADING?.(false);
     window.DZ_AT_HOME_RESET?.();
+    window.DZ_PITCH_COUNTS_RESET?.();
     window.DZ_AUTHORIZED=false;
     window.DZ_SESSIONS_DB=null;
     window.DZ_IS_ADMIN=false;
@@ -668,7 +669,7 @@
     try{
       const collections=['players','playerCodes','allowlist','coachRequests'];
       const snaps=await Promise.all(collections.map(name=>db.collection(name).get()));
-      const payload={format:'diamond-zone-full-backup',schemaVersion:3,
+      const payload={format:'diamond-zone-full-backup',schemaVersion:4,
         projectId:firebase.app().options.projectId,
         exportedAt:new Date().toISOString(),collections:{}};
       collections.forEach((name,i)=>{
@@ -676,6 +677,7 @@
       });
       payload.collections.playerEdits=[];
       payload.collections.playerSessions=[];
+      payload.collections.playerPitchCounts=[];
       const players=snaps[0].docs;
       // Reading one player's note sections at a time avoids bursty Firestore reads.
       for(let i=0;i<players.length;i++){
@@ -688,6 +690,10 @@
         sessions.docs.forEach(doc=>payload.collections.playerSessions.push({
           playerId:player.id,id:doc.id,data:dzEncodeBackup(doc.data())
         }));
+        const dailyCounts=await db.collection('players').doc(player.id).collection('pitchCounts').get();
+        dailyCounts.docs.forEach(doc=>payload.collections.playerPitchCounts.push({
+          playerId:player.id,id:doc.id,data:dzEncodeBackup(doc.data())
+        }));
         if((i+1)%10===0)dzBackupMessage('Collecting notes and grades: '+(i+1)+' / '+players.length+' players...');
       }
       const stamp=new Date().toISOString().slice(0,10);
@@ -695,6 +701,7 @@
       dzBackupMessage('Full backup downloaded: '+players.length+' players, '+
         payload.collections.playerEdits.length+' coaching records, '+
         payload.collections.playerSessions.length+' preserved sessions, '+
+        payload.collections.playerPitchCounts.length+' daily pitch counts, '+
         payload.collections.playerCodes.length+' player IDs, '+
         payload.collections.allowlist.length+' staff records and '+
         payload.collections.coachRequests.length+' coach requests. Store the JSON securely.');
@@ -703,15 +710,17 @@
   });
 
   function dzValidateBackup(parsed){
-    if(!parsed||parsed.format!=='diamond-zone-full-backup'||![2,3].includes(parsed.schemaVersion)||
+    if(!parsed||parsed.format!=='diamond-zone-full-backup'||![2,3,4].includes(parsed.schemaVersion)||
        !parsed.collections||typeof parsed.collections!=='object')throw Error('Select a Diamond Zone FULL backup (schema version 2).');
     if(parsed.projectId!==firebase.app().options.projectId)
       throw Error('Backup is from a different Firebase project. Restore cancelled.');
-    const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits','playerSessions'];
+    const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits','playerSessions','playerPitchCounts'];
     if(parsed.schemaVersion===2&&!('playerSessions' in parsed.collections))
       parsed.collections.playerSessions=[];
+    if(parsed.schemaVersion<4&&!('playerPitchCounts' in parsed.collections))
+      parsed.collections.playerPitchCounts=[];
     for(const key of arrays){
-      if(!Array.isArray(parsed.collections[key])||parsed.collections[key].length>5000)
+      if(!Array.isArray(parsed.collections[key])||parsed.collections[key].length>(key==='playerPitchCounts'?100000:5000))
         throw Error('Invalid or oversized '+key+' backup collection.');
     }
     const decoded={};
@@ -721,7 +730,7 @@
         if(!item || typeof item!=='object' || !item.data || typeof item.data!=='object')
           throw Error('Invalid '+key+' entry.');
         const id=key==='playerEdits'?String(item.playerId||'')+':'+String(item.section||''):
-          key==='playerSessions'?String(item.playerId||'')+':'+String(item.id||''):String(item.id||'');
+          ['playerSessions','playerPitchCounts'].includes(key)?String(item.playerId||'')+':'+String(item.id||''):String(item.id||'');
         if(!id||id.includes('/')||seen.has(id))throw Error('Invalid or duplicate '+key+' ID: '+id);
         seen.add(id);
         return {...item,data:dzDecodeBackup(item.data)};
@@ -753,6 +762,13 @@
          !Array.isArray(item.data.pitches)||item.data.pitches.length>8||
          !Array.isArray(item.data.pitchData)||item.data.pitchData.length>600)
         throw Error('Invalid player session backup: '+item.playerId+' / '+item.id);
+    }
+    for(const item of decoded.playerPitchCounts){
+      if(!backupPlayers.has(item.playerId) ||
+         typeof item.id!=='string'||!/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(item.id)||
+         item.data.date!==item.id||item.data.month!==item.id.slice(0,7)||
+         !Number.isInteger(item.data.count)||item.data.count<1||item.data.count>999)
+        throw Error('Invalid daily pitch-count entry: '+item.playerId+' / '+item.id);
     }
     for(const item of decoded.playerEdits){
       if(!backupPlayers.has(item.playerId)||
@@ -823,6 +839,7 @@
       }
       const summary=decoded.players.length+' players, '+decoded.playerEdits.length+
         ' coaching records, '+decoded.playerSessions.length+' sessions, '+
+        decoded.playerPitchCounts.length+' daily pitch counts, '+
         decoded.allowlist.length+' staff approvals, '+
         decoded.coachRequests.length+' coach requests.';
       const permission=window.prompt('EMERGENCY RESTORE from '+parsed.exportedAt+'\n'+summary+
@@ -845,6 +862,18 @@
         await dzRestoreBatch(decoded.playerSessions,
           item=>db.collection('players').doc(item.playerId).collection('sessions').doc(item.id),
           item=>item.data,15);
+      }
+      // Stage 2b: restore pitch count dates while recording this admin's restore.
+      // Firestore requires a fresh server timestamp on every pitch-count write.
+      if(decoded.playerPitchCounts.length){
+        dzBackupMessage('Restoring '+decoded.playerPitchCounts.length+' daily pitch counts...');
+        await dzRestoreBatch(decoded.playerPitchCounts,
+          item=>db.collection('players').doc(item.playerId).collection('pitchCounts').doc(item.id),
+          item=>({
+            date:item.id,month:item.id.slice(0,7),count:item.data.count,
+            updatedBy:activeUser.email.toLowerCase(),
+            updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+          }),20);
       }
       // Stage 3: create only missing reservations; never overwrite an existing code.
       const missingCodes=decoded.playerCodes.filter(item=>
@@ -885,7 +914,8 @@
       await loadPlayers();
       await listCoaches();
       dzBackupMessage('Restore completed. Recovered '+decoded.players.length+' player profiles, '+
-        decoded.playerSessions.length+' sessions and '+decoded.playerEdits.length+' coaching records. Existing admin roles and accounts were preserved. '+
+        decoded.playerSessions.length+' sessions, '+decoded.playerPitchCounts.length+
+        ' pitch-count days and '+decoded.playerEdits.length+' coaching records. Existing admin roles and accounts were preserved. '+
         'Records absent from the backup were not deleted.');
     }catch(e){
       dzBackupMessage('RESTORE FAILED: '+friendly(e)+
@@ -950,7 +980,7 @@
     const controls=document.createElement('div');
     controls.className='dz-role-controls';
     const label=document.createElement('label');label.className='dz-coach-meta';
-    label.textContent='Role';
+    label.textContent='Assigned role';
     const select=document.createElement('select');
     select.className='type-select dz-role-select';
     select.setAttribute('aria-label','Account role');
@@ -1079,11 +1109,46 @@
       const lastInvited=invitePlayer.value;
       playerOptions(invitePlayer,lastInvited);
       syncInvitePlayer();
-      const entriesApproved=Array.from(allowlist.docs).sort((a,b)=>a.id.localeCompare(b.id));
+      const order={player_parent:0,coach:1,pitching_coach:2,admin:3};
+      const entriesApproved=Array.from(allowlist.docs).sort((a,b)=>
+        (order[a.data().role]??9)-(order[b.data().role]??9) || a.id.localeCompare(b.id));
+      const activeAccounts=entriesApproved.filter(doc=>doc.data().active);
+      const tiles=[
+        ['Active accounts',activeAccounts.length],
+        ['Players / Parents',activeAccounts.filter(doc=>doc.data().role==='player_parent').length],
+        ['Coaching staff',activeAccounts.filter(doc=>['coach','pitching_coach'].includes(doc.data().role)).length],
+        ['Disabled accounts',entriesApproved.length-activeAccounts.length]
+      ];
+      const overview=$('dz-admin-role-summary');overview.replaceChildren();
+      for(const [label,value] of tiles){
+        const tile=document.createElement('div');tile.className='dz-access-stat';
+        const count=document.createElement('strong');count.textContent=String(value);
+        const name=document.createElement('span');name.textContent=label;
+        tile.append(count,name);overview.append(tile);
+      }
       for(const doc of entriesApproved){
         const d=doc.data(),mine=doc.id===emailKey(activeUser.email);
         const statusText=d.active?'Active':'Disabled';
-        const li=coachCard(doc.id,(ROLE_LABELS[d.role]||d.role)+' · '+statusText+(mine?' · You':''),[]);
+        const linkedName=d.role==='player_parent'
+          ? (PLAYERS[d.playerId]?.name || 'No linked player') : '';
+        const li=coachCard(doc.id,mine?'Your account · Permission changes disabled':'Account permissions',[]);
+        li.classList.add('dz-account-row');
+        li.dataset.role=d.role||'unknown';
+        li.dataset.state=d.active?'active':'disabled';
+        li.dataset.search=[doc.id,linkedName,(ROLE_LABELS[d.role]||d.role)].join(' ').toLowerCase();
+        const badgeRow=document.createElement('div');badgeRow.className='dz-account-badges';
+        const roleBadge=document.createElement('span');roleBadge.className='dz-account-badge dz-role-badge';
+        roleBadge.textContent=ROLE_LABELS[d.role]||d.role||'Unassigned';
+        const accessBadge=document.createElement('span');
+        accessBadge.className='dz-account-badge'+(d.active?'':' dz-account-disabled');
+        accessBadge.textContent=statusText;
+        badgeRow.append(roleBadge,accessBadge);
+        li.querySelector('.dz-coach-detail').append(badgeRow);
+        if(d.role==='player_parent'){
+          const relation=document.createElement('div');relation.className='dz-coach-meta';
+          relation.textContent='Linked player: '+linkedName;
+          li.querySelector('.dz-coach-detail').append(relation);
+        }
         if(!mine){
           const picker=rolePicker(d.role,d.playerId);
           const save=document.createElement('button');
@@ -1115,12 +1180,30 @@
         list.appendChild(li);
       }
       if(!entriesApproved.length)list.appendChild(emptyCoachRow('No approved accounts yet.'));
+      filterAccounts();
       notify($('cloud-request-status'),'Account permissions refreshed.');
     }catch(e){
       notify($('cloud-request-status'),'Unable to load account permissions: '+friendly(e),true);
       pending.appendChild(emptyCoachRow('Check that updated Firestore rules are deployed.'));
     }
   }
+  function filterAccounts(){
+    const search=$('dz-admin-account-search').value.trim().toLowerCase();
+    const role=$('dz-admin-role-filter').value,status=$('dz-admin-account-status').value;
+    const rows=Array.from($('cloud-allowlist').querySelectorAll('li.dz-account-row'));
+    let visible=0;
+    for(const li of rows){
+      const show=(!search||li.dataset.search.includes(search))
+        &&(role==='all'||li.dataset.role===role)
+        &&(status==='all'||li.dataset.state===status);
+      li.style.display=show?'':'none';
+      if(show)visible++;
+    }
+    $('dz-admin-filter-count').textContent='Showing '+visible+' of '+rows.length+' accounts';
+  }
+  $('dz-admin-account-search').addEventListener('input',filterAccounts);
+  $('dz-admin-role-filter').addEventListener('change',filterAccounts);
+  $('dz-admin-account-status').addEventListener('change',filterAccounts);
   window.DZ_REFRESH_COACH_REQUESTS=()=>listCoaches();
   $('cloud-refresh-requests').addEventListener('click',()=>listCoaches());
   const inviteRole=$('cloud-invite-role'),invitePlayer=$('cloud-invite-player');
