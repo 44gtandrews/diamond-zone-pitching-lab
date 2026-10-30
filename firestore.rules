@@ -63,6 +63,35 @@ service cloud.firestore {
             (request.resource.data.role == 'admin' && request.resource.data.active == true));
       allow delete: if isAdmin() && email != request.auth.token.email;
     }
+    // Self-reported sign-in timestamps copied from Firebase Authentication
+    // metadata. Only the account itself may create/advance its login time;
+    // only administrators can read the whole collection.
+    match /userLogins/{email} {
+      function ownsLogin() {
+        return approved()
+          && request.auth.token.email.lower() == email;
+      }
+      function validLogin() {
+        return ownsLogin()
+          && request.resource.data.keys().hasOnly(
+            ['email','uid','lastSignInAt','recordedAt'])
+          && request.resource.data.keys().hasAll(
+            ['email','uid','lastSignInAt','recordedAt'])
+          && request.resource.data.email == email
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.lastSignInAt is timestamp
+          && request.resource.data.lastSignInAt <= request.time
+          && request.resource.data.recordedAt == request.time;
+      }
+      allow get: if isAdmin() || ownsLogin();
+      allow list: if isAdmin();
+      allow create: if validLogin();
+      allow update: if validLogin()
+        && resource.data.email == email
+        && resource.data.lastSignInAt is timestamp
+        && request.resource.data.lastSignInAt > resource.data.lastSignInAt;
+      allow delete: if false;
+    }
     match /coachRequests/{userId} {
       // Applicant-provided registration intent is not an access grant.
       function validApplicant() {
