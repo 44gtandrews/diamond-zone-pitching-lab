@@ -1948,6 +1948,21 @@
   .dz-verification-details{margin:20px 0;border-top:1px solid #35545E;padding-top:12px;}
   .dz-verification-details summary{cursor:pointer;font:650 12px Inter,sans-serif;color:#B6D3D9;}
   @media(max-width:640px){.cloud-registration-fields{padding:12px;}.dz-request-context{padding:9px 10px;}}
+  /* Admin-only account activity timestamp: readable on desktop and phones. */
+  #view-admin .dz-account-last-login{
+    display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+    margin:9px 0 6px;padding:8px 10px;
+    border-left:3px solid #008c95;border-radius:2px;
+    background:#102B33;
+  }
+  #view-admin .dz-account-last-login span{
+    font:750 9px Inter,sans-serif;letter-spacing:.08em;
+    color:#A9C4CA;
+  }
+  #view-admin .dz-account-last-login strong{
+    font:700 12px/1.5 Inter,sans-serif;color:#EAF7F8;
+  }
+  #view-admin .dz-last-login-help{max-width:770px;margin:8px 0 12px;}
 </style>
 </head>
 <body>
@@ -2179,6 +2194,7 @@
         </label>
       </div>
       <p class="dz-admin-filter-count" id="dz-admin-filter-count" role="status"></p>
+      <p class="cloud-help dz-last-login-help">Last Login uses Firebase’s verified sign-in timestamp (Eastern time), not page-refresh activity. An account will show “Not recorded yet” until that user first returns to the portal after this update.</p>
       <ul id="cloud-allowlist" class="dz-coach-list" aria-label="Approved user accounts and roles"></ul>
       <p class="cloud-status" id="cloud-request-status" role="status"></p>
       </section>
