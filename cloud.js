@@ -54,6 +54,39 @@
     $('cloud-login-button').style.display='';
   }
   const emailKey=s=>String(s||'').trim().toLowerCase();
+
+  // Sync Firebase Authentication's server-maintained "last signed in" timestamp
+  // to a separate self-owned record. Refreshing the page does NOT count as a
+  // new login. Firestore rules restrict writes to the account owner, with
+  // server-assigned recording time. No activity data changes access roles.
+  async function recordOwnLastSignIn(user) {
+    const signedInMs=Date.parse(user?.metadata?.lastSignInTime||'');
+    if(!user?.uid||!user?.email||!Number.isFinite(signedInMs))return;
+    const signedInAt=firebase.firestore.Timestamp.fromMillis(signedInMs);
+    const ref=db.collection('userLogins').doc(emailKey(user.email));
+    await db.runTransaction(async tx=>{
+      const existing=await tx.get(ref);
+      const previously=existing.exists?existing.data()?.lastSignInAt?.toMillis?.():null;
+      if(Number.isFinite(previously)&&previously>=signedInMs)return;
+      tx.set(ref,{
+        email:emailKey(user.email),
+        uid:user.uid,
+        lastSignInAt:signedInAt,
+        recordedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+  }
+  // Clearly show that historical users don't have a recorded timestamp until
+  // they sign in (or revisit with an authenticated Firebase session) after rollout.
+  function formatLastSignIn(value) {
+    const date=value?.toDate?.();
+    if(!(date instanceof Date)||!Number.isFinite(date.getTime()))
+      return 'Not recorded yet';
+    return new Intl.DateTimeFormat('en-US',{
+      timeZone:'America/New_York',dateStyle:'medium',timeStyle:'short',
+      timeZoneName:'short'
+    }).format(date);
+  }
   const registration=()=>window.DZ_REGISTRATION;
   function syncRegistrationFields(){
     const role=$('cloud-register-role').value;
@@ -321,6 +354,9 @@
       window.DZ_SET_PORTAL_LOADING?.(false);
     }
     window.DZ_IMPORTER_INIT({firestore:db,currentUser:activeUser});
+    // A telemetry write must never block legitimate account access.
+    try{await recordOwnLastSignIn(activeUser);}
+    catch(error){console.warn('Last login timestamp could not be recorded',error);}
     if(staff.role==='admin') {
       await listCoaches();
       renderInactivePlayers();
@@ -1162,9 +1198,17 @@
     denied.replaceChildren();list.replaceChildren();
     notify($('cloud-request-status'),'Loading account access requests...');
     try{
-      const [allowlist,requests]=await Promise.all([
-        db.collection('allowlist').get(),db.collection('coachRequests').get()
+      const [allowlist,requests,logins]=await Promise.all([
+        db.collection('allowlist').get(),
+        db.collection('coachRequests').get(),
+        // Allow the existing role-management UI to remain usable if activity
+        // tracking is temporarily unavailable or rules deployment is delayed.
+        db.collection('userLogins').get().catch(error=>{
+          console.warn('Account sign-in timestamps unavailable',error);
+          return null;
+        })
       ]);
+      const loginByEmail=new Map(logins?.docs?.map(doc=>[doc.id,doc.data()])||[]);
       const entries=Array.from(requests.docs)
         .sort((a,b)=>(b.data().requestedAt?.toMillis?.()||0)-
                      (a.data().requestedAt?.toMillis?.()||0));
@@ -1294,6 +1338,14 @@
         accessBadge.textContent=statusText;
         badgeRow.append(roleBadge,accessBadge);
         li.querySelector('.dz-coach-detail').append(badgeRow);
+        const lastLogin=document.createElement('div');
+        lastLogin.className='dz-account-last-login';
+        const loginLabel=document.createElement('span');
+        loginLabel.textContent='LAST LOGIN';
+        const loginValue=document.createElement('strong');
+        loginValue.textContent=formatLastSignIn(loginByEmail.get(doc.id)?.lastSignInAt);
+        lastLogin.append(loginLabel,loginValue);
+        li.querySelector('.dz-coach-detail').append(lastLogin);
         if(d.role==='player_parent'){
           const relation=document.createElement('div');relation.className='dz-coach-meta';
           relation.textContent='Linked player: '+linkedName;
