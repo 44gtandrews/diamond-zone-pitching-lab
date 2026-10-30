@@ -30,6 +30,7 @@ jobs:
           node tests/trackman-session-smoke.test.js
           node tests/admin-upload-override-smoke.test.js
           node tests/registration-onboarding-smoke.test.js
+          node tests/account-last-login-smoke.test.js
           node tests/session-history-smoke.test.js
           node tests/at-home-plan-smoke.test.js
           node tests/mechanical-changes-smoke.test.js
