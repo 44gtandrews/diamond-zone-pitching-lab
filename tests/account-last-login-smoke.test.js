@@ -42,6 +42,34 @@ assert.match(cloud,/:'Temporarily unavailable';/);
 assert.match(cloud,/function formatLastSignIn\(authTimeSeconds\)/);
 assert.match(cloud,/new Date\(authTimeSeconds\*1000\)/);
 assert.match(cloud,/timeZone:'America\/New_York'/);
+
+// Exercise actual formatted login values: a previous mixed Intl option set
+// threw RangeError and prevented the entire Admin Center from rendering.
+const formatterStart=cloud.indexOf('  function formatLastSignIn(authTimeSeconds) {');
+const formatterEnd=cloud.indexOf('  const registration=()=>window.DZ_REGISTRATION;',formatterStart);
+assert.ok(formatterStart>=0 && formatterEnd>formatterStart,'Missing formatter function boundaries');
+const formatterSource=cloud.slice(formatterStart,formatterEnd);
+assert.doesNotMatch(formatterSource,/dateStyle:|timeStyle:/,'dateStyle/timeStyle conflict with timeZoneName');
+const makeFormatter=(intl,log)=>new Function('Intl','console',formatterSource+
+  '\nreturn formatLastSignIn;')(intl,log);
+const format=makeFormatter(Intl,console);
+const summer=format(Date.parse('2026-10-30T12:34:00Z')/1000);
+assert.match(summer,/Oct 30, 2026/);
+assert.match(summer,/8:34 AM/);
+assert.match(summer,/EDT/);
+const winter=format(Date.parse('2026-01-14T12:34:00Z')/1000);
+assert.match(winter,/Jan 14, 2026/);
+assert.match(winter,/7:34 AM/);
+assert.match(winter,/EST/);
+assert.equal(format(null),'Not recorded yet');
+assert.equal(format('not a timestamp'),'Not recorded yet');
+// If Intl fails in a specific browser, a display-only field must not crash
+// account roles: show a clear UTC fallback instead.
+const brokenIntl={DateTimeFormat:()=>{throw Error('unsupported Intl formatting')}};
+const safeFormat=makeFormatter(brokenIntl,{warn:()=>{}});
+assert.equal(safeFormat(Date.parse('2026-10-30T12:34:00Z')/1000),
+  '2026-10-30 12:34 UTC');
+
 assert.match(cloud,/textContent='LAST LOGIN'/);
 assert.match(cloud,/textContent=logins/);
 assert.match(cloud,/return 'Not recorded yet'/);
