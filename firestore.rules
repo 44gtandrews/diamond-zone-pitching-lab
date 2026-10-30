@@ -63,9 +63,9 @@ service cloud.firestore {
             (request.resource.data.role == 'admin' && request.resource.data.active == true));
       allow delete: if isAdmin() && email != request.auth.token.email;
     }
-    // Self-reported sign-in timestamps copied from Firebase Authentication
-    // metadata. Only the account itself may create/advance its login time;
-    // only administrators can read the whole collection.
+    // The client may record its latest authenticated sign-in time, but ONLY
+    // when it exactly matches the Firebase ID token's signed auth_time claim.
+    // No self-assigned roles, arbitrary timestamps, or foreign account reads.
     match /userLogins/{email} {
       function ownsLogin() {
         return approved()
@@ -74,13 +74,13 @@ service cloud.firestore {
       function validLogin() {
         return ownsLogin()
           && request.resource.data.keys().hasOnly(
-            ['email','uid','lastSignInAt','recordedAt'])
+            ['email','uid','authTimeSeconds','recordedAt'])
           && request.resource.data.keys().hasAll(
-            ['email','uid','lastSignInAt','recordedAt'])
+            ['email','uid','authTimeSeconds','recordedAt'])
           && request.resource.data.email == email
           && request.resource.data.uid == request.auth.uid
-          && request.resource.data.lastSignInAt is timestamp
-          && request.resource.data.lastSignInAt <= request.time
+          && request.resource.data.authTimeSeconds is int
+          && request.resource.data.authTimeSeconds == request.auth.token.auth_time
           && request.resource.data.recordedAt == request.time;
       }
       allow get: if isAdmin() || ownsLogin();
@@ -88,8 +88,8 @@ service cloud.firestore {
       allow create: if validLogin();
       allow update: if validLogin()
         && resource.data.email == email
-        && resource.data.lastSignInAt is timestamp
-        && request.resource.data.lastSignInAt > resource.data.lastSignInAt;
+        && resource.data.authTimeSeconds is int
+        && request.resource.data.authTimeSeconds > resource.data.authTimeSeconds;
       allow delete: if false;
     }
     match /coachRequests/{userId} {
