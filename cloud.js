@@ -86,10 +86,16 @@
     if(!Number.isFinite(date.getTime()))return 'Not recorded yet';
     // Intl does not allow dateStyle/timeStyle together with timeZoneName.
     // Use explicit components so the Admin Center can show the Eastern zone.
-    return new Intl.DateTimeFormat('en-US',{
-      timeZone:'America/New_York',year:'numeric',month:'short',day:'numeric',
-      hour:'numeric',minute:'2-digit',timeZoneName:'short'
-    }).format(date);
+    try {
+      return new Intl.DateTimeFormat('en-US',{
+        timeZone:'America/New_York',year:'numeric',month:'short',day:'numeric',
+        hour:'numeric',minute:'2-digit',timeZoneName:'short'
+      }).format(date);
+    } catch(error) {
+      // A display-only timestamp must never prevent the Admin Center loading.
+      console.warn('Unable to format last login in Eastern time',error);
+      return date.toISOString().slice(0,16).replace('T',' ')+' UTC';
+    }
   }
   const registration=()=>window.DZ_REGISTRATION;
   function syncRegistrationFields(){
