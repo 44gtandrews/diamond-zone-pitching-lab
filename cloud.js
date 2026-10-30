@@ -55,33 +55,35 @@
   }
   const emailKey=s=>String(s||'').trim().toLowerCase();
 
-  // Sync Firebase Authentication's server-maintained "last signed in" timestamp
-  // to a separate self-owned record. Refreshing the page does NOT count as a
-  // new login. Firestore rules restrict writes to the account owner, with
-  // server-assigned recording time. No activity data changes access roles.
+  // Firebase-issued ID tokens carry an authentic "auth_time" claim. Capture
+  // that login time (not page-load time); Firestore rules REQUIRE the saved
+  // value to equal the server-verified claim. Users cannot forge login times.
+  // This does not change permissions and never blocks account access.
   async function recordOwnLastSignIn(user) {
-    const signedInMs=Date.parse(user?.metadata?.lastSignInTime||'');
-    if(!user?.uid||!user?.email||!Number.isFinite(signedInMs))return;
-    const signedInAt=firebase.firestore.Timestamp.fromMillis(signedInMs);
+    if(!user?.uid||!user?.email)return;
+    const token=await user.getIdTokenResult();
+    const signInSecs=Math.floor(Date.parse(token.authTime||'')/1000);
+    if(!Number.isSafeInteger(signInSecs)||signInSecs<=0)return;
     const ref=db.collection('userLogins').doc(emailKey(user.email));
     await db.runTransaction(async tx=>{
       const existing=await tx.get(ref);
-      const previously=existing.exists?existing.data()?.lastSignInAt?.toMillis?.():null;
-      if(Number.isFinite(previously)&&previously>=signedInMs)return;
+      const previously=existing.exists?existing.data()?.authTimeSeconds:null;
+      if(Number.isSafeInteger(previously)&&previously>=signInSecs)return;
       tx.set(ref,{
         email:emailKey(user.email),
         uid:user.uid,
-        lastSignInAt:signedInAt,
+        authTimeSeconds:signInSecs,
         recordedAt:firebase.firestore.FieldValue.serverTimestamp()
       });
     });
   }
-  // Clearly show that historical users don't have a recorded timestamp until
-  // they sign in (or revisit with an authenticated Firebase session) after rollout.
-  function formatLastSignIn(value) {
-    const date=value?.toDate?.();
-    if(!(date instanceof Date)||!Number.isFinite(date.getTime()))
+  // User activity predating this feature can only appear after they revisit
+  // the portal once; the time shown is the authenticated sign-in, not refresh.
+  function formatLastSignIn(authTimeSeconds) {
+    if(!Number.isSafeInteger(authTimeSeconds)||authTimeSeconds<=0)
       return 'Not recorded yet';
+    const date=new Date(authTimeSeconds*1000);
+    if(!Number.isFinite(date.getTime()))return 'Not recorded yet';
     return new Intl.DateTimeFormat('en-US',{
       timeZone:'America/New_York',dateStyle:'medium',timeStyle:'short',
       timeZoneName:'short'
@@ -1343,7 +1345,9 @@
         const loginLabel=document.createElement('span');
         loginLabel.textContent='LAST LOGIN';
         const loginValue=document.createElement('strong');
-        loginValue.textContent=formatLastSignIn(loginByEmail.get(doc.id)?.lastSignInAt);
+        loginValue.textContent=logins
+          ?formatLastSignIn(loginByEmail.get(doc.id)?.authTimeSeconds)
+          :'Temporarily unavailable';
         lastLogin.append(loginLabel,loginValue);
         li.querySelector('.dz-coach-detail').append(lastLogin);
         if(d.role==='player_parent'){
