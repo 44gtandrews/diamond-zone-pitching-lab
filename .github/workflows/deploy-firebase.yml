@@ -34,6 +34,7 @@ jobs:
           node tests/session-history-smoke.test.js
           node tests/at-home-plan-smoke.test.js
           node tests/mechanical-changes-smoke.test.js
+          node tests/staff-evaluation-smoke.test.js
           node tests/pitch-counts-smoke.test.js
           node tests/trackman-pitch-count-calendar-smoke.test.js
           node tests/pitch-count-session-type-and-mobile-kpis-smoke.test.js
