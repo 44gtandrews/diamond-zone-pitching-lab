@@ -56,6 +56,6 @@ assert.match(workflow,/node tests\/mechanical-changes-smoke\.test\.js/);
 assert.match(cloud,/window\.DZ_EDIT_ENABLED=window\.DZ_IS_ADMIN\|\|staff\.role==='pitching_coach'/);
 assert.match(cloud,/if\(!window\.DZ_AUTHORIZED \|\| !window\.DZ_EDIT_ENABLED\)/);
 assert.match(rules,/match \/playerEdits\/\{playerId\}\/sections\/\{section\}/);
-assert.match(rules,/section in \['notes', 'mechanics', 'strength'/);
+assert.match(rules,/section in \['notes', 'evaluation', 'mechanics', 'strength'/);
 
 console.log('Mechanical changes completion smoke tests passed: legacy notes, completion/reopen, storage and role wiring.');
