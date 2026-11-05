@@ -159,13 +159,15 @@
 
   function installStorage() {
     function section(key) {
-      const m=/^([a-z0-9-]{1,65}):(notes|mechanics|strength|grades|type-overrides)$/.exec(key);
+      const m=/^([a-z0-9-]{1,65}):(notes|evaluation|mechanics|strength|grades|type-overrides)$/.exec(key);
       if (!m) throw Error('Invalid storage key');
       return db.collection('playerEdits').doc(m[1]).collection('sections').doc(m[2]);
     }
     window.storage={
       async get(key) {
         if(!window.DZ_AUTHORIZED) throw Error('Sign in required');
+        if(key.endsWith(':evaluation') && !['admin','pitching_coach','coach'].includes(window.DZ_ROLE))
+          throw Error('Coach or Administrator required for evaluations');
         const doc=await section(key).get();
         return doc.exists ? {value:doc.data().value}:null;
       },
@@ -905,7 +907,7 @@
     }
     for(const item of decoded.playerEdits){
       if(!backupPlayers.has(item.playerId)||
-         !['notes','mechanics','strength','grades','type-overrides'].includes(item.section)||
+         !['notes','evaluation','mechanics','strength','grades','type-overrides'].includes(item.section)||
          typeof item.data.value!=='string'||item.data.value.length>50000||
          typeof item.data.editedBy!=='string')
         throw Error('Invalid player coaching section: '+item.playerId+' / '+item.section);
