@@ -1633,6 +1633,9 @@
   /* At-Home Plan — admin-only visibility is reinforced server-side in firestore.rules */
   body:not([data-dz-role="admin"]) #tab-at-home-btn,
   body:not([data-dz-role="admin"]) #panel-at-home {display:none!important;}
+  /* Never reveal the staff-only section to a Player / Parent role. */
+  body:not([data-dz-role="admin"]):not([data-dz-role="pitching_coach"]):not([data-dz-role="coach"]) #tab-evaluation-btn,
+  body:not([data-dz-role="admin"]):not([data-dz-role="pitching_coach"]):not([data-dz-role="coach"]) #panel-evaluation {display:none!important;}
   .dz-plan-shell{background:#0E2028;border:1px solid #31505B;border-radius:6px;padding:23px;margin:14px 0 50px;}
   .dz-plan-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;}
   .dz-plan-header h2{font:800 23px Inter,sans-serif;color:#F4FBFC;margin:0 0 8px;}
@@ -2304,6 +2307,7 @@
       <button class="tabbtn active" data-tab="overview">Overview</button>
       <button class="tabbtn" data-tab="pitchlog" id="tab-pitchlog-btn" style="display:none;">Pitch Log</button>
       <button class="tabbtn" data-tab="notes">Notes</button>
+      <button class="tabbtn" data-tab="evaluation" id="tab-evaluation-btn" style="display:none;">Evaluation</button>
       <button class="tabbtn" data-tab="mechanics">Mechanical Changes</button>
       <button class="tabbtn" data-tab="pitch-counts">Pitch Counts</button>
       <button class="tabbtn" data-tab="strength">Strength &amp; Mobility</button>
@@ -2400,6 +2404,20 @@
       <div class="save-row">
         <button class="save-btn" id="notes-save">Save notes</button>
         <span class="save-status" id="status-notes">Saved</span>
+      </div>
+    </div>
+
+    <!-- STAFF-ONLY EVALUATION: separately secured notes; never available to players/parents. -->
+    <div class="panel" id="panel-evaluation">
+      <div class="field-block">
+        <div class="field-label">Coach Evaluation</div>
+        <div class="field-hint" id="evaluation-hint">Private staff evaluation notes. Only coaches and administrators can view this section.</div>
+        <div class="note-list" id="evaluation-list"></div>
+        <button class="add-note-btn" type="button" id="evaluation-add">+ Add evaluation note</button>
+      </div>
+      <div class="save-row">
+        <button class="save-btn" id="evaluation-save" type="button">Save evaluation</button>
+        <span class="save-status" id="status-evaluation">Saved</span>
       </div>
     </div>
 
@@ -3345,6 +3363,24 @@ async function initPlayerNotes(player){
   try{ const res = await window.storage.get(player.id+':notes', false); if(res&&res.value) savedNotes = JSON.parse(res.value); }catch(e){}
   player._notesList = makeNoteList('notes-list','notes-add', savedNotes);
 
+  // Evaluation is staff-confidential. Never fetch this document for a
+  // linked player/parent, even if they know its Firestore document path.
+  player._evaluationList=null;
+  document.getElementById('evaluation-list').replaceChildren();
+  const staffEvaluation=['admin','pitching_coach','coach'].includes(window.DZ_ROLE);
+  if(staffEvaluation){
+    let savedEvaluation=[];
+    try{
+      const res=await window.storage.get(player.id+':evaluation', false);
+      if(res&&res.value)savedEvaluation=JSON.parse(res.value);
+      if(!Array.isArray(savedEvaluation))savedEvaluation=[];
+    }catch(error){
+      console.warn('Unable to load coach evaluation notes',error);
+      document.getElementById('status-evaluation').textContent='Evaluation unavailable';
+    }
+    player._evaluationList=makeNoteList('evaluation-list','evaluation-add',savedEvaluation);
+  }
+
   let savedMech = {positives:[], negatives:[]};
   try{ const res = await window.storage.get(player.id+':mechanics', false); if(res&&res.value) savedMech = JSON.parse(res.value); }catch(e){}
   player._mechanicalBoard = window.DZ_CREATE_MECHANICAL_BOARD(savedMech);
@@ -3358,6 +3394,15 @@ document.getElementById('notes-save').addEventListener('click', async ()=>{
   const player = PLAYERS[currentPlayerId]; const statusEl = document.getElementById('status-notes');
   try{ await window.storage.set(player.id+':notes', JSON.stringify(player._notesList.getValues()), false); flashStatus(statusEl,'Saved'); }
   catch(e){ flashStatus(statusEl,'Save failed — try again'); }
+});
+document.getElementById('evaluation-save').addEventListener('click', async ()=>{
+  if(!window.DZ_EDIT_ENABLED || !['admin','pitching_coach'].includes(window.DZ_ROLE))return;
+  const player=PLAYERS[currentPlayerId], statusEl=document.getElementById('status-evaluation');
+  if(!player?._evaluationList)return;
+  try{
+    await window.storage.set(player.id+':evaluation',JSON.stringify(player._evaluationList.getValues()),false);
+    flashStatus(statusEl,'Saved');
+  }catch(error){flashStatus(statusEl,'Save failed — try again');}
 });
 document.getElementById('mechanics-save').addEventListener('click', async ()=>{
   if(!window.DZ_EDIT_ENABLED)return;
@@ -3379,6 +3424,7 @@ document.getElementById('strength-save').addEventListener('click', async ()=>{
 document.querySelectorAll('.tabbtn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     if(btn.dataset.tab==='at-home' && !window.DZ_IS_ADMIN)return;
+    if(btn.dataset.tab==='evaluation' && !['admin','pitching_coach','coach'].includes(window.DZ_ROLE))return;
     document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
@@ -3574,6 +3620,8 @@ async function showPlayer(id){
   document.getElementById('panel-overview').classList.add('active');
   document.getElementById('tab-pitchlog-btn').style.display = player.dataType==='raw' ? '' : 'none';
   document.getElementById('tab-at-home-btn').style.display = window.DZ_IS_ADMIN ? '' : 'none';
+  document.getElementById('tab-evaluation-btn').style.display=
+    ['admin','pitching_coach','coach'].includes(window.DZ_ROLE)?'':'none';
 
   moveViewMode = 'avg';
   document.querySelectorAll('#move-toggle .toggle-btn').forEach(b=>b.classList.remove('active'));

@@ -334,13 +334,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     match /playerEdits/{playerId}/sections/{section} {
-      allow get: if canViewAll() || (assignedParent(playerId)
+      // Evaluation is staff-confidential: a linked player/parent must never
+      // read it, even by requesting the exact document path directly.
+      allow get: if canViewAll() || (section != 'evaluation'
+        && assignedParent(playerId)
         && exists(/databases/$(database)/documents/players/$(playerId))
         && get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
       allow list: if canViewAll();
       allow create, update: if canWritePitching()
         && exists(/databases/$(database)/documents/players/$(playerId))
-        && section in ['notes', 'mechanics', 'strength', 'grades', 'type-overrides']
+        && section in ['notes', 'evaluation', 'mechanics', 'strength', 'grades', 'type-overrides']
         && request.resource.data.keys().hasOnly(['value', 'updatedAt', 'editedBy'])
         && request.resource.data.keys().hasAll(['value', 'updatedAt', 'editedBy'])
         && request.resource.data.value is string
