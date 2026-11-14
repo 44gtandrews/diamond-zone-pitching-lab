@@ -8,7 +8,7 @@ const rules=fs.readFileSync('firestore.rules','utf8');
 const workflow=fs.readFileSync('.github/workflows/deploy-firebase.yml','utf8');
 const section=rules.split('match /playerEdits/{playerId}/sections/{section} {')[1]?.split('match /{document=**}')[0];
 assert.ok(section,'Expected protected playerEdits security rules');
-assert.match(section,/allow get: if canViewAll\(\) \|\| \(section != 'evaluation'\s*&& section != 'grades'\s*&& assignedParent\(playerId\)/,
+assert.match(section,/allow get: if canViewAll\(\) \|\| \(section in \['notes', 'mechanics', 'strength', 'visibility', 'type-overrides'\]\s*&& assignedParent\(playerId\)/,
  'a player/parent must never read the evaluation document');
 assert.match(section,/allow list: if canViewAll\(\)/,'only staff can list private sections');
 assert.match(section,/allow create, update: if canWritePitching\(\)/,'only admin and pitching coach edit');
