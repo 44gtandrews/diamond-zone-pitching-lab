@@ -8,11 +8,11 @@ const rules=fs.readFileSync('firestore.rules','utf8');
 const workflow=fs.readFileSync('.github/workflows/deploy-firebase.yml','utf8');
 const section=rules.split('match /playerEdits/{playerId}/sections/{section} {')[1]?.split('match /{document=**}')[0];
 assert.ok(section,'Expected protected playerEdits security rules');
-assert.match(section,/allow get: if canViewAll\(\) \|\| \(section != 'evaluation'\s*&& assignedParent\(playerId\)/,
+assert.match(section,/allow get: if canViewAll\(\) \|\| \(section in \['notes', 'mechanics', 'strength', 'visibility', 'type-overrides'\]\s*&& assignedParent\(playerId\)/,
  'a player/parent must never read the evaluation document');
 assert.match(section,/allow list: if canViewAll\(\)/,'only staff can list private sections');
 assert.match(section,/allow create, update: if canWritePitching\(\)/,'only admin and pitching coach edit');
-assert.match(section,/section in \['notes', 'evaluation', 'mechanics', 'strength', 'grades', 'type-overrides'\]/);
+assert.match(section,/section in \['notes', 'evaluation', 'mechanics', 'strength', 'grades', 'visibility', 'type-overrides'\]/);
 assert.doesNotMatch(section,/allow get: if (?:true|approved\(\))/);
 assert.match(html,/<button class="tabbtn" data-tab="evaluation" id="tab-evaluation-btn" style="display:none;">Evaluation<\/button>/);
 assert.match(html,/class="panel" id="panel-evaluation"/);
@@ -33,10 +33,10 @@ assert.match(html,/if\(!window\.DZ_EDIT_ENABLED \|\| !\['admin','pitching_coach'
 assert.match(html,/if\(btn\.dataset\.tab==='evaluation' && !\['admin','pitching_coach','coach'\]\.includes\(window\.DZ_ROLE\)\)return;/);
 assert.match(html,/document\.getElementById\('tab-evaluation-btn'\)\.style\.display=/);
 assert.match(html,/document\.querySelectorAll\('#view-player \.save-row'\)\.forEach\(el=>el\.style\.display=window\.DZ_EDIT_ENABLED\?'':'none'\)/);
-assert.match(cloud,/\(notes\|evaluation\|mechanics\|strength\|grades\|type-overrides\)/);
-assert.match(cloud,/if\(key\.endsWith\(':evaluation'\) && !\['admin','pitching_coach','coach'\]\.includes\(window\.DZ_ROLE\)\)/);
+assert.match(cloud,/\(notes\|evaluation\|mechanics\|strength\|grades\|visibility\|type-overrides\)/);
+assert.match(cloud,/if\(\(key\.endsWith\(':evaluation'\) \|\| key\.endsWith\(':grades'\)\) &&\s*!\['admin','pitching_coach','coach'\]\.includes\(window\.DZ_ROLE\)\)/);
 assert.match(cloud,/!window\.DZ_AUTHORIZED \|\| !window\.DZ_EDIT_ENABLED/);
 assert.match(cloud,/!window\.DZ_AUTHORIZED \|\| !window\.DZ_IS_ADMIN/);
-assert.match(cloud,/!?\['notes','evaluation','mechanics','strength','grades','type-overrides'\]\.includes\(item\.section\)/);
+assert.match(cloud,/!?\['notes','evaluation','mechanics','strength','grades','visibility','type-overrides'\]\.includes\(item\.section\)/);
 assert.match(workflow,/node tests\/staff-evaluation-smoke\.test\.js/);
 console.log('Evaluation privacy smoke checks passed: role visibility, Notes UI, Firestore block, read-only coaches and backup safety.');

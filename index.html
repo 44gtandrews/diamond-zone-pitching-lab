@@ -1966,6 +1966,14 @@
     font:700 12px/1.5 Inter,sans-serif;color:#EAF7F8;
   }
   #view-admin .dz-last-login-help{max-width:770px;margin:8px 0 12px;}
+  /* Player/Parent: four public KPIs, never the coach-only grade KPI. */
+  body[data-dz-role="player_parent"] #view-player .kpis{grid-template-columns:repeat(4,minmax(0,1fr));}
+  @media(max-width:640px){
+    body[data-dz-role="player_parent"] #view-player .kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+    body[data-dz-role="player_parent"] #view-player .kpis>.kpi{grid-column:span 1;border-bottom:1px solid #28424B;}
+    body[data-dz-role="player_parent"] #view-player .kpis>.kpi:nth-child(2n){border-right:0;}
+    body[data-dz-role="player_parent"] #view-player .kpis>.kpi:nth-last-child(-n+2){border-bottom:0;}
+  }
 </style>
 </head>
 <body>
@@ -2811,10 +2819,32 @@ async function ensureOverridesLoaded(player){
   player._overridesLoaded = true;
 }
 
+function dzHiddenKeys(input){
+  return Array.isArray(input)?[...new Set(input)].filter(k=>typeof k==='string'&&k.length<=4):[];
+}
 async function ensureGradesLoaded(player){
   if(player._gradesLoaded)return player._gradesByPitch;
   if(player._gradesPromise)return player._gradesPromise;
   player._gradesPromise=(async()=>{
+    const parent=window.DZ_ROLE==='player_parent';
+    // Pitch visibility is separate from grades: parents may see the
+    // coach-curated pitch selection, but never the scouting-grade document.
+    let visibility=null;
+    try{
+      const data=await window.storage.get(player.id+':visibility',false);
+      if(data?.value){
+        const parsed=JSON.parse(data.value);
+        if(Array.isArray(parsed?.hiddenPitchTypes))visibility=dzHiddenKeys(parsed.hiddenPitchTypes);
+      }
+    }catch(error){console.warn('Unable to load pitch visibility settings',error);}
+    if(parent){
+      player._gradesByPitch={};
+      player._hiddenPitchTypes=visibility||[];
+      player._gradesLoadFailed=false;
+      player._gradesLoaded=true;
+      player._gradesPromise=null;
+      return player._gradesByPitch;
+    }
     try{
       const res=await window.storage.get(player.id+':grades',false);
       const raw=res?.value?JSON.parse(res.value):{};
@@ -2826,15 +2856,22 @@ async function ensureGradesLoaded(player){
         }
       }
       player._gradesByPitch=grades;
-      player._hiddenPitchTypes=Array.isArray(raw?.__hiddenPitchTypes)
-        ?[...new Set(raw.__hiddenPitchTypes)].filter(k=>typeof k==='string'&&k.length<=4):[];
+      const legacyHidden=dzHiddenKeys(raw?.__hiddenPitchTypes);
+      player._hiddenPitchTypes=visibility===null?legacyHidden:visibility;
       player._gradesLoaded=true;
       player._gradesLoadFailed=false;
+      // Backfill pre-existing hidden-pitch choices when editing staff load
+      // legacy grade records. This keeps visibility separate for parents.
+      if(visibility===null && legacyHidden.length && window.DZ_EDIT_ENABLED){
+        try{
+          await window.storage.set(player.id+':visibility',
+            JSON.stringify({hiddenPitchTypes:legacyHidden}),false);
+        }catch(error){console.warn('Could not migrate private pitch visibility settings',error);}
+      }
     }catch(error){
-      // A read failure is not proof the player has never been graded.
-      // Allow a subsequent navigation to retry instead of caching a false default.
+      // Staff can retry after transient failure. Parents never request grades.
       player._gradesByPitch={};
-      player._hiddenPitchTypes=[];
+      player._hiddenPitchTypes=visibility||[];
       player._gradesLoadFailed=true;
       console.warn('Unable to load saved scouting grades',error);
     }finally{
@@ -2986,7 +3023,8 @@ function renderMovementChart(player, summary){
 
 function buildFootnote(player, totalN){
   if(player.summaryOnly){
-    return 'Pitch-type averages from the Trackman Team Portal report. This format does not contain pitch counts, true usage percentages, maximum pitch velocities or a precise number of sessions, so the portal intentionally leaves those values unknown. Release height and release side represent averages for each pitch type, not measured anatomical arm angle. Coaches may hide unwanted pitch types without deleting the imported measurements. Grades remain manually assigned and age-relative. If two pitches share the highest grade, usage cannot resolve the tie in this report because counts are missing.';
+    return 'Pitch-type averages from the Trackman Team Portal report. This format does not contain pitch counts, true usage percentages, maximum pitch velocities or a precise number of sessions, so the portal intentionally leaves those values unknown. Release height and release side represent averages for each pitch type, not measured anatomical arm angle. Coaches may hide unwanted pitch types without deleting the imported measurements.'+
+      (window.DZ_ROLE==='player_parent'?'':' Grades remain manually assigned and age-relative. If two pitches share the highest grade, usage cannot resolve the tie in this report because counts are missing.');
   }
   if(player.dataType==='raw'){
     return `${totalN} pitches from the ${player.sessionDate} practice feed this view — pitches classified or `+
@@ -2996,8 +3034,8 @@ function buildFootnote(player, totalN){
     `Fastball and Sweeper, least reliable in the 66&ndash;70 mph cluster where Cutter, ChangeUp, and Splitter `+
     `overlap. Check the Pitch Log tab to correct any pitch — it flows through everywhere above. Velo and Spin are `+
     `true medians here since this export has every pitch — VAA isn't in this session's export, so that column `+
-    `reads blank. Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still `+
-    `yours to set by hand).`;
+    `reads blank.`+
+    (window.DZ_ROLE==='player_parent'?'':' Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still yours to set by hand).');
   }
   const bench = VELO_BENCH_BY_AGE[player.ageNum];
   const discardNote = player.discardedUndefined>0
@@ -3006,12 +3044,13 @@ function buildFootnote(player, totalN){
   const benchNote = bench!==undefined
     ? ` Velo is shaded against average fastball velocity for ${player.ageLabel} (${bench} mph) — red above the mark (better), blue below it (worse), darker meaning further off average either way. Max, IVB, and HB are wired for the same treatment but unshaded for now — no age-group norms for those yet, pending a fuller look once more players' data is in.`
     : '';
-  return `Figures pulled directly from the DiamondZone CT session export (${player.sessions} session${player.sessions===1?'':'s'}, ${totalN} pitches). Movement chart plots each pitch type's average break. ${discardNote}${benchNote} Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still yours to set by hand — no model behind it yet).`;
+  return `Figures pulled directly from the DiamondZone CT session export (${player.sessions} session${player.sessions===1?'':'s'}, ${totalN} pitches). Movement chart plots each pitch type's average break. ${discardNote}${benchNote}`+
+    (window.DZ_ROLE==='player_parent'?'':' Grade uses the same red/blue scale centered on 50 on the fixed 20&ndash;80 scouting scale (still yours to set by hand — no model behind it yet).');
 }
 
 
-// Non-destructive visibility controls share the existing grades section.
-// Backups already include that section, so no Firestore migration is required.
+// Visibility is stored separately from private scouting grades so parents
+// can see coach-approved pitch types without receiving scouting information.
 async function setPitchHidden(player,key,hide){
   if(!window.DZ_EDIT_ENABLED)return;
   const available=player.dataType==='aggregate'
@@ -3021,18 +3060,12 @@ async function setPitchHidden(player,key,hide){
   const name=(player.pitches||[]).find(p=>p.key===key)?.name||TYPE_BY_KEY[key]?.name||key;
   if(hide&&!window.confirm('Remove '+name+' from '+player.name+"'s report? It will disappear from the directory, charts and tables, but the original data will be kept and you can restore it."))return;
   try{
-    const res=await window.storage.get(player.id+':grades',false);
-    const raw=res?.value?JSON.parse(res.value):{};
-    const current=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
-    const set=new Set(Array.isArray(current.__hiddenPitchTypes)?current.__hiddenPitchTypes:[]);
+    const set=new Set(player._hiddenPitchTypes||[]);
     if(hide)set.add(key);else set.delete(key);
-    current.__hiddenPitchTypes=[...set];
-    await window.storage.set(player.id+':grades',JSON.stringify(current),false);
-    player._hiddenPitchTypes=current.__hiddenPitchTypes;
-    player._gradesByPitch=Object.fromEntries(
-      Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&v!==null&&v!==''&&GRADES.includes(Number(v))).map(([k,v])=>[k,Number(v)])
-    );
-    player._gradesLoaded=true;player._gradesLoadFailed=false;
+    const hiddenPitchTypes=[...set];
+    await window.storage.set(player.id+':visibility',
+      JSON.stringify({hiddenPitchTypes}),false);
+    player._hiddenPitchTypes=hiddenPitchTypes;
     if(currentPlayerId===player.id){
       renderOverview(player);
       if(player.dataType==='raw')renderPitchLog(player);
@@ -3069,8 +3102,9 @@ function renderHiddenPitchControls(player){
 }
 
 async function renderPitchTable(player, summary, totalN){
-  await ensureGradesLoaded(player);
-  const savedGrades=player._gradesByPitch||{};
+  const coachView=window.DZ_ROLE!=='player_parent';
+  if(coachView)await ensureGradesLoaded(player);
+  const savedGrades=coachView?(player._gradesByPitch||{}):{};
 
   const hasRelease=summary.some(p=>p.relHeight!=null||p.relSide!=null);
   const hasAxes=summary.some(p=>p.axis2d!=null||p.axis3d!=null);
@@ -3078,7 +3112,7 @@ async function renderPitchTable(player, summary, totalN){
   const hasGyro=player.summaryOnly&&summary.some(p=>p.gyro!=null);
   const headCols = ['Pitch','#','Usage','Velo','Max','Spin','IVB','HB','VAA',
     ...(hasAdvancedExt?['Ext']:[]),...(hasRelease?['Rel H','Rel Side']:[]),
-    ...(hasAxes?['2D Axis','3D Axis']:[]),...(hasGyro?['Gyro']:[]),'Grade',...(window.DZ_EDIT_ENABLED?['Display']:[])];
+    ...(hasAxes?['2D Axis','3D Axis']:[]),...(hasGyro?['Gyro']:[]),...(coachView?['Grade']:[]),...(window.DZ_EDIT_ENABLED?['Display']:[])];
   let html = `<thead><tr>${headCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
   summary.forEach(p=>{
     const share = player.summaryOnly||!totalN?'—':Math.round(p.n/totalN*100)+'%';
@@ -3099,7 +3133,7 @@ async function renderPitchTable(player, summary, totalN){
       ${hasRelease?`<td>${fmt(p.relHeight,2)}</td><td>${fmt(p.relSide,2)}</td>`:''}
       ${hasAxes?`<td>${fmt(p.axis2d,0)}</td><td>${fmt(p.axis3d,0)}</td>`:''}
       ${hasGyro?`<td>${fmt(p.gyro,0)}</td>`:''}
-      <td><select class="grade-select" data-pitch-key="${p.key}" ${window.DZ_EDIT_ENABLED?'':'disabled'}>${gradeOptions}</select></td>
+      ${coachView?`<td><select class="grade-select" data-pitch-key="${p.key}" ${window.DZ_EDIT_ENABLED?'':'disabled'}>${gradeOptions}</select></td>`:''}
       ${window.DZ_EDIT_ENABLED?`<td><button type="button" class="dz-hide-pitch" data-key="${dzEscapeText(p.key)}" data-name="${dzEscapeText(p.name)}" aria-label="Remove ${dzEscapeText(p.name)} from report">Remove</button></td>`:''}
     </tr>`;
   });
@@ -3134,7 +3168,8 @@ async function renderPitchTable(player, summary, totalN){
         player._gradesByPitch=Object.fromEntries(
           Object.entries(current).filter(([k,v])=>k!=='__hiddenPitchTypes'&&v!==null&&v!==''&&GRADES.includes(Number(v))).map(([k,v])=>[k,Number(v)])
         );
-        player._hiddenPitchTypes=Array.isArray(current.__hiddenPitchTypes)?current.__hiddenPitchTypes:[];
+        // Pitch visibility is a separate document; don't overwrite the
+        // current visibility cache with legacy metadata in grades.
         player._gradesLoaded=true;
         player._gradesLoadFailed=false;
         refreshHighestGradedPitchKpi(player);
@@ -3165,7 +3200,7 @@ function highestGradedPitch(player,summary){
   return best;
 }
 function refreshHighestGradedPitchKpi(player){
-  if(currentPlayerId!==player.id)return;
+  if(window.DZ_ROLE==='player_parent'||currentPlayerId!==player.id)return;
   const field=document.querySelector('#kpis .kpi:nth-child(4) .kpi-value');
   if(!field)return;
   const best=highestGradedPitch(player,getTypeSummary(player));
@@ -3190,14 +3225,14 @@ function trackmanSessionCount(player){
 function renderOverview(player){
   const summary = getTypeSummary(player);
   const totalN = summary.reduce((s,p)=>s+(Number.isFinite(p.n)?p.n:0),0);
-  const topGraded = highestGradedPitch(player,summary);
+  const topGraded = window.DZ_ROLE==='player_parent'?null:highestGradedPitch(player,summary);
   const fb = summary.find(p=>p.key==='fb');
 
   const kpiData = [
     {label:'Total Pitches', value:player.summaryOnly?'—':totalN},
     {label:player.summaryOnly?'Reports Imported':'Sessions', value:player._periodView && player._periodView.mode!=='lifetime' ? player._periodView.sessions.length : player.summaryOnly?player.sessions:trackmanSessionCount(player)},
     {label:'Pitch Types', value:summary.length},
-    {label:'Highest Graded Pitch', value:topGraded?topGraded.name:(player._gradesLoadFailed?'Grade unavailable':'Not graded'), small:topGraded?topGraded.grade+' Grade':''},
+    ...(window.DZ_ROLE==='player_parent'?[]:[{label:'Highest Graded Pitch', value:topGraded?topGraded.name:(player._gradesLoadFailed?'Grade unavailable':'Not graded'), small:topGraded?topGraded.grade+' Grade':''}]),
     {label: player.dataType==='raw' ? 'Fastball Med.' : 'Fastball Avg', value: fb?fmt(fb.velo):'—', small:'mph'},
   ];
   document.getElementById('kpis').innerHTML = kpiData.map(k =>
