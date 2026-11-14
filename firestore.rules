@@ -336,8 +336,7 @@ service cloud.firestore {
     match /playerEdits/{playerId}/sections/{section} {
       // Evaluation is staff-confidential: a linked player/parent must never
       // read it, even by requesting the exact document path directly.
-      allow get: if canViewAll() || (section != 'evaluation'
-        && section != 'grades'
+      allow get: if canViewAll() || (section in ['notes', 'mechanics', 'strength', 'visibility', 'type-overrides']
         && assignedParent(playerId)
         && exists(/databases/$(database)/documents/players/$(playerId))
         && get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
