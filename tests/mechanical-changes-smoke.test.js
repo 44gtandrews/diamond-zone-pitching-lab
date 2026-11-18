@@ -36,7 +36,10 @@ assert.deepEqual(m.normalize(serialized),done,'JSON round trip preserves complet
 
 const mechanicalUi=fs.readFileSync('mechanical-changes.js','utf8');
 assert.match(mechanicalUi,/completionBox\.type='checkbox'/);
-assert.match(mechanicalUi,/Mark '\+group\+' mechanical note '/);
+assert.match(mechanicalUi,/Mark mechanical adjustment '/);
+assert.doesNotMatch(mechanicalUi,/Mark '\+group\+' mechanical note '/,
+ 'mechanical strengths should not expose a Complete action');
+assert.match(mechanicalUi,/mech-strength-actions/);
 assert.match(mechanicalUi,/window\.DZ_EDIT_ENABLED/);
 assert.match(mechanicalUi,/current=reopen\(current,i\)/);
 const html=fs.readFileSync('index.html','utf8');
