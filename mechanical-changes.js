@@ -110,28 +110,19 @@ function createBoard(initial){
        }
        entry.append(footer);
      }else{
-       // Preserve the full Positives / mechanical strengths list, including
-       // historical notes and its existing add/edit/complete/remove actions.
+       // Mechanical strengths are positive observations, not checklist
+       // tasks. Keep their existing add/edit/remove workflow but do not
+       // offer a "Complete" checkbox for new strengths. Historical
+       // completed positive notes remain available and can be reopened.
        entry.append(ta);
        if(!readonly){
-         const toolbar=document.createElement('div');toolbar.className='mech-entry-actions';
-         const completionLabel=document.createElement('label');
-         completionLabel.className='mech-complete-control';
-         const completionBox=document.createElement('input');
-         completionBox.type='checkbox';
-         completionBox.setAttribute('aria-label','Mark '+group+' mechanical note '+(i+1)+' complete');
-         completionBox.addEventListener('change',()=>{
-           capture();
-           if(!current[group][i].trim()){completionBox.checked=false;ta.focus();return;}
-           current=complete(current,group,i);
-           render();markUnsaved();
-         });
-         completionLabel.append(completionBox,document.createTextNode('Complete'));
+         const toolbar=document.createElement('div');
+         toolbar.className='mech-entry-actions mech-strength-actions';
          const remove=makeButton('Remove','mech-remove-btn',()=>{
            capture();current[group].splice(i,1);render();markUnsaved();
          });
-         remove.setAttribute('aria-label','Remove '+group+' mechanical note '+(i+1));
-         toolbar.append(completionLabel,remove);entry.append(toolbar);
+         remove.setAttribute('aria-label','Remove mechanical strength '+(i+1));
+         toolbar.append(remove);entry.append(toolbar);
        }
      }
      list.append(entry);
