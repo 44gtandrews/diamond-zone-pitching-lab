@@ -112,6 +112,12 @@ function boardFor(editable){
 }
 const {board,nodes}=boardFor(true);
 assert.equal(nodes['mech-pos-list'].querySelectorAll('textarea').length,2);
+assert.equal(nodes['mech-pos-list'].querySelectorAll('input').length,0,
+ 'Mechanical strengths must have no Complete checkbox');
+assert.ok(findClass(nodes['mech-pos-list'],'mech-remove-btn'),
+ 'Mechanical strengths still need their Remove action');
+assert.equal(typeof nodes['mech-pos-add'].onclick,'function',
+ 'Coaches must still be able to add mechanical strengths');
 assert.equal(nodes['mech-neg-list'].querySelectorAll('textarea').length,1);
 assert.equal(nodes['mech-neg-list'].querySelectorAll('input').length,1);
 const activeCheck=nodes['mech-neg-list'].querySelectorAll('input')[0];
@@ -134,6 +140,8 @@ assert.equal(restored.completed.length,1);
 assert.match(nodes['status-mechanics'].textContent,/Unsaved changes/);
 const readonly=boardFor(false);
 assert.equal(readonly.nodes['mech-pos-list'].querySelectorAll('textarea').length,2);
+assert.equal(readonly.nodes['mech-pos-list'].querySelectorAll('input').length,0,
+ 'Read-only mechanical strengths must not show completion checkboxes');
 assert.ok(readonly.nodes['mech-neg-list'].querySelectorAll('input').every(c=>c.disabled));
 assert.ok(readonly.nodes['mech-completed-list'].querySelectorAll('input').every(c=>c.disabled));
 assert.equal(readonly.nodes['mech-pos-add'].style.display,'none');
@@ -146,6 +154,7 @@ assert.match(html,/id="chart-usage"/);
 assert.match(html,/id="panel-strength"/);
 assert.match(html,/id="mech-pos-list"/);
 assert.match(html,/Mechanical strengths/);
+assert.match(html,/mech-strength-actions\{justify-content:flex-end;/);
 assert.match(html,/id="mech-neg-list"/);
 assert.match(html,/id="mech-completed-list"/);
 assert.match(html,/id="mechanics-save"/);
