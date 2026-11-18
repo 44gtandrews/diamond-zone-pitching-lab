@@ -1974,6 +1974,64 @@
     body[data-dz-role="player_parent"] #view-player .kpis>.kpi:nth-child(2n){border-right:0;}
     body[data-dz-role="player_parent"] #view-player .kpis>.kpi:nth-last-child(-n+2){border-bottom:0;}
   }
+
+  /* Staff directory display toggle: compact, aligned above the arsenal caption. */
+  .dz-directory-view-tools{display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:auto;}
+  .dz-directory-mode-switch{display:inline-flex;align-items:center;padding:3px;gap:3px;
+    border:1px solid #36545E;border-radius:5px;background:#0B1D24;}
+  .dz-directory-mode{min-height:33px;padding:7px 12px;cursor:pointer;
+    font:750 11px Inter,sans-serif;border:1px solid transparent;border-radius:3px;
+    color:#A2C1C9;background:transparent;white-space:nowrap;}
+  .dz-directory-mode.active{background:#008c95;color:#061D20;border-color:#008c95;}
+  .dz-directory-mode:not(.active):hover{color:#F5FFFF;background:#19353D;}
+  .dz-directory-mode:focus-visible{outline:2px solid #F4FAFA;outline-offset:3px;}
+  #dz-weekly-status{margin:0 0 12px;color:#A6C6CC;font:550 11px Inter,sans-serif;}
+  #dz-weekly-status[hidden],#dz-weekly-legend[hidden],#dz-scouting-key[hidden]{display:none!important;}
+  #view-home .dz-pitch-usage.dz-week-data{display:block;min-width:0;width:100%;}
+  .dz-week-count-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) minmax(48px,1.13fr);
+    align-items:stretch;gap:4px;min-width:0;width:100%;}
+  .dz-week-cell,.dz-week-total{min-width:0;min-height:50px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:4px;padding:5px 2px;
+    background:#172B33;color:#BBD3D9;border-radius:3px;text-align:center;
+    border:1px solid #2B4952;font-variant-numeric:tabular-nums;}
+  .dz-week-cell small,.dz-week-total small{color:inherit;opacity:.79;
+    font:650 9px/1.15 Inter,sans-serif;white-space:nowrap;}
+  .dz-week-cell strong,.dz-week-total strong{font:850 15px/1 'Barlow Condensed',Inter,sans-serif;
+    color:inherit;}
+  .dz-week-cell.dz-week-yellow,.dz-week-legend-chip.dz-week-yellow{
+    background:#FFE45E;color:#131A1C;border-color:#FFE45E;}
+  .dz-week-cell.dz-week-orange,.dz-week-legend-chip.dz-week-orange{
+    background:#FF9D3E;color:#191A1B;border-color:#FF9D3E;}
+  .dz-week-cell.dz-week-red,.dz-week-legend-chip.dz-week-red{
+    background:#F05B55;color:#1C1314;border-color:#F05B55;}
+  .dz-week-total{background:#153940;color:#E8F6F7;border:1px solid #008c95;}
+  .dz-week-total strong{font-size:19px;}
+  .dz-week-placeholder,.dz-week-error{font:600 11px Inter,sans-serif;
+    color:#A8C5CB;padding:15px 4px;}
+  .dz-week-error{color:#F1B6B5;}
+  .dz-week-legend-list{display:grid;gap:11px;margin:16px 0;color:#BDD1D7;
+    font:600 11px/1.4 Inter,sans-serif;}
+  .dz-week-legend-list>div{display:flex;align-items:center;gap:11px;}
+  .dz-week-legend-chip{display:inline-flex;min-width:42px;min-height:27px;
+    align-items:center;justify-content:center;padding:4px 6px;border-radius:3px;
+    font:800 11px Inter,sans-serif;}
+  .dz-week-legend-chip.dz-week-none{background:#203740;color:#AFC5CB;}
+  @media(max-width:1020px){
+    .dz-directory-view-tools .dz-directory-order{display:none;}
+  }
+  @media(max-width:640px){
+    .dz-directory-tools{align-items:flex-start;}
+    .dz-directory-view-tools{width:100%;align-items:flex-end;margin:0;}
+    .dz-directory-mode-switch{max-width:100%;}
+    .dz-directory-mode{min-height:40px;font-size:11px;padding:9px 11px;}
+    #view-home .dz-pitch-usage.dz-week-data{grid-column:1;grid-row:2;margin-top:9px;}
+    .dz-week-count-grid{gap:3px;}
+    .dz-week-cell,.dz-week-total{min-height:47px;padding:4px 1px;}
+    .dz-week-cell small,.dz-week-total small{font-size:8px;}
+    .dz-week-cell strong{font-size:14px;}
+    .dz-week-total strong{font-size:17px;}
+  }
+
 </style>
 </head>
 <body>
@@ -2079,8 +2137,15 @@
       <main class="dz-home-roster">
         <div class="dz-directory-tools">
           <div id="dz-age-filters" class="dz-age-filters" role="group" aria-label="Filter by age group"></div>
-          <span class="dz-directory-order">Pitches ranked by usage · Grades relative to age</span>
+          <div class="dz-directory-view-tools">
+            <div class="dz-directory-mode-switch" role="group" aria-label="Directory view">
+              <button type="button" id="dz-directory-arsenal-view" class="dz-directory-mode active" aria-pressed="true">Pitch Arsenal</button>
+              <button type="button" id="dz-directory-weekly-view" class="dz-directory-mode" aria-pressed="false">Last 7 Days</button>
+            </div>
+            <span class="dz-directory-order" id="dz-directory-order-text">Pitches ranked by usage · Grades relative to age</span>
+          </div>
         </div>
+        <p class="dz-weekly-status" id="dz-weekly-status" role="status" aria-live="polite" hidden></p>
         <section id="dz-roster-loading" class="dz-loading-roster" role="status" aria-live="polite" aria-label="Loading player directory" style="display:none;">
           <span class="dz-loading-spinner" aria-hidden="true"></span>
           <div class="dz-loading-copy">
@@ -2106,10 +2171,24 @@
           <p>Check your connection and try again.</p>
           <button class="cloud-button secondary" id="dz-retry-directory" type="button">Retry loading</button>
         </section>
-        <p class="home-footnote">Scouting grades are saved by coaches, relative to each pitcher's age group. Select a pitcher to open the full profile.</p>
+        <p class="home-footnote" id="dz-directory-footnote">Scouting grades are saved by coaches, relative to each pitcher's age group. Select a pitcher to open the full profile.</p>
       </main>
       <aside class="dz-home-aside">
-        <section class="dz-scouting-key" aria-labelledby="dz-scouting-key-title">
+        <section class="dz-scouting-key" id="dz-weekly-legend" aria-labelledby="dz-weekly-legend-heading" hidden>
+          <div class="dz-scouting-key-heading">
+            <h2 id="dz-weekly-legend-heading">7-Day Pitch Workload</h2>
+            <span class="dz-scouting-age-label" id="dz-directory-week-range">Last seven days</span>
+          </div>
+          <p>Daily pitch totals from recorded sessions and manual corrections. Colors match each player's Pitch Counts calendar.</p>
+          <div class="dz-week-legend-list">
+            <div><span class="dz-week-legend-chip dz-week-yellow">1–20</span> Low daily volume</div>
+            <div><span class="dz-week-legend-chip dz-week-orange">21–40</span> Moderate daily volume</div>
+            <div><span class="dz-week-legend-chip dz-week-red">41+</span> Higher daily volume</div>
+            <div><span class="dz-week-legend-chip dz-week-none">—</span> No recorded pitches</div>
+          </div>
+          <p class="dz-scouting-footnote">The total at the end of each player's row is their recorded pitch count across all seven days. Switch back to Pitch Arsenal at any time.</p>
+        </section>
+        <section class="dz-scouting-key" id="dz-scouting-key" aria-labelledby="dz-scouting-key-title">
       <div class="dz-scouting-key-heading">
         <h2 id="dz-scouting-key-title">20–80 Scouting Scale</h2>
         <span class="dz-scouting-age-label">AGE-BASED GRADES</span>
@@ -2930,6 +3009,7 @@ async function renderHome(){
   dzBuildAgeFilters();
   dzSetDirectoryLoading(false);
   dzApplyDirectoryFilters();
+  window.DZ_WEEKLY_DIRECTORY_ON_RENDER?.();
   }catch(error){
     if(version!==DZ_DIRECTORY_RENDER_VERSION)return;
     console.error('Failed loading player directory',error);
@@ -3593,6 +3673,7 @@ function showHome(){
   }
   window.DZ_AT_HOME_RESET?.();
   window.DZ_PITCH_COUNTS_RESET?.();
+  window.DZ_WEEKLY_DIRECTORY_RESET?.();
   currentPlayerId = null;
   document.getElementById('view-admin').style.display = 'none';
   document.getElementById('view-player').style.display = 'none';
@@ -3733,6 +3814,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="./at-home-plan.js"></script>
 <script src="./mechanical-changes.js"></script>
 <script src="./pitch-counts.js"></script>
+<script src="./directory-weekly-counts.js"></script>
 <script src="./registration-policy.js"></script>
 <script src="./cloud.js"></script>
 </body>
