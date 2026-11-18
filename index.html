@@ -2067,6 +2067,48 @@
     .dz-distribution-legend{max-width:none;}
   }
 
+
+  /* Mechanical task-list design from the prototype. The Positives data,
+     complete history and separate Strength & Mobility tab are unchanged. */
+  .mech-secondary-label{font:500 10px Inter,sans-serif;color:var(--ink-soft);}
+  .mech-task-entry{padding:10px 10px 8px;background:#10232B;}
+  .mech-task-line{display:flex;gap:10px;align-items:flex-start;min-width:0;}
+  .mech-task-checkbox{
+    flex:none;width:20px;height:20px;min-width:20px;min-height:20px;
+    margin:4px 0 0;cursor:pointer;accent-color:#008c95;
+  }
+  .mech-task-checkbox:disabled{cursor:default;opacity:.75;}
+  .mech-task-checkbox:focus-visible{outline:2px solid #E9F5F6;outline-offset:3px;}
+  .mech-task-entry .mech-textarea{
+    min-height:47px;max-width:100%;padding:4px 2px;
+    resize:vertical;border:0;background:transparent;
+    font:550 12.5px/1.45 Inter,sans-serif;
+  }
+  .mech-task-entry .mech-textarea:focus{outline:1px solid #008c95;outline-offset:2px;}
+  .mech-task-footer{margin:4px 0 0 30px;display:flex;
+    justify-content:space-between;align-items:center;gap:8px;}
+  .mech-task-footer small{font:600 10px Inter,sans-serif;color:#9AB4BB;}
+  .mech-task-footer .mech-remove-btn{font:550 10px Inter,sans-serif;
+    border:0;background:transparent;color:#9AB4BB;cursor:pointer;
+    min-height:28px;padding:4px 6px;}
+  .mech-task-footer .mech-remove-btn:hover{color:#EEF7F8;}
+  .mech-done-entry.mech-task-entry{
+    border:1px solid #32535A;border-left:3px solid #008c95;
+    padding:11px 9px;
+  }
+  .mech-done-entry .mech-done-text{font:550 12.5px/1.45 Inter,sans-serif;min-width:0;}
+  .mech-done-entry .mech-done-meta{margin:8px 0 0 30px;
+    font:500 10px Inter,sans-serif;}
+  .mech-reopen-hint{color:#A4C5CA;}
+  #view-player.dz-readonly .mech-task-entry .mech-textarea{
+    background:transparent;color:var(--ink);opacity:1;
+  }
+  @media(max-width:740px){
+    .mech-task-entry{padding:12px 11px;}
+    .mech-task-checkbox{width:22px;height:22px;}
+    .mech-task-entry .mech-textarea{min-height:42px;}
+  }
+
 </style>
 </head>
 <body>
@@ -2546,11 +2588,11 @@
 
     <!-- MECHANICAL CHANGES -->
     <div class="panel" id="panel-mechanics">
-      <p class="field-hint mech-intro">Track current mechanical changes and check off completed work. Completed items move into the third column; select Save changes to sync with Firebase.</p>
+      <p class="field-hint mech-intro">Check off an adjustment when it's complete; uncheck it to reopen. Mechanical strengths stay in their own section. Select <strong>Save changes</strong> to sync to Firebase.</p>
       <div class="mech-columns">
         <section class="field-block mech-column" aria-label="Positive mechanical notes">
-          <div class="field-label">Positives</div>
-          <div class="field-hint">What's clicking mechanically right now.</div>
+          <div class="field-label">Mechanical strengths <span class="mech-secondary-label">(Positives)</span></div>
+          <div class="field-hint">What's clicking mechanically right now. Existing strengths and notes are preserved.</div>
           <div class="note-list" id="mech-pos-list"></div>
           <button class="add-note-btn" type="button" id="mech-pos-add">+ Add note</button>
         </section>
@@ -2562,7 +2604,7 @@
         </section>
         <section class="field-block mech-column mech-completed-column" aria-label="Completed mechanical changes">
           <div class="field-label">Completed <span class="mech-check-symbol" aria-hidden="true">✓</span></div>
-          <div class="field-hint">Finished changes, kept for reference. Reopen if needed.</div>
+          <div class="field-hint">Checked-off adjustments, kept for reference. Uncheck to reopen.</div>
           <div class="note-list" id="mech-completed-list"></div>
         </section>
       </div>
