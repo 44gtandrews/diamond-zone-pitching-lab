@@ -82,6 +82,7 @@ function updateControls(days){
     ?'Last seven calendar days, including today. Dated TrackMan sessions are summed by day; manual calendar corrections take priority. — means no recorded pitches, not necessarily a rest day.'
     :'Scouting grades are saved by coaches, relative to each pitcher’s age group. Select a pitcher to open the full profile.';
   $('dz-directory-week-range').textContent=days[0].label+' – '+days[6].label;
+  $('dz-scroll-scale').textContent=weekly?'Workload key ↗':'20–80 scale ↗';
   document.querySelectorAll('#dz-roster-results .dz-roster-columns').forEach(head=>{
     const columns=head.children;
     if(columns.length>1)columns[1].textContent=weekly
