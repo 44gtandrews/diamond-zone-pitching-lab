@@ -74,32 +74,65 @@ function createBoard(initial){
      list.append(p);
    }
    values.forEach((value,i)=>{
-     const entry=document.createElement('div');entry.className='mech-entry';
+     const entry=document.createElement('div');
+     entry.className=group==='negatives'?'mech-entry mech-task-entry':'mech-entry';
      const ta=document.createElement('textarea');
-     ta.className='note-textarea mech-textarea';ta.dataset.mechIndex=String(i);
-     ta.value=value;ta.rows=3;ta.placeholder='Describe the mechanical change…';
+     ta.className='note-textarea mech-textarea';
+     ta.dataset.mechIndex=String(i);
+     ta.value=value;
+     ta.rows=group==='negatives'?2:3;
+     ta.placeholder=group==='negatives'?'Describe the mechanical adjustment…':'Describe a mechanical strength…';
      if(readonly)ta.readOnly=true;
      else ta.addEventListener('input',()=>{current[group][i]=ta.value;markUnsaved();});
-     entry.append(ta);
-     if(!readonly){
-       const toolbar=document.createElement('div');toolbar.className='mech-entry-actions';
-       const completionLabel=document.createElement('label');
-       completionLabel.className='mech-complete-control';
+     if(group==='negatives'){
+       // An active mechanical adjustment is a checklist task, not a second
+       // large note box. The underlying negatives[] data remains unchanged.
+       const line=document.createElement('div');line.className='mech-task-line';
        const completionBox=document.createElement('input');
-       completionBox.type='checkbox';
-       completionBox.setAttribute('aria-label','Mark '+group+' mechanical note '+(i+1)+' complete');
-       completionBox.addEventListener('change',()=>{
+       completionBox.type='checkbox';completionBox.className='mech-task-checkbox';
+       completionBox.disabled=readonly;
+       completionBox.setAttribute('aria-label','Mark mechanical adjustment '+(i+1)+' complete');
+       if(!readonly)completionBox.addEventListener('change',()=>{
          capture();
          if(!current[group][i].trim()){completionBox.checked=false;ta.focus();return;}
          current=complete(current,group,i);
          render();markUnsaved();
        });
-       completionLabel.append(completionBox,document.createTextNode('Complete'));
-       const remove=makeButton('Remove','mech-remove-btn',()=>{
-         capture();current[group].splice(i,1);render();markUnsaved();
-       });
-       remove.setAttribute('aria-label','Remove '+group+' mechanical note '+(i+1));
-       toolbar.append(completionLabel,remove);entry.append(toolbar);
+       line.append(completionBox,ta);entry.append(line);
+       const footer=document.createElement('div');footer.className='mech-task-footer';
+       const state=document.createElement('small');state.textContent='In progress';footer.append(state);
+       if(!readonly){
+         const remove=makeButton('Remove','mech-remove-btn',()=>{
+           capture();current[group].splice(i,1);render();markUnsaved();
+         });
+         remove.setAttribute('aria-label','Remove mechanical adjustment '+(i+1));
+         footer.append(remove);
+       }
+       entry.append(footer);
+     }else{
+       // Preserve the full Positives / mechanical strengths list, including
+       // historical notes and its existing add/edit/complete/remove actions.
+       entry.append(ta);
+       if(!readonly){
+         const toolbar=document.createElement('div');toolbar.className='mech-entry-actions';
+         const completionLabel=document.createElement('label');
+         completionLabel.className='mech-complete-control';
+         const completionBox=document.createElement('input');
+         completionBox.type='checkbox';
+         completionBox.setAttribute('aria-label','Mark '+group+' mechanical note '+(i+1)+' complete');
+         completionBox.addEventListener('change',()=>{
+           capture();
+           if(!current[group][i].trim()){completionBox.checked=false;ta.focus();return;}
+           current=complete(current,group,i);
+           render();markUnsaved();
+         });
+         completionLabel.append(completionBox,document.createTextNode('Complete'));
+         const remove=makeButton('Remove','mech-remove-btn',()=>{
+           capture();current[group].splice(i,1);render();markUnsaved();
+         });
+         remove.setAttribute('aria-label','Remove '+group+' mechanical note '+(i+1));
+         toolbar.append(completionLabel,remove);entry.append(toolbar);
+       }
      }
      list.append(entry);
    });
@@ -112,9 +145,20 @@ function createBoard(initial){
      list.append(p);return;
    }
    current.completed.forEach((item,i)=>{
-     const entry=document.createElement('div');entry.className='mech-done-entry';
-     const title=document.createElement('div');title.className='mech-done-text';title.textContent=item.text;
-     entry.append(title);
+     const entry=document.createElement('div');entry.className='mech-done-entry mech-task-entry';
+     const line=document.createElement('div');line.className='mech-task-line';
+     const completionBox=document.createElement('input');
+     completionBox.type='checkbox';
+     completionBox.className='mech-task-checkbox';
+     completionBox.checked=true;completionBox.disabled=readonly;
+     completionBox.setAttribute('aria-label','Reopen completed mechanical note '+(i+1));
+     if(!readonly)completionBox.addEventListener('change',()=>{
+       if(completionBox.checked)return;
+       capture();current=reopen(current,i);render();markUnsaved();
+     });
+     const title=document.createElement('div');title.className='mech-done-text';
+     title.textContent=item.text;
+     line.append(completionBox,title);entry.append(line);
      const row=document.createElement('div');row.className='mech-done-meta';
      const from=document.createElement('span');
      from.textContent=item.from==='positives'?'From Positives':'From Areas to Work On';
@@ -125,11 +169,8 @@ function createBoard(initial){
        row.append(time);
      }
      if(!readonly){
-       const undo=makeButton('↶ Reopen','mech-reopen-btn',()=>{
-         capture();current=reopen(current,i);render();markUnsaved();
-       });
-       undo.setAttribute('aria-label','Reopen completed mechanical note '+(i+1));
-       row.append(undo);
+       const hint=document.createElement('span');hint.className='mech-reopen-hint';
+       hint.textContent='Uncheck to reopen';row.append(hint);
      }
      entry.append(row);list.append(entry);
    });

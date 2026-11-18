@@ -2032,6 +2032,83 @@
     .dz-week-total strong{font-size:17px;}
   }
 
+
+  /* Player overview — prototype-style donut, anchored to real pitch counts. */
+  #chart-usage{min-width:0;}
+  .dz-distribution{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+    gap:14px 17px;min-width:0;padding:12px 0 10px;
+  }
+  .dz-distribution-ring{
+    width:132px;height:132px;flex:0 0 132px;border-radius:50%;
+    display:grid;place-items:center;
+  }
+  .dz-distribution-center{
+    width:89px;height:89px;border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:var(--paper-raised);color:var(--ink);
+  }
+  .dz-distribution-center strong{
+    font:850 24px/1 'Barlow Condensed',Inter,sans-serif;font-variant-numeric:tabular-nums;
+  }
+  .dz-distribution-center small{font:550 10px Inter,sans-serif;color:var(--ink-soft);margin-top:4px;}
+  .dz-distribution-legend{list-style:none;display:grid;gap:8px;min-width:110px;
+    max-width:170px;flex:1 1 110px;margin:0;padding:0;}
+  .dz-distribution-legend li{display:flex;align-items:center;gap:7px;
+    color:var(--ink-soft);font:550 11px/1.3 Inter,sans-serif;min-width:0;}
+  .dz-distribution-dot{display:block;width:8px;height:8px;border-radius:50%;flex:none;}
+  .dz-distribution-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .dz-distribution-legend strong{margin-left:auto;color:var(--ink);
+    font:750 11px Inter,sans-serif;font-variant-numeric:tabular-nums;}
+  @media(max-width:460px){
+    .dz-distribution{gap:12px 18px;justify-content:flex-start;}
+    .dz-distribution-ring{width:122px;height:122px;flex-basis:122px;}
+    .dz-distribution-center{width:82px;height:82px;}
+    .dz-distribution-legend{max-width:none;}
+  }
+
+
+  /* Mechanical task-list design from the prototype. The Positives data,
+     complete history and separate Strength & Mobility tab are unchanged. */
+  .mech-secondary-label{font:500 10px Inter,sans-serif;color:var(--ink-soft);}
+  .mech-task-entry{padding:10px 10px 8px;background:#10232B;}
+  .mech-task-line{display:flex;gap:10px;align-items:flex-start;min-width:0;}
+  .mech-task-checkbox{
+    flex:none;width:20px;height:20px;min-width:20px;min-height:20px;
+    margin:4px 0 0;cursor:pointer;accent-color:#008c95;
+  }
+  .mech-task-checkbox:disabled{cursor:default;opacity:.75;}
+  .mech-task-checkbox:focus-visible{outline:2px solid #E9F5F6;outline-offset:3px;}
+  .mech-task-entry .mech-textarea{
+    min-height:47px;max-width:100%;padding:4px 2px;
+    resize:vertical;border:0;background:transparent;
+    font:550 12.5px/1.45 Inter,sans-serif;
+  }
+  .mech-task-entry .mech-textarea:focus{outline:1px solid #008c95;outline-offset:2px;}
+  .mech-task-footer{margin:4px 0 0 30px;display:flex;
+    justify-content:space-between;align-items:center;gap:8px;}
+  .mech-task-footer small{font:600 10px Inter,sans-serif;color:#9AB4BB;}
+  .mech-task-footer .mech-remove-btn{font:550 10px Inter,sans-serif;
+    border:0;background:transparent;color:#9AB4BB;cursor:pointer;
+    min-height:28px;padding:4px 6px;}
+  .mech-task-footer .mech-remove-btn:hover{color:#EEF7F8;}
+  .mech-done-entry.mech-task-entry{
+    border:1px solid #32535A;border-left:3px solid #008c95;
+    padding:11px 9px;
+  }
+  .mech-done-entry .mech-done-text{font:550 12.5px/1.45 Inter,sans-serif;min-width:0;}
+  .mech-done-entry .mech-done-meta{margin:8px 0 0 30px;
+    font:500 10px Inter,sans-serif;}
+  .mech-reopen-hint{color:#A4C5CA;}
+  #view-player.dz-readonly .mech-task-entry .mech-textarea{
+    background:transparent;color:var(--ink);opacity:1;
+  }
+  @media(max-width:740px){
+    .mech-task-entry{padding:12px 11px;}
+    .mech-task-checkbox{width:22px;height:22px;}
+    .mech-task-entry .mech-textarea{min-height:42px;}
+  }
+
 </style>
 </head>
 <body>
@@ -2444,7 +2521,7 @@
           <div id="velo-stats"></div>
         </div>
         <div class="chart-card">
-          <p class="chart-title">Bullpen Pitch Usage</p>
+          <p class="chart-title">Pitch Distribution</p>
           <p class="chart-caption" id="usage-caption">Share of tracked pitches</p>
           <div id="chart-usage"></div>
         </div>
@@ -2511,11 +2588,11 @@
 
     <!-- MECHANICAL CHANGES -->
     <div class="panel" id="panel-mechanics">
-      <p class="field-hint mech-intro">Track current mechanical changes and check off completed work. Completed items move into the third column; select Save changes to sync with Firebase.</p>
+      <p class="field-hint mech-intro">Check off an adjustment when it's complete; uncheck it to reopen. Mechanical strengths stay in their own section. Select <strong>Save changes</strong> to sync to Firebase.</p>
       <div class="mech-columns">
         <section class="field-block mech-column" aria-label="Positive mechanical notes">
-          <div class="field-label">Positives</div>
-          <div class="field-hint">What's clicking mechanically right now.</div>
+          <div class="field-label">Mechanical strengths <span class="mech-secondary-label">(Positives)</span></div>
+          <div class="field-hint">What's clicking mechanically right now. Existing strengths and notes are preserved.</div>
           <div class="note-list" id="mech-pos-list"></div>
           <button class="add-note-btn" type="button" id="mech-pos-add">+ Add note</button>
         </section>
@@ -2527,7 +2604,7 @@
         </section>
         <section class="field-block mech-column mech-completed-column" aria-label="Completed mechanical changes">
           <div class="field-label">Completed <span class="mech-check-symbol" aria-hidden="true">✓</span></div>
-          <div class="field-hint">Finished changes, kept for reference. Reopen if needed.</div>
+          <div class="field-hint">Checked-off adjustments, kept for reference. Uncheck to reopen.</div>
           <div class="note-list" id="mech-completed-list"></div>
         </section>
       </div>
@@ -3339,30 +3416,11 @@ function renderOverview(player){
   document.getElementById('usage-caption').textContent = usageAvailable
     ?`Share of ${totalN} tracked pitches`
     :'Usage unavailable — pitch counts are not included in this PDF';
-  if(!usageAvailable){
-    document.getElementById('chart-usage').innerHTML='<p class="dz-no-counts">This Trackman report provides pitch-type averages, not individual pitch counts. Usage percentages cannot be calculated.</p>';
-  }else (function(){
-    const w=440,h=186,padL=90,padR=40,padT=6,padB=22;
-    const rowH=(h-padT-padB)/summary.length;
-    const scaleW = w-padL-padR;
-    const barW = pct => (pct/100)*scaleW;
-    let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%">`;
-    summary.forEach((p,i)=>{
-      const y = padT + rowH*i + rowH*0.2;
-      const bh = rowH*0.6;
-      const sharePrecise = Number(p.n||0)/totalN*100;
-      const share = Math.round(sharePrecise);
-      svg += `<text x="${padL-10}" y="${y+bh/2+3.5}" font-size="10.5" fill="${cssColor('ink')}" text-anchor="end" font-family="Inter" font-weight="600">${p.name}</text>`;
-      svg += `<rect x="${padL}" y="${y}" width="${barW(sharePrecise)}" height="${bh}" fill="${cssColor(p.key)}"/>`;
-      svg += `<text x="${padL+barW(sharePrecise)+8}" y="${y+bh/2+3.5}" font-size="10" fill="${cssColor('ink-soft')}" font-family="Inter">${share}%</text>`;
-    });
-    const axisY = h-padB+8;
-    svg += `<line x1="${padL}" y1="${axisY}" x2="${padL+scaleW}" y2="${axisY}" stroke="${cssColor('line-strong')}" stroke-width="1"/>`;
-    svg += `<text x="${padL}" y="${axisY+11}" font-size="8.5" fill="${cssColor('ink-soft')}" text-anchor="start" font-family="Inter">0</text>`;
-    svg += `<text x="${padL+scaleW}" y="${axisY+11}" font-size="8.5" fill="${cssColor('ink-soft')}" text-anchor="end" font-family="Inter">100%</text>`;
-    svg += `</svg>`;
-    document.getElementById('chart-usage').innerHTML = svg;
-  })();
+  // The chart follows the same selected session/timeframe and visible pitch
+  // types as the movement and velocity views. Do not fabricate report-only usage.
+  window.DZ_PITCH_DISTRIBUTION.render(
+    document.getElementById('chart-usage'),summary,usageAvailable,cssColor
+  );
 
   renderPitchTable(player, summary, totalN);
   document.getElementById('overview-footnote').innerHTML = buildFootnote(player, totalN);
@@ -3816,6 +3874,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="./importer.js"></script>
 <script src="./at-home-plan.js"></script>
 <script src="./mechanical-changes.js"></script>
+<script src="./pitch-distribution.js"></script>
 <script src="./pitch-counts.js"></script>
 <script src="./directory-weekly-counts.js"></script>
 <script src="./registration-policy.js"></script>
