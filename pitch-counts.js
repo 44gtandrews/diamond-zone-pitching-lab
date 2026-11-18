@@ -47,6 +47,9 @@ function combineCounts(manual,automatic){
 }
 const helper={parseMonth,moveMonth,gridDates,band,validCount,validType,typeLabel,autoFromSessions,combineCounts};
 if(typeof module!=='undefined'&&module.exports)module.exports=helper;
+// The directory's rolling seven-day view reuses the exact same counting
+// and manual-correction precedence as the monthly profile calendar.
+if(typeof window!=='undefined')window.DZ_PITCH_COUNT_UTILS=helper;
 if(typeof document==='undefined')return;
 const $=id=>document.getElementById(id);
 const today=new Date();
