@@ -39,7 +39,11 @@ assert.match(mechanicalUi,/completionBox\.type='checkbox'/);
 assert.match(mechanicalUi,/Mark mechanical adjustment '/);
 assert.doesNotMatch(mechanicalUi,/Mark '\+group\+' mechanical note '/,
  'mechanical strengths should not expose a Complete action');
-assert.match(mechanicalUi,/mech-strength-actions/);
+assert.match(mechanicalUi,/entry\.className='mech-entry mech-task-entry'/);
+assert.match(mechanicalUi,/line\.append\(spacer,ta\);entry\.append\(line\)/);
+assert.match(mechanicalUi,/state\.textContent='Strength'/);
+assert.match(mechanicalUi,/Remove mechanical strength /);
+assert.doesNotMatch(mechanicalUi,/mech-strength-actions/);
 assert.match(mechanicalUi,/window\.DZ_EDIT_ENABLED/);
 assert.match(mechanicalUi,/current=reopen\(current,i\)/);
 const html=fs.readFileSync('index.html','utf8');
