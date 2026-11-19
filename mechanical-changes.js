@@ -75,12 +75,12 @@ function createBoard(initial){
    }
    values.forEach((value,i)=>{
      const entry=document.createElement('div');
-     entry.className=group==='negatives'?'mech-entry mech-task-entry':'mech-entry';
+     entry.className='mech-entry mech-task-entry';
      const ta=document.createElement('textarea');
      ta.className='note-textarea mech-textarea';
      ta.dataset.mechIndex=String(i);
      ta.value=value;
-     ta.rows=group==='negatives'?2:3;
+     ta.rows=2;
      ta.placeholder=group==='negatives'?'Describe the mechanical adjustment…':'Describe a mechanical strength…';
      if(readonly)ta.readOnly=true;
      else ta.addEventListener('input',()=>{current[group][i]=ta.value;markUnsaved();});
@@ -110,20 +110,25 @@ function createBoard(initial){
        }
        entry.append(footer);
      }else{
-       // Mechanical strengths are positive observations, not checklist
-       // tasks. Keep their existing add/edit/remove workflow but do not
-       // offer a "Complete" checkbox for new strengths. Historical
-       // completed positive notes remain available and can be reopened.
-       entry.append(ta);
+       // Strengths share the compact mechanical task styling, but are
+       // observations rather than completable tasks. The non-interactive
+       // spacer aligns their text with the weakness checklist rows.
+       const line=document.createElement('div');line.className='mech-task-line';
+       const spacer=document.createElement('span');
+       spacer.className='mech-task-checkbox';
+       spacer.style.visibility='hidden';
+       spacer.setAttribute('aria-hidden','true');
+       line.append(spacer,ta);entry.append(line);
+       const footer=document.createElement('div');footer.className='mech-task-footer';
+       const state=document.createElement('small');state.textContent='Strength';footer.append(state);
        if(!readonly){
-         const toolbar=document.createElement('div');
-         toolbar.className='mech-entry-actions mech-strength-actions';
          const remove=makeButton('Remove','mech-remove-btn',()=>{
            capture();current[group].splice(i,1);render();markUnsaved();
          });
          remove.setAttribute('aria-label','Remove mechanical strength '+(i+1));
-         toolbar.append(remove);entry.append(toolbar);
+         footer.append(remove);
        }
+       entry.append(footer);
      }
      list.append(entry);
    });
