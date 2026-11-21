@@ -31,7 +31,7 @@ const legacyCompleted=m.normalize({positives:['x'],negatives:[],completed:['Old 
 assert.deepEqual(legacyCompleted.completed,[{text:'Old adjustment',from:'negatives',completedAt:null}]);
 assert.equal(m.normalize(null).completed.length,0);
 assert.deepEqual(m.normalize(old).drills,[],'older profiles get an empty Recommended Drills section');
-const drillNotes={...old,drills:['Step-behind throws: 2 x 5','Pivot pickoffs',''];};
+const drillNotes={...old,drills:['Step-behind throws: 2 x 5','Pivot pickoffs','']};
 assert.deepEqual(m.normalize(drillNotes).drills,drillNotes.drills);
 assert.deepEqual(m.complete(drillNotes,'drills',0,date),m.normalize(drillNotes),'drills are never completable');
 assert.equal(m.normalize({positives:[1,'x'],negatives:'bad',completed:[null,{text:'done',from:'invalid',completedAt:4}]}).completed[0].from,'negatives');
