@@ -89,7 +89,7 @@ const original={positives:['Strong lead leg block','Good posture'],
  negatives:['Stay closed longer'],completed:[{text:'Consistent arm action',
   from:'negatives',completedAt:'2026-11-01T12:00:00.000Z'}]};
 const normalized=mechanics.normalize(original);
-assert.deepEqual(normalized,original);
+assert.deepEqual(normalized,{...original,drills:[]});
 const checked=mechanics.complete(original,'negatives',0,'2026-11-18T12:00:00.000Z');
 assert.deepEqual(checked.positives,original.positives);
 assert.equal(checked.negatives.length,0);
@@ -98,8 +98,8 @@ assert.equal(mechanics.reopen(checked,1).negatives[0],'Stay closed longer');
 
 // Exercise real DOM checkbox handlers, not just data helpers.
 function boardFor(editable){
- const ids=['mech-pos-list','mech-neg-list','mech-completed-list',
-   'mech-pos-add','mech-neg-add','status-mechanics'];
+ const ids=['mech-pos-list','mech-neg-list','mech-drills-list','mech-completed-list',
+   'mech-pos-add','mech-neg-add','mech-drills-add','status-mechanics'];
  const nodes=Object.fromEntries(ids.map(id=>[id,new El()]));
  const document={
   ...baseDoc,
@@ -118,6 +118,19 @@ assert.ok(findClass(nodes['mech-pos-list'],'mech-remove-btn'),
  'Mechanical strengths still need their Remove action');
 assert.equal(typeof nodes['mech-pos-add'].onclick,'function',
  'Coaches must still be able to add mechanical strengths');
+assert.equal(nodes['mech-drills-list'].querySelectorAll('input').length,0,
+ 'Recommended drills must have no completion checkboxes');
+assert.equal(typeof nodes['mech-drills-add'].onclick,'function',
+ 'Coaches can add recommended drills');
+nodes['mech-drills-add'].onclick();
+const drillInput=nodes['mech-drills-list'].querySelectorAll('textarea')[0];
+drillInput.value='Connection ball drill - 2 x 5';
+drillInput.listeners.input();
+assert.deepEqual(board.getValues().drills,['Connection ball drill - 2 x 5']);
+const drillRemove=findClass(nodes['mech-drills-list'],'mech-remove-btn');
+assert.ok(drillRemove,'Coach should be able to remove a drill');
+drillRemove.listeners.click();
+assert.deepEqual(board.getValues().drills,[]);
 assert.equal(nodes['mech-neg-list'].querySelectorAll('textarea').length,1);
 assert.equal(nodes['mech-neg-list'].querySelectorAll('input').length,1);
 const activeCheck=nodes['mech-neg-list'].querySelectorAll('input')[0];
@@ -145,6 +158,9 @@ assert.equal(readonly.nodes['mech-pos-list'].querySelectorAll('input').length,0,
 assert.ok(readonly.nodes['mech-neg-list'].querySelectorAll('input').every(c=>c.disabled));
 assert.ok(readonly.nodes['mech-completed-list'].querySelectorAll('input').every(c=>c.disabled));
 assert.equal(readonly.nodes['mech-pos-add'].style.display,'none');
+assert.equal(readonly.nodes['mech-drills-add'].style.display,'none');
+assert.equal(readonly.nodes['mech-drills-list'].querySelectorAll('input').length,0);
+assert.deepEqual(readonly.board.getValues().drills,[]);
 assert.deepEqual(readonly.board.getValues().positives,original.positives);
 
 assert.match(html,/<p class="chart-title">Pitch Distribution<\/p>/);
@@ -156,6 +172,8 @@ assert.match(html,/id="mech-pos-list"/);
 assert.match(html,/Mechanical strengths/);
 assert.match(html,/mech-strength-actions\{justify-content:flex-end;/);
 assert.match(html,/id="mech-neg-list"/);
+assert.match(html,/id="mech-drills-list"/);
+assert.match(html,/id="mech-drills-add"/);
 assert.match(html,/id="mech-completed-list"/);
 assert.match(html,/id="mechanics-save"/);
 assert.match(html,/\.dz-distribution-ring\{/);

@@ -3,6 +3,7 @@
 (function(){
 'use strict';
 const SECTIONS=['positives','negatives'];
+const NOTE_GROUPS=['positives','negatives','drills'];
 function text(value){return typeof value==='string'?value:'';}
 function normalize(saved){
  const data=saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
@@ -12,7 +13,7 @@ function normalize(saved){
    .filter(v=>v&&typeof v==='object'&&typeof v.text==='string')
    .map(v=>({text:v.text,from:SECTIONS.includes(v.from)?v.from:'negatives',
      completedAt:typeof v.completedAt==='string'?v.completedAt:null}));
- return {positives:cleanNotes('positives'),negatives:cleanNotes('negatives'),completed};
+ return {positives:cleanNotes('positives'),negatives:cleanNotes('negatives'),completed,drills:cleanNotes('drills')};
 }
 function complete(data,from,index,now){
  const next=normalize(data);
@@ -40,11 +41,13 @@ function createBoard(initial){
  const containers={
    positives:document.getElementById('mech-pos-list'),
    negatives:document.getElementById('mech-neg-list'),
+   drills:document.getElementById('mech-drills-list'),
    completed:document.getElementById('mech-completed-list')
  };
  const addButtons={
    positives:document.getElementById('mech-pos-add'),
-   negatives:document.getElementById('mech-neg-add')
+   negatives:document.getElementById('mech-neg-add'),
+   drills:document.getElementById('mech-drills-add')
  };
  const status=document.getElementById('status-mechanics');
  function markUnsaved(){
@@ -53,7 +56,7 @@ function createBoard(initial){
    status.classList.add('show');
  }
  function capture(){
-   for(const group of SECTIONS){
+   for(const group of NOTE_GROUPS){
      const textareas=containers[group].querySelectorAll('textarea[data-mech-index]');
      textareas.forEach(ta=>{
        const i=Number(ta.dataset.mechIndex);
@@ -81,7 +84,7 @@ function createBoard(initial){
      ta.dataset.mechIndex=String(i);
      ta.value=value;
      ta.rows=2;
-     ta.placeholder=group==='negatives'?'Describe the mechanical adjustment…':'Describe a mechanical strength…';
+     ta.placeholder=group==='negatives'?'Describe the mechanical adjustment…':group==='drills'?'Name the drill, coaching cues, or suggested reps…':'Describe a mechanical strength…';
      if(readonly)ta.readOnly=true;
      else ta.addEventListener('input',()=>{current[group][i]=ta.value;markUnsaved();});
      if(group==='negatives'){
@@ -110,8 +113,8 @@ function createBoard(initial){
        }
        entry.append(footer);
      }else{
-       // Strengths share the compact mechanical task styling, but are
-       // observations rather than completable tasks. The non-interactive
+       // Strengths and recommended drills share the compact task styling,
+       // but are not completable tasks. The non-interactive
        // spacer aligns their text with the weakness checklist rows.
        const line=document.createElement('div');line.className='mech-task-line';
        const spacer=document.createElement('span');
@@ -120,12 +123,12 @@ function createBoard(initial){
        spacer.setAttribute('aria-hidden','true');
        line.append(spacer,ta);entry.append(line);
        const footer=document.createElement('div');footer.className='mech-task-footer';
-       const state=document.createElement('small');state.textContent='Strength';footer.append(state);
+       const state=document.createElement('small');state.textContent=group==='drills'?'Recommended drill':'Strength';footer.append(state);
        if(!readonly){
          const remove=makeButton('Remove','mech-remove-btn',()=>{
            capture();current[group].splice(i,1);render();markUnsaved();
          });
-         remove.setAttribute('aria-label','Remove mechanical strength '+(i+1));
+         remove.setAttribute('aria-label',(group==='drills'?'Remove recommended drill ':'Remove mechanical strength ')+(i+1));
          footer.append(remove);
        }
        entry.append(footer);
@@ -172,10 +175,10 @@ function createBoard(initial){
    });
  }
  function render(){
-   for(const group of SECTIONS)renderGroup(group);
+   for(const group of NOTE_GROUPS)renderGroup(group);
    renderCompleted();
  }
- for(const group of SECTIONS){
+ for(const group of NOTE_GROUPS){
    addButtons[group].style.display=readonly?'none':'';
    addButtons[group].onclick=()=>{
      if(readonly)return;
@@ -188,7 +191,7 @@ function createBoard(initial){
  return {getValues(){
    capture();
    const result=normalize(current);
-   for(const group of SECTIONS)result[group]=result[group].map(t=>t.trim()).filter(Boolean);
+   for(const group of NOTE_GROUPS)result[group]=result[group].map(t=>t.trim()).filter(Boolean);
    result.completed=result.completed.map(item=>({...item,text:item.text.trim()})).filter(item=>item.text);
    return result;
  }};

@@ -2069,6 +2069,17 @@
   }
 
 
+  /* Recommended drill notes use the same compact styling as mechanical
+     strengths, in a full-width section below the three progress columns. */
+  .mech-drills-column{margin-top:16px;}
+  .mech-drills-column .field-hint{min-height:0;margin-bottom:12px;}
+  .mech-drills-column .note-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .mech-drills-column .add-note-btn{max-width:300px;}
+  @media(max-width:740px){
+    .mech-drills-column .note-list{grid-template-columns:1fr;}
+    .mech-drills-column .add-note-btn{max-width:none;}
+  }
+
   /* Mechanical task-list design from the prototype. The Positives data,
      complete history and separate Strength & Mobility tab are unchanged. */
   .mech-secondary-label{font:500 10px Inter,sans-serif;color:var(--ink-soft);}
@@ -2589,7 +2600,7 @@
 
     <!-- MECHANICAL CHANGES -->
     <div class="panel" id="panel-mechanics">
-      <p class="field-hint mech-intro">Check off an adjustment when it's complete; uncheck it to reopen. Mechanical strengths stay in their own section. Select <strong>Save changes</strong> to sync to Firebase.</p>
+      <p class="field-hint mech-intro">Check off an adjustment when it's complete; uncheck it to reopen. Strengths and recommended drills stay as editable notes without checkboxes. Select <strong>Save changes</strong> to sync to Firebase.</p>
       <div class="mech-columns">
         <section class="field-block mech-column" aria-label="Positive mechanical notes">
           <div class="field-label">Mechanical strengths <span class="mech-secondary-label">(Positives)</span></div>
@@ -2609,6 +2620,12 @@
           <div class="note-list" id="mech-completed-list"></div>
         </section>
       </div>
+      <section class="field-block mech-column mech-drills-column" aria-label="Recommended drills">
+        <div class="field-label">Recommended Drills</div>
+        <div class="field-hint">Drills to reinforce these mechanical changes. Add drill names, coaching cues, or suggested reps. Drills can be edited or removed, but not checked off.</div>
+        <div class="note-list" id="mech-drills-list"></div>
+        <button class="add-note-btn" type="button" id="mech-drills-add">+ Add drill</button>
+      </section>
       <div class="save-row">
         <button class="save-btn" id="mechanics-save">Save changes</button>
         <span class="save-status" id="status-mechanics">Saved</span>
