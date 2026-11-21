@@ -126,11 +126,11 @@ nodes['mech-drills-add'].onclick();
 const drillInput=nodes['mech-drills-list'].querySelectorAll('textarea')[0];
 drillInput.value='Connection ball drill - 2 x 5';
 drillInput.listeners.input();
-assert.deepEqual(board.getValues().drills,['Connection ball drill - 2 x 5']);
+assert.deepEqual(Array.from(board.getValues().drills),['Connection ball drill - 2 x 5']);
 const drillRemove=findClass(nodes['mech-drills-list'],'mech-remove-btn');
 assert.ok(drillRemove,'Coach should be able to remove a drill');
 drillRemove.listeners.click();
-assert.deepEqual(board.getValues().drills,[]);
+assert.deepEqual(Array.from(board.getValues().drills),[]);
 assert.equal(nodes['mech-neg-list'].querySelectorAll('textarea').length,1);
 assert.equal(nodes['mech-neg-list'].querySelectorAll('input').length,1);
 const activeCheck=nodes['mech-neg-list'].querySelectorAll('input')[0];
@@ -160,7 +160,7 @@ assert.ok(readonly.nodes['mech-completed-list'].querySelectorAll('input').every(
 assert.equal(readonly.nodes['mech-pos-add'].style.display,'none');
 assert.equal(readonly.nodes['mech-drills-add'].style.display,'none');
 assert.equal(readonly.nodes['mech-drills-list'].querySelectorAll('input').length,0);
-assert.deepEqual(readonly.board.getValues().drills,[]);
+assert.deepEqual(Array.from(readonly.board.getValues().drills),[]);
 assert.deepEqual(readonly.board.getValues().positives,original.positives);
 
 assert.match(html,/<p class="chart-title">Pitch Distribution<\/p>/);
