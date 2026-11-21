@@ -84,7 +84,7 @@ function createBoard(initial){
      ta.dataset.mechIndex=String(i);
      ta.value=value;
      ta.rows=2;
-     ta.placeholder=group==='negatives'?'Describe the mechanical adjustment…':group==='drills'?'Name the drill, coaching cues, reps or a video link…':'Describe a mechanical strength…';
+     ta.placeholder=group==='negatives'?'Describe the mechanical adjustment…':group==='drills'?'Name the drill, coaching cues, or suggested reps…':'Describe a mechanical strength…';
      if(readonly)ta.readOnly=true;
      else ta.addEventListener('input',()=>{current[group][i]=ta.value;markUnsaved();});
      if(group==='negatives'){
