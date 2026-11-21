@@ -45,7 +45,7 @@ assert.doesNotMatch(mechanicalUi,/Mark '\+group\+' mechanical note '/,
  'mechanical strengths should not expose a Complete action');
 assert.match(mechanicalUi,/entry\.className='mech-entry mech-task-entry'/);
 assert.match(mechanicalUi,/line\.append\(spacer,ta\);entry\.append\(line\)/);
-assert.match(mechanicalUi,/state\.textContent='Strength'/);
+assert.match(mechanicalUi,/state\.textContent=group==='drills'\?'Recommended drill':'Strength'/);
 assert.match(mechanicalUi,/Remove mechanical strength /);
 assert.match(mechanicalUi,/Remove recommended drill /);
 assert.match(mechanicalUi,/mech-drills-list/);
