@@ -1,0 +1,13 @@
+{
+  "name": "diamond-zone-security-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Offline Firestore authorization regression tests; never connects to production",
+  "scripts": {
+    "test:rules": "node firestore-rules.test.cjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "12.19.0"
+  }
+}
