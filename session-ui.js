@@ -8,7 +8,8 @@ function today(){
  const d=new Date();
  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 }
-const total=record=>(record.pitches||[]).reduce((sum,p)=>sum+(p.n||0),0);
+const total=record=>(record.pitches||[]).reduce((sum,p)=>sum+
+  (Number.isFinite(p.n)&&p.n>0?p.n:0),0);
 function chooseOptions(select,records){
  select.replaceChildren();
  for(const row of records){
@@ -87,10 +88,14 @@ function renderCompare(player){
   }
   const color=cssColor(key);
   if(left?.ivb!=null&&left?.hb!=null){
-   points.push({x:left.hb,y:left.ivb,color,outline:true,tooltip:'<strong>'+name+' · Earlier</strong> IVB '+fmt(left.ivb)+'" · HB '+fmt(left.hb)+'"'});
+   points.push({x:left.hb,y:left.ivb,color,outline:true,
+     tooltipTitle:String(left?.name||right?.name||key)+' · Earlier',
+     tooltipDetails:' IVB '+fmt(left.ivb)+'" · HB '+fmt(left.hb)+'"'});
   }
   if(right?.ivb!=null&&right?.hb!=null){
-   points.push({x:right.hb,y:right.ivb,color,tooltip:'<strong>'+name+' · Later</strong> IVB '+fmt(right.ivb)+'" · HB '+fmt(right.hb)+'"'});
+   points.push({x:right.hb,y:right.ivb,color,
+     tooltipTitle:String(right?.name||left?.name||key)+' · Later',
+     tooltipDetails:' IVB '+fmt(right.ivb)+'" · HB '+fmt(right.hb)+'"'});
   }
   if(left?.ivb!=null&&left?.hb!=null&&right?.ivb!=null&&right?.hb!=null){
    connectors.push({x1:left.hb,y1:left.ivb,x2:right.hb,y2:right.ivb,color});
