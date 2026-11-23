@@ -1,0 +1,42 @@
+name: Security regression checks (no deployment)
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test_security:
+    name: XSS and Firestore emulator authorization tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out proposed changes
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate scripts and run all existing smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in *.js; do node --check "$file"; done
+          for file in tests/*-smoke.test.js; do node "$file"; done
+
+      - name: Install Java for local Firebase emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install isolated test SDK (not deployed to production)
+        run: npm install --prefix security-tests --no-audit --no-fund
+
+      - name: Verify actual Firestore rules with local emulator
+        run: npx --yes firebase-tools@15.37.0 emulators:exec --only firestore --project demo-diamond-zone-security "node security-tests/firestore-rules.test.cjs"
