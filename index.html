@@ -3088,7 +3088,7 @@ async function renderHome(){
       const searchKey=dzEscapeText((player.name+' '+(player.ageLabel||'')).toLowerCase());
       const ageKey=player.ageNum===28?'coach':String(player.ageNum)+'u';
       const affiliation=player.affiliation==='external'?'Lesson':'Program';
-      return `<a class="player-row" data-player-id="${dzEscapeText(id)}" data-search="${searchKey}" data-age="${ageKey}" href="${player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id)}">
+      return `<a class="player-row" data-player-id="${dzEscapeText(id)}" data-search="${searchKey}" data-age="${ageKey}" href="${dzEscapeText(player.publicId?window.DZ_LINK_FOR(player):'#'+encodeURIComponent(id))}">
         <div class="dz-roster-person">
           <span class="player-name">${dzEscapeText(player.name)}</span>
           <span class="dz-roster-meta">${dzEscapeText(player.ageLabel||'')} · ${affiliation}</span>
@@ -3193,7 +3193,7 @@ function renderMovementChart(player, summary){
     document.getElementById('move-caption').textContent = 'IVB vs. HB, inches — one dot per pitch, hover for detail';
     const points = player.rawPitches.filter(p=>p.ivb!==null && p.hb!==null && !DISCARD_KEYS.includes(effectiveType(p,player)) && !(player._hiddenPitchTypes||[]).includes(effectiveType(p,player))).map(p=>({
       x:p.hb, y:p.ivb, color:cssColor(TYPE_BY_KEY[effectiveType(p,player)].color),
-      tooltipTitle:`#${dzEscapeText(p.no)} · ${TYPE_BY_KEY[effectiveType(p,player)].name}`,tooltipDetails:`IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
+      tooltipTitle:`#${p.no} · ${TYPE_BY_KEY[effectiveType(p,player)].name}`,tooltipDetails:`IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
     }));
     scatterChart('chart-move', points, 'Horz. break (in) →', '↑ IVB (in)', false);
   }
@@ -3444,7 +3444,7 @@ function renderOverview(player){
   );
 
   renderPitchTable(player, summary, totalN);
-  document.getElementById('overview-footnote').innerHTML = buildFootnote(player, totalN);
+  document.getElementById('overview-footnote').textContent = buildFootnote(player, totalN).replaceAll('&ndash;','–');
 }
 
 document.querySelectorAll('#move-toggle .toggle-btn').forEach(btn=>{
