@@ -2778,7 +2778,8 @@ const TYPE_BY_KEY = Object.fromEntries(TYPE_INFO.map(t=>[t.key,t]));
 const DISCARD_KEYS = ['ot'];
 
 /* ================= Utilities ================= */
-const cssColor = k => getComputedStyle(document.documentElement).getPropertyValue('--'+k).trim();
+const cssColor = k => /^[a-zA-Z][a-zA-Z0-9-]*$/.test(String(k))
+  ? getComputedStyle(document.documentElement).getPropertyValue('--'+k).trim() : '';
 const fmt = (v,d=1) => v===null||v===undefined ? '—' : (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toString();
 function median(arr){
   const s = arr.filter(v=>v!==null&&v!==undefined).slice().sort((a,b)=>a-b);
@@ -3153,7 +3154,9 @@ function scatterChart(containerId, points, xLabel, yLabel, sizeByN, connectors=[
     const rect = container.getBoundingClientRect();
     tooltip.style.left = (clientX-rect.left)+'px';
     tooltip.style.top = (clientY-rect.top-8)+'px';
-    tooltip.innerHTML = p.tooltip;
+    const heading=document.createElement('strong');
+    heading.textContent=p.tooltipTitle;
+    tooltip.replaceChildren(heading,document.createTextNode(p.tooltipDetails));
     tooltip.classList.add('show');
   }
   container.querySelectorAll('.dot').forEach(dot=>{
@@ -3183,14 +3186,14 @@ function renderMovementChart(player, summary){
       : 'Avg IVB vs. HB, inches — hover a dot for values';
     const points = summary.filter(p=>p.ivb!==null && p.hb!==null).map(p=>({
       x:p.hb, y:p.ivb, n:p.n, color:cssColor(p.key),
-      tooltip:`<strong>${p.name}</strong>IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
+      tooltipTitle:String(p.name??""),tooltipDetails:`IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
     }));
     scatterChart('chart-move', points, 'Horz. break (in) →', '↑ IVB (in)', true);
   } else {
     document.getElementById('move-caption').textContent = 'IVB vs. HB, inches — one dot per pitch, hover for detail';
     const points = player.rawPitches.filter(p=>p.ivb!==null && p.hb!==null && !DISCARD_KEYS.includes(effectiveType(p,player)) && !(player._hiddenPitchTypes||[]).includes(effectiveType(p,player))).map(p=>({
       x:p.hb, y:p.ivb, color:cssColor(TYPE_BY_KEY[effectiveType(p,player)].color),
-      tooltip:`<strong>#${p.no} · ${TYPE_BY_KEY[effectiveType(p,player)].name}</strong>IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
+      tooltipTitle:`#${dzEscapeText(p.no)} · ${TYPE_BY_KEY[effectiveType(p,player)].name}`,tooltipDetails:`IVB ${fmt(p.ivb)}" · HB ${fmt(p.hb)}"`
     }));
     scatterChart('chart-move', points, 'Horz. break (in) →', '↑ IVB (in)', false);
   }
@@ -3295,12 +3298,12 @@ async function renderPitchTable(player, summary, totalN){
     const gradeOptions=`<option value="" ${savedGrade===null?'selected':''}>— Not graded —</option>`+
       GRADES.map(g=>`<option value="${g}" ${g===savedGrade?'selected':''}>${g}</option>`).join('');
     html += `<tr>
-      <td class="pitch-cell"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${p.name}</td>
-      <td>${p.n??'—'}</td>
+      <td class="pitch-cell"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)}</td>
+      <td>${dzEscapeText(p.n??'—')}</td>
       <td>${share}</td>
       <td style="${benchmarkCellStyle('velo',p.key,p.velo,player.ageNum)}">${fmt(p.velo)}</td>
       <td class="dim" style="${benchmarkCellStyle('veloMax',p.key,p.veloMax,player.ageNum)}">${fmt(p.veloMax)}</td>
-      <td>${p.spin===null?'<span class="na">—</span>':p.spin}</td>
+      <td>${p.spin==null?'<span class="na">—</span>':dzEscapeText(p.spin)}</td>
       <td style="${benchmarkCellStyle('ivb',p.key,p.ivb,player.ageNum)}">${p.ivb===null?'<span class="na">—</span>':fmt(p.ivb)}</td>
       <td style="${benchmarkCellStyle('hb',p.key,p.hb,player.ageNum)}">${p.hb===null?'<span class="na">—</span>':fmt(p.hb)}</td>
       <td>${p.vaa==null?'<span class="na">—</span>':fmt(p.vaa)}</td>
@@ -3308,7 +3311,7 @@ async function renderPitchTable(player, summary, totalN){
       ${hasRelease?`<td>${fmt(p.relHeight,2)}</td><td>${fmt(p.relSide,2)}</td>`:''}
       ${hasAxes?`<td>${fmt(p.axis2d,0)}</td><td>${fmt(p.axis3d,0)}</td>`:''}
       ${hasGyro?`<td>${fmt(p.gyro,0)}</td>`:''}
-      ${coachView?`<td><select class="grade-select" data-pitch-key="${p.key}" ${window.DZ_EDIT_ENABLED?'':'disabled'}>${gradeOptions}</select></td>`:''}
+      ${coachView?`<td><select class="grade-select" data-pitch-key="${dzEscapeText(p.key)}" ${window.DZ_EDIT_ENABLED?'':'disabled'}>${gradeOptions}</select></td>`:''}
       ${window.DZ_EDIT_ENABLED?`<td><button type="button" class="dz-hide-pitch" data-key="${dzEscapeText(p.key)}" data-name="${dzEscapeText(p.name)}" aria-label="Remove ${dzEscapeText(p.name)} from report">Remove</button></td>`:''}
     </tr>`;
   });
@@ -3411,7 +3414,7 @@ function renderOverview(player){
     {label: player.dataType==='raw' ? 'Fastball Med.' : 'Fastball Avg', value: fb?fmt(fb.velo):'—', small:'mph'},
   ];
   document.getElementById('kpis').innerHTML = kpiData.map(k =>
-    `<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}${k.small?` <small>${k.small}</small>`:''}</div></div>`
+    `<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value">${dzEscapeText(k.value)}${k.small?` <small>${dzEscapeText(k.small)}</small>`:''}</div></div>`
   ).join('');
 
   document.getElementById('velo-title').textContent = 'Velocity';
@@ -3420,7 +3423,7 @@ function renderOverview(player){
     : "Avg / max, mph — this is the export's average, not a true median (needs per-pitch data)";
   document.getElementById('velo-stats').innerHTML = summary.map(p=>`
     <div class="velo-row">
-      <div class="velo-name"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${p.name}</div>
+      <div class="velo-name"><span class="pitch-dot" style="background:${cssColor(p.key)}"></span>${dzEscapeText(p.name)}</div>
       <div class="velo-nums">
         <span class="velo-avg">${fmt(p.velo)}<small>${player.dataType==='raw'?'med':'avg'}</small></span>
         <span class="velo-max">${fmt(p.veloMax)} max</span>
@@ -3477,18 +3480,18 @@ function renderPitchLog(player){
     const t = effectiveType(p,player);
     const typeOptions = TYPE_INFO.map(ti=>`<option value="${ti.key}" ${ti.key===t?'selected':''}>${ti.name}</option>`).join('');
     html += `<tr>
-      <td class="dim">${p.no}</td>
-      <td class="dim">${p.date}</td>
-      <td style="text-align:left;">${window.DZ_EDIT_ENABLED? `<select class="type-select" data-pitch-no="${p.no}">${typeOptions}</select>` : dzEscapeText(TYPE_BY_KEY[t]?.name||t)}</td>
+      <td class="dim">${dzEscapeText(p.no)}</td>
+      <td class="dim">${dzEscapeText(p.date)}</td>
+      <td style="text-align:left;">${window.DZ_EDIT_ENABLED? `<select class="type-select" data-pitch-no="${dzEscapeText(p.no)}">${typeOptions}</select>` : dzEscapeText(TYPE_BY_KEY[t]?.name||t)}</td>
       <td>${fmt(p.speed)}</td>
-      <td>${p.spin ?? '<span class="na">—</span>'}</td>
-      <td class="dim">${p.tilt ?? '<span class="na">—</span>'}</td>
+      <td>${p.spin == null ? '<span class="na">—</span>' : dzEscapeText(p.spin)}</td>
+      <td class="dim">${p.tilt == null ? '<span class="na">—</span>' : dzEscapeText(p.tilt)}</td>
       <td>${p.ivb===null?'<span class="na">—</span>':fmt(p.ivb)}</td>
       <td>${p.hb===null?'<span class="na">—</span>':fmt(p.hb)}</td>
       <td class="dim">${p.ext===null?'<span class="na">—</span>':fmt(p.ext,1)}</td>
       <td class="dim">${p.relH===null?'<span class="na">—</span>':fmt(p.relH,1)}</td>
       <td class="dim">${p.relSide===null?'<span class="na">—</span>':fmt(p.relSide,1)}</td>
-      <td>${p.spinEff===null?'<span class="na">—</span>':p.spinEff+'%'}</td>
+      <td>${p.spinEff==null?'<span class="na">—</span>':dzEscapeText(p.spinEff)+'%'}</td>
     </tr>`;
   });
   html += '</tbody>';
@@ -3805,8 +3808,8 @@ async function showPlayer(id){
   document.getElementById('player-copy-status').textContent='';
   document.getElementById('session-tag-main').innerHTML =
     player.summaryOnly
-      ?`<span class="live-dot"></span><strong>${player.sessions} report${player.sessions===1?'':'s'}</strong> imported · pitch counts unavailable`
-      :`<span class="live-dot"></span><strong>${trackmanSessionCount(player)} session${trackmanSessionCount(player)===1?'':'s'}</strong> represented in imported reports`;
+      ?`<span class="live-dot"></span><strong>${dzEscapeText(player.sessions)} report${player.sessions===1?'':'s'}</strong> imported · pitch counts unavailable`
+      :`<span class="live-dot"></span><strong>${dzEscapeText(trackmanSessionCount(player))} session${trackmanSessionCount(player)===1?'':'s'}</strong> represented in imported reports`;
 
   document.getElementById('view-player').classList.toggle('dz-readonly',!window.DZ_EDIT_ENABLED);
   document.querySelectorAll('#view-player .save-row').forEach(el=>el.style.display=window.DZ_EDIT_ENABLED?'':'none');
