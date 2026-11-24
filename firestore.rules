@@ -340,7 +340,8 @@ service cloud.firestore {
         let d = request.resource.data;
         return canScreen()
           && screenDate.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
-          && d.keys().hasOnly(['date','templateId','scores','revision','updatedBy','updatedAt'])
+          && d.keys().hasOnly(['date','title','templateId','scores','revision','updatedBy','updatedAt'])
+          && (!('title' in d) || (d.title is string && d.title.size() <= 120))
           && d.keys().hasAll(['date','templateId','scores','revision','updatedBy','updatedAt'])
           && d.date == screenDate && d.templateId == 'example-v1'
           && d.scores is list && d.scores.size() == 9
