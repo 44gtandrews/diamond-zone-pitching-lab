@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id), fields=['n','velo','veloMax','spin','spinMax','ext','ivb','hb','tilt','strike','strikeExt','out','vaa','relHeight','relSide','axis2d','axis3d','gyro'];
 const names={fb:'Fastball',cb:'Curveball',ch:'ChangeUp',sk:'Sinker',sw:'Sweeper',sp:'Splitter',sl:'Slider',ct:'Cutter',kn:'Knuckleball',ot:'Other'};
 const aliases={fastball:'fb','four-seam':'fb',curveball:'cb',changeup:'ch',sinker:'sk',sweeper:'sw',splitter:'sp',slider:'sl',cutter:'ct',knuckleball:'kn',other:'ot'};
-let db,user,mode,id,rows=[],fileName='',fileHash='',pdfText='',reportFormat='count-summary',detectedThrowingHand=null,selectedSourceSessions=null,individualPitches=[],sessionDate=null,sessionFingerprint=null,reportPlayerName=null,overrideConfirmationKey=null,overridePendingKey=null;
+let db,user,mode,id,creatingManual=false,rows=[],fileName='',fileHash='',pdfText='',reportFormat='count-summary',detectedThrowingHand=null,selectedSourceSessions=null,individualPitches=[],sessionDate=null,sessionFingerprint=null,reportPlayerName=null,overrideConfirmationKey=null,overridePendingKey=null;
 const err=e=>{ $('session-import-status').textContent=String(e?.message||e); };
 const policy=()=>window.DZ_IMPORT_OVERRIDE_POLICY;
 function mismatches(date=$('session-date').value.trim()){
@@ -84,7 +84,7 @@ function render(){
  input.oninput=()=>{r[f]=f==='tilt'?input.value.trim()||null:num(input.value,['n','spin','spinMax','strike','strikeExt','out'].includes(f));};c.append(input);tr.append(c);});
  const c=document.createElement('td'),b=document.createElement('button');b.type='button';b.textContent='Remove';b.onclick=()=>{rows.splice(i,1);render();};c.append(b);tr.append(c);body.append(tr);});
 }
-function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;reportPlayerName=null;$('session-date').value='';$('session-admin-override').checked=false;$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';refreshOverrideWarning();err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
+function open(m,pid){if(!window.DZ_AUTHORIZED || !window.DZ_CAN_UPLOAD)return;mode=m;id=pid;rows=[];fileHash='';fileName='';pdfText='';reportFormat='count-summary';detectedThrowingHand=null;selectedSourceSessions=null;individualPitches=[];sessionDate=null;sessionFingerprint=null;reportPlayerName=null;$('session-date').value='';$('session-admin-override').checked=false;$('session-file').value='';if(m==='new'){$('session-player-name').value='';$('session-player-age').value='';$('session-player-affiliation').value='internal';}$('session-review').style.display='none';$('session-create-manual').style.display=m==='new'&&window.DZ_IS_ADMIN?'':'none';$('session-import-title').textContent=m==='new'?'Add New Pitcher':'Upload New Session';$('session-new-fields').style.display=m==='new'?'grid':'none';$('session-target').textContent=m==='update'?(PLAYERS[pid]?.name||''):'';$('session-import-overlay').style.display='block';document.body.style.overflow='hidden';refreshOverrideWarning();err('Choose a Trackman PDF, CSV, or JSON, then review the summary before saving.');}
 function close(){clearOverrideConfirmation();$('session-import-overlay').style.display='none';document.body.style.overflow='';}
 function observedCount(p,f){
  const n=p.validCounts?.[f];
@@ -116,6 +116,39 @@ function merge(existing,incoming){
  }
  return [...map.values()].sort((a,b)=>b.n-a.n);
 }
+function newPlayerFields(){
+ const playerName=$('session-player-name').value.trim(),age=$('session-player-age').value,affiliation=$('session-player-affiliation').value;
+ if(!/^[A-Za-z][A-Za-z .'-]{1,99}$/.test(playerName)||!age)throw Error('Enter player name and age group.');
+ if(!['internal','external'].includes(affiliation))throw Error('Choose Internal or External.');
+ return {name:playerName,ageLabel:age==='Coach'?'Coach / Adult':age+'U',ageNum:age==='Coach'?28:Number(age),affiliation};
+}
+$('session-create-manual').onclick=async()=>{
+ if(creatingManual||mode!=='new'||!window.DZ_AUTHORIZED||!window.DZ_IS_ADMIN||!db||!user)return;
+ const button=$('session-create-manual'),save=$('session-save'),read=$('session-read');
+ if(read.disabled||save.disabled)return;
+ try{
+  const fields=newPlayerFields();
+  if($('session-file').files.length&&!window.confirm('Create this player without importing the selected TrackMan file?'))return;
+  creatingManual=true;button.disabled=true;save.disabled=true;read.disabled=true;err('Creating player without TrackMan data...');
+  const pid='p-'+crypto.randomUUID().replace(/-/g,''),ref=db.collection('players').doc(pid);
+  let created=false;
+  for(let attempt=0;attempt<24&&!created;attempt++){
+   const random=new Uint32Array(1);crypto.getRandomValues(random);
+   const publicId=String(100000+(random[0]%900000)),codeRef=db.collection('playerCodes').doc(publicId);
+   created=await db.runTransaction(async tx=>{
+    const [playerSnap,codeSnap]=await Promise.all([tx.get(ref),tx.get(codeRef)]);
+    if(playerSnap.exists)throw Error('Player record already exists. Please retry.');
+    if(codeSnap.exists)return false;
+    tx.set(codeRef,{playerId:pid});
+    tx.set(ref,{id:pid,publicId,...fields,sessions:0,dataType:'aggregate',summaryOnly:false,throwingHand:null,discardedUndefined:0,pitches:[],createdBy:user.email,updatedBy:user.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),importHistory:[]});
+    return true;
+   });
+  }
+  if(!created)throw Error('Unable to reserve a unique six-digit ID. Please try again.');
+  try{await window.DZ_RELOAD_ROSTER();close();await window.DZ_OPEN_PLAYER(pid);}
+  catch(e){close();window.alert('Player created. Reload the portal to open the profile.');}
+ }catch(e){err(e);}finally{creatingManual=false;button.disabled=false;save.disabled=false;read.disabled=false;}
+};
 $('cloud-add-player').onclick=()=>open('new');
 $('cloud-update-player').onclick=()=>open('update',window.DZ_CURRENT_PLAYER());
 $('session-cancel').onclick=close;
@@ -210,7 +243,7 @@ $('session-save').onclick=async()=>{
  if(rows.length>8)throw Error('This report has more than eight pitch types. Remove the unwanted types from the review table before saving (up to 8 supported per profile).');
  if(mode==='update'){
    const existing=PLAYERS[id];
-   if(Boolean(existing?.summaryOnly)!==(reportFormat==='pitch-type-summary')){
+   if(!dzNoTrackman(existing)&&Boolean(existing?.summaryOnly)!==(reportFormat==='pitch-type-summary')){
      throw Error('Cannot combine a multi-session averages report with a count-based player profile: the data are not mathematically compatible. Please use a count-based single-session report for this player, or create a separate summary profile.');
    }
  }
@@ -257,7 +290,7 @@ $('session-save').onclick=async()=>{
    // not the bounded /players import-history array (Firestore 1 MiB limit).
    audit.pitchDataStoredInSession=true;
  }
- if(reportFormat==='pitch-type-summary'&&mode==='update'){
+ if(reportFormat==='pitch-type-summary'&&mode==='update'&&!dzNoTrackman(PLAYERS[id])){
    if(!window.confirm('Replace this player\'s prior pitch-type averages with this report? The previous averages will remain in the import history, and scouting grades/notes will be preserved. Pitch counts and usage are not available in this report.'))return;
  }
  $('session-save').disabled=true;err('Saving shared player data...');
@@ -288,7 +321,8 @@ $('session-save').onclick=async()=>{
      if(existingSession.exists)throw Error('This session is already stored for this player.');
      if(!snap.exists)throw Error('Player no longer exists');
      const old=snap.data();
-     if(Boolean(old.summaryOnly)!==(reportFormat==='pitch-type-summary'))
+     const firstImport=dzNoTrackman(old);
+     if(!firstImport&&Boolean(old.summaryOnly)!==(reportFormat==='pitch-type-summary'))
        throw Error('Profile report type changed; reload the roster and retry. Averages-only and counted reports cannot be combined.');
      if(old.inactive===true)throw Error('This player is inactive. An administrator must reactivate the profile before uploading another session.');
      if(old.dataType!=='aggregate')throw Error('Raw pitch-log players cannot yet receive aggregate session uploads.');
@@ -296,7 +330,7 @@ $('session-save').onclick=async()=>{
      if(history.some(h=>h.sha256===fileHash ||
        (sessionFingerprint&&h.sessionFingerprint===sessionFingerprint)))
        throw Error('This Trackman session has already been imported for this player.');
-     if(!baselineSnap.exists){
+     if(!baselineSnap.exists&&!firstImport){
        // The first post-upgrade upload atomically freezes all pre-existing
        // aggregate data. Its source dates are unknown, so it NEVER qualifies
        // as an individual session in 60-day / 365-day windows.
@@ -309,7 +343,11 @@ $('session-save').onclick=async()=>{
        });
      }
      tx.set(sessionRef,sessionRecord);
-     if(reportFormat==='pitch-type-summary'){
+     if(firstImport){
+       // No fabricated baseline or prior session. The first real report determines the data format.
+       history.push(audit);
+       tx.update(ref,{pitches:incoming,sessions:1,summaryOnly:reportFormat==='pitch-type-summary',throwingHand:detectedThrowingHand,updatedBy:user.email,updatedAt:now,importHistory:history});
+     }else if(reportFormat==='pitch-type-summary'){
        // Preserve the previous snapshot inside the existing allowed audit
        // field, and replace rather than falsely adding unknown pitch counts.
        audit.replacedSnapshot=old.pitches;

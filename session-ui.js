@@ -124,7 +124,15 @@ async function load(player){
  const nonce=++version;
  $('dz-session-controls').style.display=player.dataType==='aggregate'?'':'none';
  $('dz-session-history').style.display='none';
+ $('dz-session-comparison').style.display='none';
  delete player._periodView;
+ if(dzNoTrackman(player)){
+  state={id:null,records:[],mode:'auto',comparing:false,earlier:null,later:null};
+  $('dz-session-controls').style.display='none';
+  $('dz-session-compare').disabled=true;
+  renderOverview(player);
+  return;
+ }
  if(player.dataType!=='aggregate')return;
  state={id:player.id,records:[],mode:'auto',comparing:false,earlier:null,later:null};
  $('dz-session-status').textContent='Loading session history...';

@@ -2122,6 +2122,8 @@
   }
 
 
+  /* Manual profile placeholder */
+  .dz-no-trackman{padding:32px 12px;text-align:center;color:#A4BDC5;font:600 13px/1.5 Inter,sans-serif;caption-side:top}
   /* Movement screening preview: private staff-only matrix, scrollable on mobile. */
   #dz-screening[hidden],body:not([data-dz-role="admin"]):not([data-dz-role="pitching_coach"]) #dz-screening{display:none!important}
   #dz-screening{background:#0E2028;border:1px solid #31505B;border-radius:8px;padding:20px;margin-bottom:24px;color:#EAF6F8}
@@ -2508,7 +2510,7 @@
         </div>
         <div class="session-tag">
           <div id="session-tag-main"></div>
-          <div style="margin-top:4px;">Source: Trackman Team Portal export</div>
+          <div id="session-tag-source" style="margin-top:4px;">Source: Trackman Team Portal export</div>
         </div>
       </div>
     </div>
@@ -2902,6 +2904,7 @@ function groupByType(player){
   player.rawPitches.forEach(p=>groups[effectiveType(p,player)].push(p));
   return groups;
 }
+function dzNoTrackman(player){return !!player&&player.dataType==='aggregate'&&player.sessions===0&&Array.isArray(player.pitches)&&player.pitches.length===0;}
 function getTypeSummary(player){
   const hidden=player._hiddenPitchTypes||[];
   if(player.dataType==='aggregate'){
@@ -3153,7 +3156,7 @@ async function renderHome(){
           <span class="player-name">${dzEscapeText(player.name)}</span>
           <span class="dz-roster-meta">${dzEscapeText(player.ageLabel||'')} · ${affiliation}</span>
         </div>
-        <div class="dz-pitch-usage" aria-label="${player.summaryOnly?'Pitch-type averages; usage unavailable':'Pitches ordered by usage'} with age-based scouting grades and average velocity">${usage||'<span class="player-blurb">No pitches displayed</span>'}</div>
+        <div class="dz-pitch-usage" aria-label="${player.summaryOnly?'Pitch-type averages; usage unavailable':'Pitches ordered by usage'} with age-based scouting grades and average velocity">${usage||(dzNoTrackman(player)?'<span class="player-blurb">No TrackMan data yet</span>':'<span class="player-blurb">No pitches displayed</span>')}</div>
         <span class="chevron" aria-hidden="true">›</span>
       </a>`;
     }));
@@ -3342,6 +3345,7 @@ function renderHiddenPitchControls(player){
 async function renderPitchTable(player, summary, totalN){
   const coachView=window.DZ_ROLE!=='player_parent';
   if(coachView)await ensureGradesLoaded(player);
+  if(currentPlayerId!==player.id)return;
   const savedGrades=coachView?(player._gradesByPitch||{}):{};
 
   const hasRelease=summary.some(p=>p.relHeight!=null||p.relSide!=null);
@@ -3439,6 +3443,7 @@ function highestGradedPitch(player,summary){
 }
 function refreshHighestGradedPitchKpi(player){
   if(window.DZ_ROLE==='player_parent'||currentPlayerId!==player.id)return;
+  if(dzNoTrackman(player))return;
   const field=document.querySelector('#kpis .kpi:nth-child(4) .kpi-value');
   if(!field)return;
   const best=highestGradedPitch(player,getTypeSummary(player));
@@ -3461,6 +3466,28 @@ function trackmanSessionCount(player){
 }
 
 function renderOverview(player){
+  if(dzNoTrackman(player)){
+    const metrics=['Total Pitches','Sessions','Pitch Types',...(window.DZ_ROLE==='player_parent'?[]:['Highest Graded Pitch']),'Fastball Avg'];
+    const kpis=document.getElementById('kpis');kpis.replaceChildren();
+    for(const label of metrics){
+      const cell=document.createElement('div');cell.className='kpi';
+      const name=document.createElement('div');name.className='kpi-label';name.textContent=label;
+      const value=document.createElement('div');value.className='kpi-value';value.textContent='N/A';
+      cell.append(name,value);kpis.append(cell);
+    }
+    const noData='N/A — no TrackMan report uploaded';
+    for(const id of ['velo-stats','chart-move','chart-usage','pitch-table']){
+      const el=document.getElementById(id);el.replaceChildren();
+      const msg=document.createElement(id==='pitch-table'?'caption':'div');msg.className='dz-no-trackman';msg.textContent=noData;el.append(msg);
+    }
+    document.getElementById('move-toggle').style.display='none';
+    document.getElementById('velo-caption').textContent='Awaiting first report';
+    document.getElementById('move-caption').textContent='Awaiting first report';
+    document.getElementById('usage-caption').textContent='Awaiting first report';
+    document.getElementById('overview-footnote').textContent='This profile was created without a TrackMan report. Coaching tabs are available; pitching analytics will populate after the first upload.';
+    const hiddenControls=document.getElementById('dz-hidden-pitches');hiddenControls.replaceChildren();hiddenControls.style.display='none';
+    return;
+  }
   const summary = getTypeSummary(player);
   const totalN = summary.reduce((s,p)=>s+(Number.isFinite(p.n)?p.n:0),0);
   const topGraded = window.DZ_ROLE==='player_parent'?null:highestGradedPitch(player,summary);
@@ -3870,8 +3897,9 @@ async function showPlayer(id){
   document.getElementById('player-public-id').textContent=hasCode?'Player ID: '+player.publicId:'Player ID pending administrator assignment';
   document.getElementById('player-copy-link').disabled=!hasCode;
   document.getElementById('player-copy-status').textContent='';
+  document.getElementById('session-tag-source').textContent=dzNoTrackman(player)?'Manual profile · awaiting first report':'Source: Trackman Team Portal export';
   document.getElementById('session-tag-main').innerHTML =
-    player.summaryOnly
+    dzNoTrackman(player)?'<strong>No TrackMan data yet</strong>':player.summaryOnly
       ?`<span class="live-dot"></span><strong>${dzEscapeText(player.sessions)} report${player.sessions===1?'':'s'}</strong> imported · pitch counts unavailable`
       :`<span class="live-dot"></span><strong>${dzEscapeText(trackmanSessionCount(player))} session${trackmanSessionCount(player)===1?'':'s'}</strong> represented in imported reports`;
 
@@ -3918,6 +3946,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
       <label>Program affiliation<select id="session-player-affiliation" required><option value="internal">Internal · DiamondZone program</option><option value="external">External · Lessons / other teams</option></select></label>
       <label>Age group<select id="session-player-age"><option value="">Select group</option><option value="10">10U</option><option value="11">11U</option><option value="12">12U</option><option value="13">13U</option><option value="14">14U</option><option value="15">15U</option><option value="16">16U</option><option value="17">17U</option><option value="18">18U</option><option value="Coach">Coach / Adult</option></select></label>
     </div>
+    <div id="session-manual-actions" class="cloud-actions"><button type="button" class="cloud-button secondary" id="session-create-manual" style="display:none;">Create without TrackMan report</button></div>
     <label class="field-label" for="session-file">Trackman session file (PDF, CSV, JSON; max 5 MB)</label>
     <input type="file" id="session-file" accept=".pdf,.csv,.json,application/pdf,text/csv,application/json">
     <label class="field-label" for="session-date">Session date <span style="color:#87AAB2;font-size:11px">(required for individual sessions; verified PDFs fill this automatically)</span></label>

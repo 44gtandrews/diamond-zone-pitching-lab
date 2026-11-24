@@ -8,7 +8,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=
   require('@firebase/rules-unit-testing');
-const {doc,collection,getDoc,getDocs,setDoc,updateDoc,deleteDoc,serverTimestamp}=
+const {doc,collection,getDoc,getDocs,setDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch}=
   require('firebase/firestore');
 
 const PROJECT_ID='demo-diamond-zone-security';
@@ -234,6 +234,42 @@ async function main(){
   await success('admin can clear optional title',updateDoc(screenRef(admin),{title:'',revision:4,updatedBy:'admin@example.test',updatedAt:serverTimestamp()}));
   await denied('pitching coach cannot delete screening history',deleteDoc(screenRef(pitching)));
   await success('admin may delete screening',deleteDoc(screenRef(admin)));
+
+  // Manual profile is an actual empty aggregate, not a fabricated session.
+  const manualProfile=(id,code,email)=>({id,publicId:code,name:'New Sample Player',ageNum:14,ageLabel:'14U',affiliation:'internal',
+   sessions:0,dataType:'aggregate',summaryOnly:false,throwingHand:null,discardedUndefined:0,pitches:[],importHistory:[],
+   createdBy:email,updatedBy:email,updatedAt:serverTimestamp()});
+  function createManual(db,id,code,email){
+   const batch=writeBatch(db);
+   batch.set(doc(db,'players',id),manualProfile(id,code,email));
+   batch.set(doc(db,'playerCodes',code),{playerId:id});
+   return batch.commit();
+  }
+  await success('administrator creates manual player with reserved public ID',createManual(admin,'manual-player','234567','admin@example.test'));
+  await success('administrator creates second manual player for counted first report',createManual(admin,'manual-counted','234568','admin@example.test'));
+  await denied('pitching coach cannot create manual player',createManual(pitching,'manual-denied','234569','pitcher@example.test'));
+  await denied('ordinary coach cannot create manual player',createManual(coach,'manual-coach','234570','coach@example.test'));
+  await denied('parent cannot create manual player',createManual(parentA,'manual-parent','234571','parent-a@example.test'));
+  const emptyProfile=(await getDoc(doc(pitching,'players','manual-player'))).data();
+  assert.equal(emptyProfile.sessions,0);
+  assert.deepEqual(emptyProfile.pitches,[]);
+  assert.equal((await getDocs(collection(pitching,'players','manual-player','sessions'))).size,0);
+  function firstReport(id,summaryOnly){
+   const batch=writeBatch(pitching),pitch={key:'fb',name:'Fastball',n:summaryOnly?null:10,velo:70};
+   batch.update(doc(pitching,'players',id),{pitches:[pitch],sessions:1,summaryOnly,throwingHand:'R',updatedBy:'pitcher@example.test',updatedAt:serverTimestamp(),importHistory:[{reportFormat:summaryOnly?'pitch-type-summary':'count-summary'}]});
+   batch.set(doc(pitching,'players',id,'sessions','first-report'),{id:'first-report',kind:summaryOnly?'historical':'single',pitches:[pitch],pitchData:[],importedBy:'pitcher@example.test'});
+   return batch.commit();
+  }
+  await success('pitching coach imports first averages-only report into manual player',firstReport('manual-player',true));
+  await success('pitching coach imports first counted report into manual player',firstReport('manual-counted',false));
+  const populated=(await getDoc(doc(pitching,'players','manual-player'))).data();
+  assert.equal(populated.sessions,1);
+  assert.equal(populated.summaryOnly,true);
+  assert.equal(populated.publicId,'234567');
+  assert.equal(populated.throwingHand,'R');
+  assert.equal((await getDocs(collection(pitching,'players','manual-player','sessions'))).size,1);
+  await denied('pitching coach cannot change report type on established profile',updateDoc(doc(pitching,'players','manual-player'),{sessions:2,summaryOnly:false,pitches:[{key:'fb',name:'Fastball',n:10,velo:70}]}));
+  await denied('pitching coach cannot change public ID on established profile',updateDoc(doc(pitching,'players','manual-counted'),{sessions:2,publicId:'234572',pitches:[{key:'fb',name:'Fastball',n:20,velo:71}]}));
 
   assert.ok(cases>=35,'Expected substantial independent allow/deny coverage');
   console.log('PASS: '+cases+' real Firestore emulator authorization assertions.');

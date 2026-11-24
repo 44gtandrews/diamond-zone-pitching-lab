@@ -714,10 +714,10 @@
   function validPlayer(p) {
     if(!p||typeof p!=='object'||!/^[a-z0-9-]{1,65}$/.test(p.id||'')||typeof p.name!=='string'||
        p.name.length>140||typeof p.ageLabel!=='string'||!Number.isInteger(p.ageNum)||
-       !Number.isInteger(p.sessions)||p.sessions<1||!['aggregate','raw'].includes(p.dataType)||
+       !Number.isInteger(p.sessions)||p.sessions<0||!['aggregate','raw'].includes(p.dataType)||
        !(Array.isArray(p.pitches)||Array.isArray(p.rawPitches))) throw Error('Invalid player: '+String(p&&p.id));
-    if(p.dataType==='raw'&&(!Array.isArray(p.rawPitches)||!p.rawPitches.length))throw Error('Raw pitch list missing: '+p.name);
-    if(p.dataType==='aggregate'&&(!Array.isArray(p.pitches)||!p.pitches.length))throw Error('Pitch summaries missing: '+p.name);
+    if(p.dataType==='raw'&&(p.sessions<1||!Array.isArray(p.rawPitches)||!p.rawPitches.length))throw Error('Raw pitch list missing: '+p.name);
+    if(p.dataType==='aggregate'&&(!Array.isArray(p.pitches)||(!dzNoTrackman(p)&&(p.sessions<1||!p.pitches.length))))throw Error('Pitch summaries missing: '+p.name);
   }
   $('cloud-import').addEventListener('click',async()=>{
     if(staff?.role!=='admin')return;
