@@ -23,6 +23,7 @@
     window.DZ_SET_PORTAL_LOADING?.(false);
     window.DZ_AT_HOME_RESET?.();
     window.DZ_PITCH_COUNTS_RESET?.();
+    window.DZ_SCREENING_RESET?.();
     window.DZ_AUTHORIZED=false;
     window.DZ_SESSIONS_DB=null;
     window.DZ_IS_ADMIN=false;
@@ -680,14 +681,16 @@
     // An atomic batch prevents a partially deleted profile. We intentionally
     // retain the anonymous /playerCodes/{code} reservation as a permanent
     // tombstone, so an old share link cannot be assigned to a different athlete.
-    const [sections,sessions]=await Promise.all([
+    const [sections,sessions,screenings]=await Promise.all([
       db.collection('playerEdits').doc(id).collection('sections').get(),
-      ref.collection('sessions').get()
+      ref.collection('sessions').get(),
+      ref.collection('movementScreens').get()
     ]);
-    if(sections.size+sessions.size>450)throw Error('Large player/session history: contact an administrator to safely remove it in multiple batches.');
+    if(sections.size+sessions.size+screenings.size>450)throw Error('Large player/session history: contact an administrator to safely remove it in multiple batches.');
     const batch=db.batch();
     sections.forEach(doc=>batch.delete(doc.ref));
     sessions.forEach(doc=>batch.delete(doc.ref));
+    screenings.forEach(doc=>batch.delete(doc.ref));
     batch.delete(ref);
     await batch.commit();
     const wasOpenProfile=window.DZ_CURRENT_PLAYER()===id;
@@ -813,6 +816,7 @@
       payload.collections.playerEdits=[];
       payload.collections.playerSessions=[];
       payload.collections.playerPitchCounts=[];
+      payload.collections.playerMovementScreens=[];
       const players=snaps[0].docs;
       // Reading one player's note sections at a time avoids bursty Firestore reads.
       for(let i=0;i<players.length;i++){
@@ -829,6 +833,8 @@
         dailyCounts.docs.forEach(doc=>payload.collections.playerPitchCounts.push({
           playerId:player.id,id:doc.id,data:dzEncodeBackup(doc.data())
         }));
+        const screenings=await db.collection('players').doc(player.id).collection('movementScreens').get();
+        screenings.docs.forEach(doc=>payload.collections.playerMovementScreens.push({playerId:player.id,id:doc.id,data:dzEncodeBackup(doc.data())}));
         if((i+1)%10===0)dzBackupMessage('Collecting notes and grades: '+(i+1)+' / '+players.length+' players...');
       }
       const stamp=new Date().toISOString().slice(0,10);
@@ -837,6 +843,7 @@
         payload.collections.playerEdits.length+' coaching records, '+
         payload.collections.playerSessions.length+' preserved sessions, '+
         payload.collections.playerPitchCounts.length+' daily pitch counts, '+
+        payload.collections.playerMovementScreens.length+' private movement screenings, '+
         payload.collections.playerCodes.length+' player IDs, '+
         payload.collections.allowlist.length+' staff records and '+
         payload.collections.coachRequests.length+' coach requests. Store the JSON securely.');
@@ -849,7 +856,9 @@
        !parsed.collections||typeof parsed.collections!=='object')throw Error('Select a DiamondZone FULL backup (schema version 2).');
     if(parsed.projectId!==firebase.app().options.projectId)
       throw Error('Backup is from a different Firebase project. Restore cancelled.');
-    const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits','playerSessions','playerPitchCounts'];
+    // An optional schema-4 extension; older backups have no screening data.
+    if(!('playerMovementScreens' in parsed.collections))parsed.collections.playerMovementScreens=[];
+    const arrays=['players','playerCodes','allowlist','coachRequests','playerEdits','playerSessions','playerPitchCounts','playerMovementScreens'];
     if(parsed.schemaVersion===2&&!('playerSessions' in parsed.collections))
       parsed.collections.playerSessions=[];
     if(parsed.schemaVersion<4&&!('playerPitchCounts' in parsed.collections))
@@ -865,7 +874,7 @@
         if(!item || typeof item!=='object' || !item.data || typeof item.data!=='object')
           throw Error('Invalid '+key+' entry.');
         const id=key==='playerEdits'?String(item.playerId||'')+':'+String(item.section||''):
-          ['playerSessions','playerPitchCounts'].includes(key)?String(item.playerId||'')+':'+String(item.id||''):String(item.id||'');
+          ['playerSessions','playerPitchCounts','playerMovementScreens'].includes(key)?String(item.playerId||'')+':'+String(item.id||''):String(item.id||'');
         if(!id||id.includes('/')||seen.has(id))throw Error('Invalid or duplicate '+key+' ID: '+id);
         seen.add(id);
         return {...item,data:dzDecodeBackup(item.data)};
@@ -905,6 +914,10 @@
          !Number.isInteger(item.data.count)||item.data.count<1||item.data.count>999||
          (item.data.type!=null&&!['game','bullpen'].includes(item.data.type)))
         throw Error('Invalid daily pitch-count entry: '+item.playerId+' / '+item.id);
+    }
+    for(const item of decoded.playerMovementScreens){
+      if(!backupPlayers.has(item.playerId)||!window.DZ_MOVEMENT_SCREENING?.validRecord(item.data,item.id))
+        throw Error('Invalid movement screening backup entry.');
     }
     for(const item of decoded.playerEdits){
       if(!backupPlayers.has(item.playerId)||
@@ -1015,6 +1028,16 @@
             updatedBy:activeUser.email.toLowerCase(),
             updatedAt:firebase.firestore.FieldValue.serverTimestamp()
           }),20);
+      }
+      // Restore private screens with a fresh authenticated timestamp. Preserve newer live assessments.
+      for(const item of decoded.playerMovementScreens){
+        const target=db.collection('players').doc(item.playerId).collection('movementScreens').doc(item.id);
+        await db.runTransaction(async tx=>{
+          const current=await tx.get(target);
+          if(current.exists)return;
+          tx.set(target,{date:item.id,templateId:item.data.templateId,scores:item.data.scores,revision:1,
+            updatedBy:activeUser.email.toLowerCase(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+        });
       }
       // Stage 3: create only missing reservations; never overwrite an existing code.
       const missingCodes=decoded.playerCodes.filter(item=>
