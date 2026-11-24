@@ -324,6 +324,41 @@ service cloud.firestore {
         && request.resource.data.revision == resource.data.revision + 1;
       allow delete: if isAdmin() && libraryId == 'library';
     }
+    // Private movement screens are in their own collection, not staff-wide sections.
+    match /players/{playerId}/movementScreens/{screenDate} {
+      function playerExists() {
+        return exists(/databases/$(database)/documents/players/$(playerId));
+      }
+      function canScreen() {
+        return canWritePitching() && playerExists()
+          && (isAdmin() || get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
+      }
+      function validScore(v) {
+        return v == null || v == 'P' || (v is int && v >= 0 && v <= 2);
+      }
+      function validScreen() {
+        let d = request.resource.data;
+        return canScreen()
+          && screenDate.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+          && d.keys().hasOnly(['date','templateId','scores','revision','updatedBy','updatedAt'])
+          && d.keys().hasAll(['date','templateId','scores','revision','updatedBy','updatedAt'])
+          && d.date == screenDate && d.templateId == 'example-v1'
+          && d.scores is list && d.scores.size() == 9
+          && validScore(d.scores[0]) && validScore(d.scores[1]) && validScore(d.scores[2])
+          && validScore(d.scores[3]) && validScore(d.scores[4]) && validScore(d.scores[5])
+          && validScore(d.scores[6]) && validScore(d.scores[7]) && validScore(d.scores[8])
+          && d.revision is int && d.revision >= 1
+          && d.updatedBy == request.auth.token.email.lower()
+          && d.updatedAt == request.time;
+      }
+      allow get, list: if canScreen();
+      allow create: if validScreen() && request.resource.data.revision == 1;
+      allow update: if validScreen()
+        && request.resource.data.templateId == resource.data.templateId
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if isAdmin();
+    }
+
     match /playerCodes/{code} {
       allow get, list: if canViewAll();
       allow create: if canWritePitching()

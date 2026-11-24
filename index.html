@@ -2121,6 +2121,45 @@
     .mech-task-entry .mech-textarea{min-height:42px;}
   }
 
+
+  /* Movement screening preview: private staff-only matrix, scrollable on mobile. */
+  #dz-screening[hidden],body:not([data-dz-role="admin"]):not([data-dz-role="pitching_coach"]) #dz-screening{display:none!important}
+  #dz-screening{background:#0E2028;border:1px solid #31505B;border-radius:8px;padding:20px;margin-bottom:24px;color:#EAF6F8}
+  .dz-screening-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .dz-screening-head h2{font:800 21px Inter,sans-serif;margin:0 0 6px;color:#F4FBFC}
+  .dz-screening-head p,.dz-screening-help,.dz-screening-empty{font:400 12px/1.5 Inter,sans-serif;color:#A4BDC5;margin:6px 0}
+  .dz-screening-private{color:#B3E8EA;font:700 10px Inter,sans-serif;padding:7px 10px;border:1px solid #286D77;border-radius:4px;background:#153943}
+  .dz-screening-controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:16px 0 12px}
+  .dz-screening-controls label{display:grid;gap:6px;color:#D7E9ED;font:600 11px Inter,sans-serif}
+  .dz-screening-controls input{padding:9px;background:#0C2027;color:#ECF6F7;border:1px solid #39606B;border-radius:4px;font:600 12px Inter,sans-serif;color-scheme:dark}
+  .dz-screening-legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;font:600 11px Inter,sans-serif}
+  .dz-screening-legend span{padding:6px 8px;border-radius:4px;border:1px solid #39606B}
+  .dz-screening-scroll{overflow-x:auto;max-width:100%;border:1px solid #31505B;border-radius:5px}
+  .dz-screening-table{border-collapse:separate;border-spacing:0;width:100%;font:500 12px Inter,sans-serif}
+  .dz-screening-table th,.dz-screening-table td{border-bottom:1px solid #29424D;border-right:1px solid #29424D;padding:8px 10px;text-align:center;vertical-align:middle}
+  .dz-screening-table .dz-screening-label{position:sticky;left:0;z-index:1;text-align:left;background:#102A34;min-width:142px;color:#ECF7F8}
+  .dz-screening-table thead th{background:#17353F}
+  .dz-screening-assessment{min-width:172px;white-space:nowrap}
+  .dz-screening-date-label{display:block;color:#ECF7F8;font-weight:800}
+  .dz-screening-period,.dz-screening-save-state{display:block;color:#A4BDC5;font-size:10px;margin:5px 0}
+  .dz-screening-col-actions{display:flex;justify-content:center;gap:6px}
+  .dz-screening-action{border:1px solid #39888D;border-radius:4px;background:#18545A;color:#F2FFFF;font:700 11px Inter,sans-serif;padding:7px 10px;cursor:pointer}
+  .dz-screening-action:disabled{opacity:.45;cursor:default}
+  .dz-screening-discard{background:#20333C;border-color:#47616A}
+  .dz-screening-group th,.dz-screening-group td{background:#15414A!important;color:#D4F5F5!important;text-transform:uppercase;font-size:10px;letter-spacing:.08em}
+  .dz-screening-score-cell{padding:4px!important;background:#11232C}
+  .dz-screening-score{display:block;width:100%;padding:8px 5px;border:1px solid #44616B;border-radius:3px;color:#EEF7F8;background:#20343D;font:700 12px Inter,sans-serif;color-scheme:dark}
+  .dz-screening-score[data-score="2"],.dz-screening-legend [data-score="2"],[data-total="pass"]{background:#154D39;color:#B8F7CC}
+  .dz-screening-score[data-score="1"],.dz-screening-legend [data-score="1"],[data-total="limited"]{background:#59451A;color:#FFE6A1}
+  .dz-screening-score[data-score="0"],.dz-screening-legend [data-score="0"],[data-total="fail"]{background:#59272A;color:#FFD0D0}
+  .dz-screening-score[data-score="P"],.dz-screening-legend [data-score="P"],[data-total="pain"]{background:#592744;color:#FFD2EF}
+  .dz-screening-legend [data-score="blank"],[data-total="partial"]{background:#20343D;color:#C5D6DC}
+  .dz-screening-total-value{font-weight:800;font-size:11px}
+  .dz-screening-total .dz-screening-label,.dz-screening-overall .dz-screening-label{font-weight:800;background:#17343F}
+  .dz-screening-overall th,.dz-screening-overall td{border-top:2px solid #31929A;font-weight:800}
+  #dz-screening-status{font:500 12px/1.5 Inter,sans-serif;color:#A4E4E7;min-height:18px;margin-top:10px}
+  #dz-screening-status.dz-screening-error{color:#FFB1B1}
+  @media(max-width:560px){#dz-screening{padding:12px}.dz-screening-table .dz-screening-label{min-width:108px}.dz-screening-assessment{min-width:145px}.dz-screening-table th,.dz-screening-table td{padding:7px}}
 </style>
 </head>
 <body>
@@ -2634,6 +2673,22 @@
 
     <!-- STRENGTH & MOBILITY -->
     <div class="panel" id="panel-strength">
+      <section id="dz-screening" hidden aria-label="Private movement screening">
+        <div class="dz-screening-head">
+          <div><h2>Movement Screening</h2><p>Example template · score each test and compare dated assessments.</p></div>
+          <span class="dz-screening-private">ADMIN + PITCHING COACH ONLY</span>
+        </div>
+        <div class="dz-screening-controls">
+          <label>Assessment date<input type="date" id="dz-screening-date"></label>
+          <button type="button" class="dz-screening-action" id="dz-screening-add" disabled>+ New screening</button>
+        </div>
+        <div class="dz-screening-legend" aria-label="Screening score key">
+          <span data-score="2">2 · Pass</span><span data-score="1">1 · Limited</span><span data-score="0">0 · Fail</span><span data-score="P">P · Pain / stop test</span><span data-score="blank">— Not tested</span>
+        </div>
+        <p class="dz-screening-help">Totals update automatically. Blank and pain scores are not failures; incomplete totals show scoring coverage. Placeholder tests are not a validated clinical screening protocol.</p>
+        <div class="dz-screening-scroll" id="dz-screening-matrix" tabindex="0" aria-label="Scrollable screening table"></div>
+        <p id="dz-screening-status" role="status" aria-live="polite"></p>
+      </section>
       <div class="field-block">
         <div class="field-label">Strength &amp; mobility concerns</div>
         <div class="field-hint">Screening notes, restrictions, or things to monitor through the winter.</div>
@@ -3626,6 +3681,7 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab==='at-home')window.DZ_AT_HOME_OPEN?.(currentPlayerId);
     if(btn.dataset.tab==='pitch-counts')window.DZ_PITCH_COUNTS_OPEN?.(currentPlayerId);
+    if(btn.dataset.tab==='strength')window.DZ_SCREENING_OPEN?.(currentPlayerId);
   });
 });
 
@@ -3722,6 +3778,7 @@ function showAdmin(){
   if(!window.DZ_AUTHORIZED || !window.DZ_IS_ADMIN){showHome();return;}
   window.DZ_AT_HOME_RESET?.();
   window.DZ_PITCH_COUNTS_RESET?.();
+  window.DZ_SCREENING_RESET?.();
   currentPlayerId=null;
   document.getElementById('view-player').style.display='none';
   document.getElementById('view-home').style.display='none';
@@ -3755,6 +3812,7 @@ function showHome(){
   }
   window.DZ_AT_HOME_RESET?.();
   window.DZ_PITCH_COUNTS_RESET?.();
+  window.DZ_SCREENING_RESET?.();
   window.DZ_WEEKLY_DIRECTORY_RESET?.();
   currentPlayerId = null;
   document.getElementById('view-admin').style.display = 'none';
@@ -3792,6 +3850,7 @@ async function showPlayer(id){
   currentPlayerId = id;
   window.DZ_AT_HOME_ON_PLAYER?.(player);
   window.DZ_PITCH_COUNTS_ON_PLAYER?.(player);
+  window.DZ_SCREENING_ON_PLAYER?.(player);
   // Returning from a profile opens the corresponding directory section.
   DZ_DIRECTORY_TAB=dzIsExternal(player)?'external':'internal';
   document.getElementById('view-admin').style.display = 'none';
@@ -3895,6 +3954,7 @@ if(location.search.includes('source=')) history.replaceState({},'',dzCleanUrl().
 <script src="./importer.js"></script>
 <script src="./at-home-plan.js"></script>
 <script src="./mechanical-changes.js"></script>
+<script src="./movement-screening.js"></script>
 <script src="./pitch-distribution.js"></script>
 <script src="./pitch-counts.js"></script>
 <script src="./directory-weekly-counts.js"></script>

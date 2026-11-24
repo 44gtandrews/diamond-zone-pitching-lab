@@ -201,6 +201,31 @@ async function main(){
   await denied('users cannot modify server-only notification quota',
    setDoc(doc(admin,'_notificationQuota','2026-11-23'),{count:0}));
 
+  // Private screening records must be inaccessible even to ordinary read-only coaches.
+  const screenRef=db=>doc(db,'players','player-a','movementScreens','2026-11-24');
+  const screenData=email=>({date:'2026-11-24',templateId:'example-v1',
+   scores:[2,1,0,null,'P',2,0,1,2],revision:1,updatedBy:email,updatedAt:serverTimestamp()});
+  await success('pitching coach saves private screening',setDoc(screenRef(pitching),screenData('pitcher@example.test')));
+  await success('admin reads screening',getDoc(screenRef(admin)));
+  await success('pitching coach reads screening',getDoc(screenRef(pitching)));
+  await success('admin lists screening history',getDocs(collection(admin,'players','player-a','movementScreens')));
+  await success('pitching coach lists screening history',getDocs(collection(pitching,'players','player-a','movementScreens')));
+  for(const [label,db] of [['ordinary coach',coach],['assigned parent',parentA],['other parent',parentB],['unapproved user',pending],['unverified user',unverified],['anonymous visitor',anonymous]]){
+    await denied(label+' cannot read private screening',getDoc(screenRef(db)));
+    await denied(label+' cannot list private screening history',getDocs(collection(db,'players','player-a','movementScreens')));
+  }
+  await denied('ordinary coach cannot edit private screening',updateDoc(screenRef(coach),{revision:2,updatedBy:'coach@example.test',updatedAt:serverTimestamp()}));
+  await denied('parent cannot edit private screening',updateDoc(screenRef(parentA),{revision:2,updatedBy:'parent-a@example.test',updatedAt:serverTimestamp()}));
+  await denied('invalid score cannot be saved',updateDoc(screenRef(pitching),{scores:[2,1,3,null,'P',2,0,1,2],revision:2,updatedAt:serverTimestamp()}));
+  await denied('injected score text cannot be saved',updateDoc(screenRef(pitching),{scores:[2,1,'unexpected',null,'P',2,0,1,2],revision:2,updatedAt:serverTimestamp()}));
+  await denied('unexpected fields cannot be saved',updateDoc(screenRef(pitching),{extra:true,revision:2,updatedAt:serverTimestamp()}));
+  await denied('invalid number of tests cannot be saved',updateDoc(screenRef(pitching),{scores:[2],revision:2,updatedAt:serverTimestamp()}));
+  await denied('stale revision cannot overwrite a screening',updateDoc(screenRef(pitching),{scores:[2,2,2,2,2,2,2,2,2],revision:1,updatedAt:serverTimestamp()}));
+  await denied('pitching coach cannot spoof editor identity',updateDoc(screenRef(pitching),{revision:2,updatedBy:'admin@example.test',updatedAt:serverTimestamp()}));
+  await success('admin updates screening',updateDoc(screenRef(admin),{revision:2,updatedBy:'admin@example.test',updatedAt:serverTimestamp()}));
+  await denied('pitching coach cannot delete screening history',deleteDoc(screenRef(pitching)));
+  await success('admin may delete screening',deleteDoc(screenRef(admin)));
+
   assert.ok(cases>=35,'Expected substantial independent allow/deny coverage');
   console.log('PASS: '+cases+' real Firestore emulator authorization assertions.');
  }finally{
