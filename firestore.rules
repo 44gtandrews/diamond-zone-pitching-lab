@@ -324,8 +324,7 @@ service cloud.firestore {
         && request.resource.data.revision == resource.data.revision + 1;
       allow delete: if isAdmin() && libraryId == 'library';
     }
-    // Screening records live in a dedicated collection: ordinary coaches can
-    // list coaching sections but cannot get or list this private collection.
+    // Private movement screens are in their own collection, not staff-wide sections.
     match /players/{playerId}/movementScreens/{screenDate} {
       function playerExists() {
         return exists(/databases/$(database)/documents/players/$(playerId));
@@ -340,37 +339,7 @@ service cloud.firestore {
       function validScreen() {
         let d = request.resource.data;
         return canScreen()
-          && screenDate.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])
-      allow get, list: if canViewAll();
-      allow create: if canWritePitching()
-        && code.matches('^[1-9][0-9]{5}$')
-        && request.resource.data.keys().hasOnly(['playerId'])
-        && request.resource.data.playerId is string
-        && getAfter(/databases/$(database)/documents/players/$(request.resource.data.playerId)).data.publicId == code;
-      allow update, delete: if false;
-    }
-    match /playerEdits/{playerId}/sections/{section} {
-      // Evaluation is staff-confidential: a linked player/parent must never
-      // read it, even by requesting the exact document path directly.
-      allow get: if canViewAll() || (section in ['notes', 'mechanics', 'strength', 'visibility', 'type-overrides']
-        && assignedParent(playerId)
-        && exists(/databases/$(database)/documents/players/$(playerId))
-        && get(/databases/$(database)/documents/players/$(playerId)).data.get('inactive', false) != true);
-      allow list: if canViewAll();
-      allow create, update: if canWritePitching()
-        && exists(/databases/$(database)/documents/players/$(playerId))
-        && section in ['notes', 'evaluation', 'mechanics', 'strength', 'grades', 'visibility', 'type-overrides']
-        && request.resource.data.keys().hasOnly(['value', 'updatedAt', 'editedBy'])
-        && request.resource.data.keys().hasAll(['value', 'updatedAt', 'editedBy'])
-        && request.resource.data.value is string
-        && request.resource.data.value.size() <= 50000
-        && (isAdmin() || request.resource.data.editedBy == request.auth.token.email);
-      allow delete: if isAdmin();
-    }
-    match /{document=**} { allow read, write: if false; }
-  }
-}
-)
+          && screenDate.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
           && d.keys().hasOnly(['date','templateId','scores','revision','updatedBy','updatedAt'])
           && d.keys().hasAll(['date','templateId','scores','revision','updatedBy','updatedAt'])
           && d.date == screenDate && d.templateId == 'example-v1'
