@@ -3345,6 +3345,7 @@ function renderHiddenPitchControls(player){
 async function renderPitchTable(player, summary, totalN){
   const coachView=window.DZ_ROLE!=='player_parent';
   if(coachView)await ensureGradesLoaded(player);
+  if(currentPlayerId!==player.id)return;
   const savedGrades=coachView?(player._gradesByPitch||{}):{};
 
   const hasRelease=summary.some(p=>p.relHeight!=null||p.relSide!=null);
@@ -3442,6 +3443,7 @@ function highestGradedPitch(player,summary){
 }
 function refreshHighestGradedPitchKpi(player){
   if(window.DZ_ROLE==='player_parent'||currentPlayerId!==player.id)return;
+  if(dzNoTrackman(player))return;
   const field=document.querySelector('#kpis .kpi:nth-child(4) .kpi-value');
   if(!field)return;
   const best=highestGradedPitch(player,getTypeSummary(player));
@@ -3465,7 +3467,7 @@ function trackmanSessionCount(player){
 
 function renderOverview(player){
   if(dzNoTrackman(player)){
-    const metrics=['Total Pitches','Sessions','Pitch Types','Fastball Avg'];
+    const metrics=['Total Pitches','Sessions','Pitch Types',...(window.DZ_ROLE==='player_parent'?[]:['Highest Graded Pitch']),'Fastball Avg'];
     const kpis=document.getElementById('kpis');kpis.replaceChildren();
     for(const label of metrics){
       const cell=document.createElement('div');cell.className='kpi';
