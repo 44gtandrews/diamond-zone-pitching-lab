@@ -24,7 +24,7 @@ jobs:
       - name: Verify scripts are valid before publishing
         shell: bash
         run: |
-          for file in cloud.js registration-policy.js importer.js mechanical-changes.js pitch-distribution.js pitch-counts.js directory-weekly-counts.js session-history.js session-ui.js at-home-plan.js trackman-pdf.js trackman-session.js upload-override-policy.js firebase-config.js; do
+          for file in cloud.js registration-policy.js importer.js mechanical-changes.js movement-screening.js pitch-distribution.js pitch-counts.js directory-weekly-counts.js session-history.js session-ui.js at-home-plan.js trackman-pdf.js trackman-session.js upload-override-policy.js firebase-config.js; do
             node --check "$file"
           done
           node tests/trackman-session-smoke.test.js
@@ -34,6 +34,7 @@ jobs:
           node tests/session-history-smoke.test.js
           node tests/at-home-plan-smoke.test.js
           node tests/mechanical-changes-smoke.test.js
+          node tests/movement-screening-smoke.test.js
           node tests/pitch-distribution-and-mechanics-smoke.test.js
           node tests/staff-evaluation-smoke.test.js
           node tests/private-pitch-grades-smoke.test.js
