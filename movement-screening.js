@@ -15,17 +15,18 @@ function validDate(value){
  const d=new Date(value+'T12:00:00Z');
  return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===value;
 }
+const validTitle=title=>typeof title==='string'&&title.length<=120;
 const validScores=scores=>Array.isArray(scores)&&scores.length===ROW_COUNT&&scores.every(validScore);
-function blank(date){if(!validDate(date))throw Error('Enter a valid screening date.');return {date,templateId:TEMPLATE_ID,scores:Array(ROW_COUNT).fill(null),revision:0};}
+function blank(date){if(!validDate(date))throw Error('Enter a valid screening date.');return {date,title:'',templateId:TEMPLATE_ID,scores:Array(ROW_COUNT).fill(null),revision:0};}
 function totals(scores,start,count){
  const selected=scores.slice(start,start+count);
  const numeric=selected.filter(v=>v===0||v===1||v===2);
  return {points:numeric.reduce((a,b)=>a+b,0),max:2*count,scored:numeric.length,count,pain:selected.filter(v=>v==='P').length,complete:numeric.length===count};
 }
 function validRecord(d,id){
- return !!d&&d.date===id&&validDate(id)&&d.templateId===TEMPLATE_ID&&validScores(d.scores)&&Number.isInteger(d.revision)&&d.revision>=1;
+ return !!d&&d.date===id&&validDate(id)&&d.templateId===TEMPLATE_ID&&validScores(d.scores)&&(!Object.prototype.hasOwnProperty.call(d,'title')||validTitle(d.title))&&Number.isInteger(d.revision)&&d.revision>=1;
 }
-const api={TEMPLATE_ID,GROUPS,ROW_COUNT,allowedRole,validScore,validDate,validScores,blank,totals,validRecord};
+const api={TEMPLATE_ID,GROUPS,ROW_COUNT,allowedRole,validScore,validDate,validTitle,validScores,blank,totals,validRecord};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 if(typeof window==='undefined'||typeof document==='undefined')return;
 window.DZ_MOVEMENT_SCREENING=api;
@@ -81,17 +82,26 @@ function render(){
  const colCells=[];
  for(const [index,col] of state.columns.entries()){
   const th=node('th','dz-screening-assessment');th.scope='col';
-  th.append(node('span','dz-screening-date-label',col.date),node('small','dz-screening-period',index===0?'Initial screening':'Reassessment '+index));
+  const titleInput=node('input','dz-screening-title');
+  titleInput.type='text';titleInput.maxLength=120;titleInput.value=col.title||'';
+  titleInput.placeholder=index===0?'Initial screening':'Reassessment '+index;
+  titleInput.setAttribute('aria-label','Screening title for '+col.date);
+  titleInput.disabled=col.saving;
+  th.append(titleInput,node('span','dz-screening-date-label',col.date));
   const label=node('small','dz-screening-save-state',col.saving?'Saving…':col.dirty?'Unsaved':col.revision?'Saved':'Not saved');
   const actions=node('div','dz-screening-col-actions');
   const save=node('button','dz-screening-action','Save');save.type='button';save.disabled=col.saving||(!col.dirty&&col.revision>0);
   save.setAttribute('aria-label','Save screening '+col.date);
   save.addEventListener('click',()=>void saveColumn(col));
   actions.append(save);
+  titleInput.addEventListener('input',()=>{
+   if(!permitted()||col.saving||!validTitle(titleInput.value))return;
+   col.title=titleInput.value;col.dirty=true;label.textContent='Unsaved';save.disabled=false;
+  });
   if(!col.revision){
    const discard=node('button','dz-screening-action dz-screening-discard','Discard');discard.type='button';discard.disabled=col.saving;
    discard.setAttribute('aria-label','Discard unsaved screening '+col.date);
-   discard.addEventListener('click',()=>{if(!permitted()||col.saving)return;if(col.dirty&&!window.confirm('Discard unsaved scores for '+col.date+'?'))return;state.columns=state.columns.filter(c=>c!==col);render();});
+   discard.addEventListener('click',()=>{if(!permitted()||col.saving)return;if(col.dirty&&!window.confirm('Discard unsaved changes for '+col.date+'?'))return;state.columns=state.columns.filter(c=>c!==col);render();});
    actions.append(discard);
   }
   th.append(label,actions);header.append(th);
@@ -155,34 +165,34 @@ async function open(id){
   const columns=[];
   snap.forEach(doc=>{
    const data=doc.data();
-   if(validRecord(data,doc.id))columns.push({...data,scores:data.scores.slice(),dirty:false,saving:false});
+   if(validRecord(data,doc.id))columns.push({...data,title:data.title||'',scores:data.scores.slice(),dirty:false,saving:false});
    else throw Error('Unexpected screening template or invalid saved record. Contact an administrator.');
   });
   state.columns=columns;
   // No fake screening values are ever created for real athletes.
   if(!columns.length)state.columns.push({...blank(localDate()),dirty:false,saving:false});
   state.loaded=true;addButton.disabled=false;render();
-  message('Private to administrators and pitching coaches. Save each assessment column to retain its scores.');
+  message('Private to administrators and pitching coaches. Name each assessment and save its column to retain the title and scores.');
  }catch(error){
   if(current(id,gen)){message('Unable to load screenings. Reopen this tab to retry. '+String(error.message||error),true);list.replaceChildren();}
  }finally{if(current(id,gen))state.loading=false;}
 }
 async function saveColumn(col){
- if(!permitted()||!state.loaded||col.saving||!validScores(col.scores)||!validDate(col.date))return;
+ if(!permitted()||!state.loaded||col.saving||!validScores(col.scores)||!validDate(col.date)||!validTitle(col.title))return;
  const id=state.id,gen=state.generation;
  const email=window.firebase?.auth().currentUser?.email;
  if(!email){message('Sign in again before saving.',true);return;}
  const target=ref(id).doc(col.date);
- const previous=col.revision,scores=col.scores.slice();col.saving=true;render();
+ const previous=col.revision,scores=col.scores.slice(),title=col.title.trim();col.saving=true;render();
  try{
   await window.DZ_SESSIONS_DB.runTransaction(async tx=>{
    const snap=await tx.get(target);
    if((snap.exists?snap.data().revision:0)!==previous)throw Error('This screening changed in another session. Reopen the player to reload before saving.');
-   tx.set(target,{date:col.date,templateId:TEMPLATE_ID,scores,revision:previous+1,
+   tx.set(target,{date:col.date,title,templateId:TEMPLATE_ID,scores,revision:previous+1,
     updatedBy:email.toLowerCase(),updatedAt:window.firebase.firestore.FieldValue.serverTimestamp()});
   });
   if(!current(id,gen))return;
-  col.revision=previous+1;col.dirty=false;message('Saved screening for '+col.date+'.');
+  col.revision=previous+1;col.title=title;col.dirty=false;message('Saved screening for '+col.date+'.');
  }catch(error){if(current(id,gen))message('Not saved: '+String(error.message||error),true);}
  finally{if(current(id,gen)){col.saving=false;render();}}
 }
@@ -191,7 +201,7 @@ addButton.addEventListener('click',()=>{
  const date=dateInput.value;
  if(!validDate(date)){message('Choose a valid screening date.',true);return;}
  if(state.columns.some(c=>c.date===date)){message('A screening column already exists for '+date+'.');return;}
- state.columns.push({...blank(date),dirty:false,saving:false});render();message('Added '+date+'. Enter scores and save the column.');
+ state.columns.push({...blank(date),dirty:false,saving:false});render();message('Added '+date+'. Enter a title and scores, then save the column.');
 });
 window.DZ_SCREENING_RESET=reset;
 window.DZ_SCREENING_ON_PLAYER=onPlayer;

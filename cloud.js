@@ -1035,7 +1035,7 @@
         await db.runTransaction(async tx=>{
           const current=await tx.get(target);
           if(current.exists)return;
-          tx.set(target,{date:item.id,templateId:item.data.templateId,scores:item.data.scores,revision:1,
+          tx.set(target,{date:item.id,title:item.data.title||'',templateId:item.data.templateId,scores:item.data.scores,revision:1,
             updatedBy:activeUser.email.toLowerCase(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
         });
       }

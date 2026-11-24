@@ -223,6 +223,15 @@ async function main(){
   await denied('stale revision cannot overwrite a screening',updateDoc(screenRef(pitching),{scores:[2,2,2,2,2,2,2,2,2],revision:1,updatedAt:serverTimestamp()}));
   await denied('pitching coach cannot spoof editor identity',updateDoc(screenRef(pitching),{revision:2,updatedBy:'admin@example.test',updatedAt:serverTimestamp()}));
   await success('admin updates screening',updateDoc(screenRef(admin),{revision:2,updatedBy:'admin@example.test',updatedAt:serverTimestamp()}));
+  await success('pitching coach saves custom screening title',updateDoc(screenRef(pitching),{title:'Initial Screening Winter 2026',revision:3,updatedBy:'pitcher@example.test',updatedAt:serverTimestamp()}));
+  const titledScreen=await getDoc(screenRef(admin));
+  assert.equal(titledScreen.data().title,'Initial Screening Winter 2026');
+  assert.deepEqual(titledScreen.data().scores,[2,1,0,null,'P',2,0,1,2]);
+  await denied('ordinary coach cannot read titled screening',getDoc(screenRef(coach)));
+  await denied('parent cannot rename private screening',updateDoc(screenRef(parentA),{title:'Changed',revision:4,updatedBy:'parent-a@example.test',updatedAt:serverTimestamp()}));
+  await denied('title exceeding limit rejected',updateDoc(screenRef(pitching),{title:'x'.repeat(121),revision:4,updatedBy:'pitcher@example.test',updatedAt:serverTimestamp()}));
+  await denied('non-string title rejected',updateDoc(screenRef(pitching),{title:42,revision:4,updatedBy:'pitcher@example.test',updatedAt:serverTimestamp()}));
+  await success('admin can clear optional title',updateDoc(screenRef(admin),{title:'',revision:4,updatedBy:'admin@example.test',updatedAt:serverTimestamp()}));
   await denied('pitching coach cannot delete screening history',deleteDoc(screenRef(pitching)));
   await success('admin may delete screening',deleteDoc(screenRef(admin)));
 

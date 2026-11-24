@@ -2139,14 +2139,19 @@
   .dz-screening-table th,.dz-screening-table td{border-bottom:1px solid #29424D;border-right:1px solid #29424D;padding:8px 10px;text-align:center;vertical-align:middle}
   .dz-screening-table .dz-screening-label{position:sticky;left:0;z-index:1;text-align:left;background:#102A34;min-width:142px;color:#ECF7F8}
   .dz-screening-table thead th{background:#17353F}
-  .dz-screening-assessment{min-width:172px;white-space:nowrap}
+  .dz-screening-assessment{width:240px;min-width:225px;white-space:nowrap}
   .dz-screening-date-label{display:block;color:#ECF7F8;font-weight:800}
   .dz-screening-period,.dz-screening-save-state{display:block;color:#A4BDC5;font-size:10px;margin:5px 0}
   .dz-screening-col-actions{display:flex;justify-content:center;gap:6px}
   .dz-screening-action{border:1px solid #39888D;border-radius:4px;background:#18545A;color:#F2FFFF;font:700 11px Inter,sans-serif;padding:7px 10px;cursor:pointer}
   .dz-screening-action:disabled{opacity:.45;cursor:default}
   .dz-screening-discard{background:#20333C;border-color:#47616A}
-  .dz-screening-group th,.dz-screening-group td{background:#15414A!important;color:#D4F5F5!important;text-transform:uppercase;font-size:10px;letter-spacing:.08em}
+  .dz-screening-table .dz-screening-group th,.dz-screening-table .dz-screening-group td{background:#235B65!important;color:#FFFFFF!important;border-top:5px solid #0E2028;border-bottom:2px solid #65C4CB;border-right:0;padding:14px 12px;text-transform:uppercase;font-size:15px;font-weight:900;letter-spacing:.10em}
+  .dz-screening-table .dz-screening-group .dz-screening-label{border-left:5px solid #65D5DB;padding-left:12px;white-space:nowrap}
+  .dz-screening-title{display:block;width:100%;min-width:0;box-sizing:border-box;padding:9px 8px;margin:0 0 6px;border:1px solid #4D8892;border-radius:4px;background:#0E2630;color:#F4FBFC;font:800 13px Inter,sans-serif;text-align:center}
+  .dz-screening-title::placeholder{color:#A4BDC5;font-weight:600}
+  .dz-screening-title:focus{outline:2px solid #65D5DB;outline-offset:1px}
+  .dz-screening-title:disabled{opacity:.65}
   .dz-screening-score-cell{padding:4px!important;background:#11232C}
   .dz-screening-score{display:block;width:100%;padding:8px 5px;border:1px solid #44616B;border-radius:3px;color:#EEF7F8;background:#20343D;font:700 12px Inter,sans-serif;color-scheme:dark}
   .dz-screening-score[data-score="2"],.dz-screening-legend [data-score="2"],[data-total="pass"]{background:#154D39;color:#B8F7CC}
@@ -2159,7 +2164,7 @@
   .dz-screening-overall th,.dz-screening-overall td{border-top:2px solid #31929A;font-weight:800}
   #dz-screening-status{font:500 12px/1.5 Inter,sans-serif;color:#A4E4E7;min-height:18px;margin-top:10px}
   #dz-screening-status.dz-screening-error{color:#FFB1B1}
-  @media(max-width:560px){#dz-screening{padding:12px}.dz-screening-table .dz-screening-label{min-width:108px}.dz-screening-assessment{min-width:145px}.dz-screening-table th,.dz-screening-table td{padding:7px}}
+  @media(max-width:560px){#dz-screening{padding:12px}.dz-screening-table .dz-screening-label{min-width:108px}.dz-screening-assessment{width:200px;min-width:185px}.dz-screening-table th,.dz-screening-table td{padding:7px}}
 </style>
 </head>
 <body>
@@ -2675,7 +2680,7 @@
     <div class="panel" id="panel-strength">
       <section id="dz-screening" hidden aria-label="Private movement screening">
         <div class="dz-screening-head">
-          <div><h2>Movement Screening</h2><p>Example template · score each test and compare dated assessments.</p></div>
+          <div><h2>Movement Screening</h2><p>Example template · name each assessment, score each test and compare progress.</p></div>
           <span class="dz-screening-private">ADMIN + PITCHING COACH ONLY</span>
         </div>
         <div class="dz-screening-controls">
