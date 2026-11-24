@@ -190,8 +190,16 @@ service cloud.firestore {
         && request.resource.data.pitches is list
         && request.resource.data.pitches.size() > 0
         && request.resource.data.pitches.size() <= 8
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-          ['pitches', 'sessions', 'updatedBy', 'updatedAt', 'importHistory']));
+        && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+            ['pitches', 'sessions', 'updatedBy', 'updatedAt', 'importHistory'])
+          || (resource.data.sessions == 0 && resource.data.pitches is list
+            && resource.data.pitches.size() == 0
+            && request.resource.data.summaryOnly is bool
+            && (request.resource.data.throwingHand == null || request.resource.data.throwingHand in ['L', 'R', 'Left', 'Right', 'left', 'right'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+              ['pitches', 'sessions', 'updatedBy', 'updatedAt', 'importHistory', 'summaryOnly', 'throwingHand']))
+        ));
       allow delete: if isAdmin();
     }
     // Per-player sessions are independent, immutable source records.
