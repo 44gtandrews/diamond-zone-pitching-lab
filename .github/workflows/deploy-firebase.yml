@@ -36,6 +36,7 @@ jobs:
           node tests/mechanical-changes-smoke.test.js
           node tests/movement-screening-smoke.test.js
           node tests/manual-player-smoke.test.js
+          node tests/import-dialog-layout-smoke.test.js
           node tests/pitch-distribution-and-mechanics-smoke.test.js
           node tests/staff-evaluation-smoke.test.js
           node tests/private-pitch-grades-smoke.test.js
