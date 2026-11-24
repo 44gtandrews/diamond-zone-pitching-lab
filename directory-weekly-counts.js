@@ -94,7 +94,8 @@ function captureArsenal(){
   for(const row of rows()){
     const el=row.querySelector('.dz-pitch-usage');
     if(el)state.arsenal.set(row.dataset.playerId,
-      {html:el.innerHTML,label:el.getAttribute('aria-label')});
+      {nodes:Array.from(el.childNodes).map(node=>node.cloneNode(true)),
+       label:el.getAttribute('aria-label')});
   }
 }
 function restoreArsenal(){
@@ -102,7 +103,7 @@ function restoreArsenal(){
     const el=row.querySelector('.dz-pitch-usage');
     const saved=state.arsenal.get(row.dataset.playerId);
     if(!saved||!el)continue;
-    el.innerHTML=saved.html;
+    el.replaceChildren(...saved.nodes.map(node=>node.cloneNode(true)));
     if(saved.label)el.setAttribute('aria-label',saved.label);
     else el.removeAttribute('aria-label');
   }
